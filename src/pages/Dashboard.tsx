@@ -1,132 +1,139 @@
 import { useEffect, useState } from 'react';
-import { Users, Briefcase, Calendar, Euro, TrendingUp } from 'lucide-react';
+import { Users, Briefcase, Euro, UserCheck, RefreshCw } from 'lucide-react';
 import api from '../lib/api';
 
+// Definiere, wie die Daten vom Backend aussehen
+interface DashboardStats {
+  revenue: number;
+  openJobs: number;
+  activeCustomers: number;
+  teamSize: number;
+}
+
 export default function Dashboard() {
-  const [stats, setStats] = useState({
-    customersCount: 0,
-    employeesCount: 0,
-    openJobsCount: 0,
-    monthlyRevenue: 0
+  const [stats, setStats] = useState<DashboardStats>({
+    revenue: 0,
+    openJobs: 0,
+    activeCustomers: 0,
+    teamSize: 0
   });
   const [loading, setLoading] = useState(true);
-  
-  // Rolle prüfen, um zu wissen, was wir anzeigen dürfen
-  const role = localStorage.getItem('role');
+
+  // Name aus dem LocalStorage holen (für die Begrüßung)
+  const firstName = localStorage.getItem('firstName') || 'Chef';
 
   useEffect(() => {
-    // Nur laden, wenn Admin. Sonst gibt es 403 Fehler.
-    if (role === 'ADMIN') {
-      fetchStats();
-    } else {
-      setLoading(false);
-    }
-  }, [role]);
+    fetchDashboardData();
+  }, []);
 
-  const fetchStats = async () => {
+  const fetchDashboardData = async () => {
+    setLoading(true);
     try {
-      const res = await api.get('/stats/dashboard');
+      // Hier rufen wir dein neues Backend auf!
+      const res = await api.get('/dashboard');
       setStats(res.data);
     } catch (error) {
-      console.error("Konnte Stats nicht laden", error);
+      console.error("Fehler beim Laden des Dashboards:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Begrüßungstext je nach Tageszeit
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Guten Morgen' : hour < 18 ? 'Guten Tag' : 'Guten Abend';
-
   return (
     <div className="space-y-8">
-      
-      {/* Begrüßung */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-800">{greeting}, Chef! 👋</h1>
-        <p className="text-slate-500 mt-1">Hier ist der aktuelle Status deiner Firma.</p>
+      {/* --- HEADER --- */}
+      <div className="flex justify-between items-end">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-800">Guten Abend, {firstName}! 👋</h1>
+          <p className="text-slate-500 mt-2">Hier ist der aktuelle Status deiner Firma.</p>
+        </div>
+        <button 
+          onClick={fetchDashboardData} 
+          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+          title="Aktualisieren"
+        >
+          <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
+        </button>
       </div>
 
-      {loading ? (
-        <div>Lade Statistiken...</div>
-      ) : role === 'ADMIN' ? (
-        /* Kacheln Grid (Nur für Admin sichtbar) */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          
-          {/* Karte 1: Umsatz */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-            <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center text-green-600">
-              <Euro className="h-6 w-6" />
+      {/* --- KACHELN (STATS) --- */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        {/* Kachel 1: UMSATZ */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between h-40">
+          <div className="flex justify-between items-start">
+            <div className="p-3 bg-green-50 rounded-xl">
+              <Euro className="h-6 w-6 text-green-600" />
             </div>
-            <div>
-              <p className="text-sm text-slate-500 font-medium">Umsatz (Monat)</p>
-              <h3 className="text-2xl font-bold text-slate-800">
-                {Number(stats.monthlyRevenue).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
-              </h3>
-            </div>
-          </div>
-
-          {/* Karte 2: Offene Jobs */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-            <div className="h-12 w-12 bg-orange-100 rounded-full flex items-center justify-center text-orange-600">
-              <Calendar className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500 font-medium">Offene Jobs</p>
-              <h3 className="text-2xl font-bold text-slate-800">{stats.openJobsCount}</h3>
-            </div>
-          </div>
-
-          {/* Karte 3: Kunden */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-            <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
-              <Briefcase className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500 font-medium">Aktive Kunden</p>
-              <h3 className="text-2xl font-bold text-slate-800">{stats.customersCount}</h3>
-            </div>
-          </div>
-
-          {/* Karte 4: Mitarbeiter */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-            <div className="h-12 w-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
-              <Users className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500 font-medium">Team Größe</p>
-              <h3 className="text-2xl font-bold text-slate-800">{stats.employeesCount}</h3>
-            </div>
-          </div>
-
-        </div>
-      ) : (
-        /* Ansicht für Mitarbeiter (Keine Finanzdaten) */
-        <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 flex items-center gap-4">
-          <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center text-blue-600 shadow-sm">
-            <TrendingUp className="h-6 w-6" />
+            {/* Kleiner Indikator (optional) */}
+            <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">+12%</span>
           </div>
           <div>
-            <h3 className="font-bold text-lg text-blue-900">Willkommen im Team-Bereich!</h3>
-            <p className="text-blue-700">Schaue unter "Jobs", welche Aufgaben heute anstehen.</p>
+            <p className="text-slate-500 font-medium text-sm">Umsatz (Monat)</p>
+            <h3 className="text-2xl font-bold text-slate-800 mt-1">
+              {/* Hier formatieren wir die Zahl als Euro */}
+              {loading ? "..." : stats.revenue.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+            </h3>
           </div>
         </div>
-      )}
 
-      {/* Optional: Schnellzugriff Buttons */}
-      {role === 'ADMIN' && (
-        <div className="pt-4">
-          <h2 className="text-lg font-semibold text-slate-800 mb-4">Schnellzugriff</h2>
-          <div className="flex gap-4">
-             <a href="/dashboard/customers/new" className="bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 transition">
-               + Neuer Kunde
-             </a>
-             <a href="/dashboard/contracts/new" className="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 transition">
-               + Neuer Vertrag
-             </a>
+        {/* Kachel 2: OFFENE JOBS */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between h-40">
+          <div className="flex justify-between items-start">
+            <div className="p-3 bg-blue-50 rounded-xl">
+              <Briefcase className="h-6 w-6 text-blue-600" />
+            </div>
+          </div>
+          <div>
+            <p className="text-slate-500 font-medium text-sm">Offene Jobs</p>
+            <h3 className="text-2xl font-bold text-slate-800 mt-1">
+              {loading ? "..." : stats.openJobs}
+            </h3>
           </div>
         </div>
-      )}
+
+        {/* Kachel 3: KUNDEN */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between h-40">
+          <div className="flex justify-between items-start">
+            <div className="p-3 bg-purple-50 rounded-xl">
+              <Users className="h-6 w-6 text-purple-600" />
+            </div>
+          </div>
+          <div>
+            <p className="text-slate-500 font-medium text-sm">Aktive Kunden</p>
+            <h3 className="text-2xl font-bold text-slate-800 mt-1">
+              {loading ? "..." : stats.activeCustomers}
+            </h3>
+          </div>
+        </div>
+
+        {/* Kachel 4: TEAM */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between h-40">
+          <div className="flex justify-between items-start">
+            <div className="p-3 bg-orange-50 rounded-xl">
+              <UserCheck className="h-6 w-6 text-orange-600" />
+            </div>
+          </div>
+          <div>
+            <p className="text-slate-500 font-medium text-sm">Team Größe</p>
+            <h3 className="text-2xl font-bold text-slate-800 mt-1">
+              {loading ? "..." : stats.teamSize}
+            </h3>
+          </div>
+        </div>
+
+      </div>
+
+      {/* --- PLATZHALTER FÜR CHARTS ODER KALENDER (Optional) --- */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 p-6 h-80 flex items-center justify-center text-slate-400">
+           Hier könnte bald ein Umsatz-Chart stehen 📈
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-100 p-6 h-80 flex items-center justify-center text-slate-400">
+           Hier könnten die nächsten Termine stehen 📅
+        </div>
+      </div>
+
     </div>
   );
 }

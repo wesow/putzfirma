@@ -31,6 +31,7 @@ const allNavItems = [
     { name: 'Team', href: '/dashboard/team', icon: HardHat, roles: ['ADMIN'] },
     { name: 'Kalender', href: '/dashboard/calendar', icon: CalendarIcon, roles: ['ADMIN', 'EMPLOYEE'] },
     { name: 'Auswertung', href: '/dashboard/reports', icon: BarChart3, roles: ['ADMIN'] },
+    { name: 'Rechnungen', href: '/dashboard/invoices', icon: FileText, roles: ['ADMIN'] },
   ];
 const navigation = allNavItems.filter(item => item.roles.includes(role));
   return (

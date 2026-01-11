@@ -16,6 +16,7 @@ import ProtectedRoute from './components/ProtectedRoute'; // <--- WICHTIG: Impor
 import EditEmployeePage from './pages/team/EditEmployeePage';
 import CalendarPage from './pages/CalendarPage';
 import ReportsPage from './pages/ReportsPage';
+import InvoicesPage from './pages/invoices/InvoicesPage';
 
 function App() {
   return (
@@ -98,7 +99,12 @@ function App() {
           <ProtectedRoute allowedRoles={['ADMIN']}>
             <ReportsPage />
           </ProtectedRoute>
-        } /></Route>
+        } />
+        <Route path="invoices" element={
+  <ProtectedRoute allowedRoles={['ADMIN']}>
+    <InvoicesPage />
+  </ProtectedRoute>
+} /></Route>
 
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>

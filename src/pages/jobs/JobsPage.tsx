@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle, XCircle, Clock, Calendar, MapPin, Play, RefreshCw, UserPlus, X } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Calendar, MapPin, Play, RefreshCw, UserPlus, X, Loader2 } from 'lucide-react'; // Loader2 importiert
 import api from '../../lib/api';
 
 // --- TYPEN ---
@@ -21,6 +21,9 @@ export default function JobsPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // NEU: Eigener State für den Generator-Prozess
+  const [isGenerating, setIsGenerating] = useState(false);
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -40,14 +43,12 @@ export default function JobsPage() {
     try {
       const promises = [api.get('/jobs')];
       
-      // Nur Admins brauchen die Mitarbeiter-Liste für das Dropdown
       if (isAdmin) {
         promises.push(api.get('/employees'));
       }
 
       const [jobsRes, employeesRes] = await Promise.all(promises);
 
-      // Sortieren: Neueste zuerst
       const sortedJobs = jobsRes.data.sort((a: Job, b: Job) => 
         new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime()
       );
@@ -63,16 +64,22 @@ export default function JobsPage() {
   };
 
   const handleGenerateJobs = async () => { 
+      // 1. Ladezustand aktivieren
+      setIsGenerating(true);
       try { 
         await api.post('/jobs/generate'); 
-        fetchData(); 
+        // 2. Warten bis Daten neu geladen sind
+        await fetchData(); 
         alert("Jobs erfolgreich generiert!"); 
-      } catch(e) { 
-        alert("Fehler beim Generieren."); 
+      } catch(e: any) { 
+        console.error(e);
+        alert(e.response?.data?.message || "Fehler beim Generieren."); 
+      } finally {
+        // 3. Ladezustand deaktivieren (egal ob Erfolg oder Fehler)
+        setIsGenerating(false);
       }
   };
 
-  // Status ändern (wird für STORNIEREN genutzt)
   const handleStatusChange = async (id: string, s: string) => { 
      try { 
        await api.patch(`/jobs/${id}/status`, { status: s }); 
@@ -92,7 +99,6 @@ export default function JobsPage() {
   };
 
   // --- MODAL LOGIK ---
-  
   const openCompletionModal = (jobId: string) => {
     setSelectedJobId(jobId);
     setDurationInput(''); 
@@ -112,7 +118,7 @@ export default function JobsPage() {
         });
         
         setIsModalOpen(false);
-        fetchData(); // Liste aktualisieren
+        fetchData();
     } catch (error) {
         console.error(error);
         alert("Fehler beim Speichern.");
@@ -145,13 +151,30 @@ export default function JobsPage() {
         
         <div className="flex gap-2">
           <button onClick={fetchData} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 bg-white" title="Aktualisieren">
-            <RefreshCw className="h-5 w-5" />
+            <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
           </button>
           
           {isAdmin && (
-            <button onClick={handleGenerateJobs} className="flex items-center gap-2 bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 transition-colors font-medium shadow-sm">
-              <Play className="h-4 w-4" />
-              Jobs generieren
+            <button 
+                onClick={handleGenerateJobs} 
+                disabled={isGenerating} // Button deaktivieren während des Ladens
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium shadow-sm transition-colors ${
+                    isGenerating 
+                    ? 'bg-slate-400 cursor-not-allowed text-white' 
+                    : 'bg-slate-800 text-white hover:bg-slate-700'
+                }`}
+            >
+              {isGenerating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Generiere...
+                  </>
+              ) : (
+                  <>
+                    <Play className="h-4 w-4" />
+                    Jobs generieren
+                  </>
+              )}
             </button>
           )}
         </div>
@@ -184,7 +207,6 @@ export default function JobsPage() {
                     {job.address?.street}, {job.address?.city}
                   </div>
                   
-                  {/* Anzeige der Dauer, falls erledigt */}
                   {job.status === 'COMPLETED' && job.actualDurationMinutes && (
                       <div className="flex items-center gap-1.5 text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded border border-green-100">
                         <Clock className="h-4 w-4" />
@@ -209,7 +231,7 @@ export default function JobsPage() {
                     </span>
                   ))}
 
-                  {isAdmin && (
+                  {isAdmin && job.status === 'SCHEDULED' && (
                     <select 
                       className="text-sm bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 outline-none focus:border-blue-500 cursor-pointer hover:bg-white transition" 
                       onChange={(e) => handleAssignEmployee(job.id, e.target.value)}
@@ -227,10 +249,8 @@ export default function JobsPage() {
               {/* RECHTER TEIL: AKTIONEN */}
               <div className="flex items-center gap-2 border-t lg:border-t-0 lg:border-l border-slate-100 pt-4 lg:pt-0 lg:pl-6 mt-2 lg:mt-0 w-full lg:w-auto justify-end">
                 
-                {/* Nur anzeigen wenn noch geplant */}
                 {job.status === 'SCHEDULED' && (
                   <>
-                    {/* Stornieren Button */}
                     <button 
                       onClick={() => handleStatusChange(job.id, 'CANCELLED')}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-100 transition-colors"
@@ -239,7 +259,6 @@ export default function JobsPage() {
                       <XCircle size={20} />
                     </button>
 
-                    {/* Erledigen Button */}
                     <button 
                       onClick={() => openCompletionModal(job.id)}
                       className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors shadow-sm whitespace-nowrap flex items-center gap-2"

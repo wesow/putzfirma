@@ -18,4 +18,4 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
 
   // Falls JA: Seite anzeigen
   return <>{children}</>;
-}
+} 
