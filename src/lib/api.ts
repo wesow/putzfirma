@@ -2,10 +2,9 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: 'http://localhost:3000/api',
-  withCredentials: true,
 });
 
-// 1. Request Interceptor: Fügt den Token hinzu (Hatten wir schon)
+// Request Interceptor (Token mitsenden)
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -14,20 +13,22 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// 2. Response Interceptor: Fängt Fehler ab (NEU!)
+// Response Interceptor (Fehlerbehandlung)
 api.interceptors.response.use(
-  (response) => response, // Alles gut, Antwort durchlassen
+  (response) => response,
   (error) => {
-    // Wenn der Server sagt "401 Unauthorized" oder "403 Forbidden"
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      console.warn('Sitzung abgelaufen oder ungültig. Logout...');
+    // Wenn 401 (Unauthorized) kommt
+    if (error.response && error.response.status === 401) {
       
-      // Token löschen
-      localStorage.removeItem('token');
-      localStorage.removeItem('role');
+      // WICHTIG: Prüfen, ob der Fehler vom Login oder Register kommt.
+      // Falls ja: NICHT ausloggen, sondern Fehler an die Page weitergeben.
+      const isAuthRequest = error.config.url.includes('/auth/login') || error.config.url.includes('/auth/register');
 
-      // Hart zum Login umleiten (nur wenn wir nicht schon da sind)
-      if (window.location.pathname !== '/login') {
+      if (!isAuthRequest) {
+        console.warn('Sitzung abgelaufen oder ungültig. Logout...');
+        localStorage.removeItem('token');
+        localStorage.removeItem('role');
+        // Optional: Weiterleitung zum Login
         window.location.href = '/login';
       }
     }

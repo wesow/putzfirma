@@ -10,6 +10,7 @@ export default function CreateEmployeePage() {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
+    email: '',
     personnelNumber: ''
   });
 
@@ -56,7 +57,21 @@ export default function CreateEmployeePage() {
             <input required name="lastName" value={formData.lastName} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
           </div>
         </div>
-
+<div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Dienst-Email *</label>
+          <input 
+            required 
+            type="email"
+            name="email" 
+            value={formData.email} 
+            onChange={handleChange} 
+            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
+            placeholder="mitarbeiter@cleanops.de"
+          />
+          <p className="text-xs text-slate-500 mt-1">
+            Wird für den automatischen Login-Abgleich benötigt.
+          </p>
+        </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Personalnummer *</label>
           <input 

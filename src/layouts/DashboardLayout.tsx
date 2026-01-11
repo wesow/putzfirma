@@ -6,30 +6,33 @@ import {
   FileText, 
   CalendarCheck, 
   LogOut, 
-  HardHat
+  HardHat,
+  CalendarIcon,
+  BarChart3
 } from 'lucide-react';
 import clsx from 'clsx';
 
 export default function DashboardLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const role = localStorage.getItem('role'); // "ADMIN" oder "EMPLOYEE"
-
+const role = localStorage.getItem('role') || 'CUSTOMER'; // Standard ist Customer
   const handleLogout = () => {
     localStorage.clear();
     navigate('/login');
   };
 
   // Die Menüpunkte
-  const navigation = [
-    { name: 'Übersicht', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Aufträge (Jobs)', href: '/dashboard/jobs', icon: CalendarCheck },
-    { name: 'Kunden', href: '/dashboard/customers', icon: Users },
-    { name: 'Dienstleistungen', href: '/dashboard/services', icon: Briefcase },
-    { name: 'Verträge', href: '/dashboard/contracts', icon: FileText },
-    { name: 'Team', href: '/dashboard/team', icon: HardHat },
+const allNavItems = [
+    { name: 'Übersicht', href: '/dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'EMPLOYEE', 'CUSTOMER'] },
+    { name: 'Aufträge (Jobs)', href: '/dashboard/jobs', icon: CalendarCheck, roles: ['ADMIN', 'EMPLOYEE'] },
+    { name: 'Kunden', href: '/dashboard/customers', icon: Users, roles: ['ADMIN', 'EMPLOYEE'] }, // Kunden sehen keine anderen Kunden
+    { name: 'Dienstleistungen', href: '/dashboard/services', icon: Briefcase, roles: ['ADMIN'] },
+    { name: 'Verträge', href: '/dashboard/contracts', icon: FileText, roles: ['ADMIN'] },
+    { name: 'Team', href: '/dashboard/team', icon: HardHat, roles: ['ADMIN'] },
+    { name: 'Kalender', href: '/dashboard/calendar', icon: CalendarIcon, roles: ['ADMIN', 'EMPLOYEE'] },
+    { name: 'Auswertung', href: '/dashboard/reports', icon: BarChart3, roles: ['ADMIN'] },
   ];
-
+const navigation = allNavItems.filter(item => item.roles.includes(role));
   return (
     <div className="flex h-screen bg-slate-100">
       

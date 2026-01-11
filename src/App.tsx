@@ -12,6 +12,10 @@ import CreateContractPage from './pages/contracts/CreateContractPage';
 import JobsPage from './pages/jobs/JobsPage'; // <--- WICHTIG: Import muss da sein
 import TeamPage from './pages/team/TeamPage';
 import CreateEmployeePage from './pages/team/CreateEmployeePage';
+import ProtectedRoute from './components/ProtectedRoute'; // <--- WICHTIG: Importieren!
+import EditEmployeePage from './pages/team/EditEmployeePage';
+import CalendarPage from './pages/CalendarPage';
+import ReportsPage from './pages/ReportsPage';
 
 function App() {
   return (
@@ -21,25 +25,81 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         
         <Route path="/dashboard" element={<DashboardLayout />}>
+          {/* Dashboard darf JEDER sehen */}
           <Route index element={<Dashboard />} />
           
-          {/* Kunden */}
-          <Route path="customers" element={<CustomersPage />} />
-          <Route path="customers/new" element={<CreateCustomerPage />} />
+          {/* KUNDEN: Nur Admin und Mitarbeiter */}
+          <Route path="customers" element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
+              <CustomersPage />
+            </ProtectedRoute>
+          } />
+          <Route path="customers/new" element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
+              <CreateCustomerPage />
+            </ProtectedRoute>
+          } />
           
-          {/* Services */}
-          <Route path="services" element={<ServicesPage />} />
-          <Route path="services/new" element={<CreateServicePage />} />
+          {/* SERVICES: Nur Admin */}
+          <Route path="services" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <ServicesPage />
+            </ProtectedRoute>
+          } />
+          <Route path="services/new" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <CreateServicePage />
+            </ProtectedRoute>
+          } />
 
-          {/* Verträge */}
-          <Route path="contracts" element={<ContractsPage />} />
-          <Route path="contracts/new" element={<CreateContractPage />} />
+          {/* VERTRÄGE: Nur Admin */}
+          <Route path="contracts" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <ContractsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="contracts/new" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <CreateContractPage />
+            </ProtectedRoute>
+          } />
           
-          <Route path="team" element={<TeamPage />} />
-          <Route path="team/new" element={<CreateEmployeePage />} />
-          <Route path="jobs" element={<JobsPage />} />
-        </Route>
+          {/* JOBS: Admin und Mitarbeiter */}
+          <Route path="jobs" element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
+              <JobsPage />
+            </ProtectedRoute>
+          } />
+
+          {/* TEAM: Nur Admin (Das war dein Beispiel!) */}
+          <Route path="team" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <TeamPage />
+            </ProtectedRoute>
+          } />
+          <Route path="team/new" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <CreateEmployeePage />
+            </ProtectedRoute>
+          } />
+
         
+        <Route path="team/:id" element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <EditEmployeePage />
+          </ProtectedRoute>
+        } />
+        <Route path="calendar" element={
+        <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
+          <CalendarPage />
+        </ProtectedRoute>
+      } />
+        <Route path="reports" element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <ReportsPage />
+          </ProtectedRoute>
+        } /></Route>
+
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>
