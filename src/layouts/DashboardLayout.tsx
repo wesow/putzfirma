@@ -8,32 +8,52 @@ import {
   LogOut, 
   HardHat,
   CalendarIcon,
-  BarChart3
+  BarChart3,
+  // NEUE ICONS:
+  Receipt,      // Für Ausgaben
+  Palmtree,     // Für Urlaub/Abwesenheit
+  FilePlus      // Für Angebote
 } from 'lucide-react';
 import clsx from 'clsx';
 
 export default function DashboardLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-const role = localStorage.getItem('role') || 'CUSTOMER'; // Standard ist Customer
+  const role = localStorage.getItem('role') || 'CUSTOMER';
+
   const handleLogout = () => {
     localStorage.clear();
     navigate('/login');
   };
 
-  // Die Menüpunkte
-const allNavItems = [
+  // Die Menüpunkte (Erweitert)
+  const allNavItems = [
     { name: 'Übersicht', href: '/dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'EMPLOYEE', 'CUSTOMER'] },
+    
+    // Operativ
     { name: 'Aufträge (Jobs)', href: '/dashboard/jobs', icon: CalendarCheck, roles: ['ADMIN', 'EMPLOYEE'] },
-    { name: 'Kunden', href: '/dashboard/customers', icon: Users, roles: ['ADMIN', 'EMPLOYEE'] }, // Kunden sehen keine anderen Kunden
-    { name: 'Dienstleistungen', href: '/dashboard/services', icon: Briefcase, roles: ['ADMIN'] },
-    { name: 'Verträge', href: '/dashboard/contracts', icon: FileText, roles: ['ADMIN'] },
-    { name: 'Team', href: '/dashboard/team', icon: HardHat, roles: ['ADMIN'] },
     { name: 'Kalender', href: '/dashboard/calendar', icon: CalendarIcon, roles: ['ADMIN', 'EMPLOYEE'] },
-    { name: 'Auswertung', href: '/dashboard/reports', icon: BarChart3, roles: ['ADMIN'] },
+    
+    // Vertrieb & Kunden
+    { name: 'Angebote', href: '/dashboard/offers', icon: FilePlus, roles: ['ADMIN'] }, // NEU
+    { name: 'Kunden', href: '/dashboard/customers', icon: Users, roles: ['ADMIN', 'EMPLOYEE'] },
+    { name: 'Verträge', href: '/dashboard/contracts', icon: FileText, roles: ['ADMIN'] },
+    
+    // Stammdaten
+    { name: 'Dienstleistungen', href: '/dashboard/services', icon: Briefcase, roles: ['ADMIN'] },
+    
+    // Team
+    { name: 'Team', href: '/dashboard/team', icon: HardHat, roles: ['ADMIN'] },
+    { name: 'Abwesenheiten', href: '/dashboard/absences', icon: Palmtree, roles: ['ADMIN', 'EMPLOYEE'] }, // NEU
+    
+    // Finanzen
+    { name: 'Ausgaben', href: '/dashboard/expenses', icon: Receipt, roles: ['ADMIN'] }, // NEU
     { name: 'Rechnungen', href: '/dashboard/invoices', icon: FileText, roles: ['ADMIN'] },
+    { name: 'Auswertung', href: '/dashboard/reports', icon: BarChart3, roles: ['ADMIN'] },
   ];
-const navigation = allNavItems.filter(item => item.roles.includes(role));
+
+  const navigation = allNavItems.filter(item => item.roles.includes(role));
+
   return (
     <div className="flex h-screen bg-slate-100">
       
@@ -44,7 +64,7 @@ const navigation = allNavItems.filter(item => item.roles.includes(role));
           <p className="text-xs text-slate-400 mt-1">Enterprise Edition</p>
         </div>
 
-        <nav className="flex-1 px-4 space-y-2">
+        <nav className="flex-1 px-4 space-y-2 overflow-y-auto">
           {navigation.map((item) => {
             const isActive = location.pathname === item.href;
             return (
@@ -82,16 +102,18 @@ const navigation = allNavItems.filter(item => item.roles.includes(role));
         </div>
       </div>
 
-      {/* --- HAUPTINHALT (Rechts) --- */}
+      {/* --- HAUPTINHALT --- */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header Leiste (Optional für Suche oder Profil) */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center px-8 shadow-sm">
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center px-8 shadow-sm justify-between">
           <h2 className="text-lg font-semibold text-slate-700">
             Verwaltungsoberfläche
           </h2>
+          {/* Kleiner Platzhalter für User Profil */}
+          <div className="h-8 w-8 bg-slate-200 rounded-full flex items-center justify-center text-slate-500 font-bold">
+             {role.charAt(0)}
+          </div>
         </header>
 
-        {/* Hier wird der eigentliche Inhalt der Seite geladen */}
         <main className="flex-1 overflow-y-auto p-8">
           <Outlet />
         </main>

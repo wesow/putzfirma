@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-// FIX 1: "Euro" entfernt, da es nicht genutzt wurde
-import { Clock, TrendingUp, Users, Wallet, AlertCircle } from 'lucide-react';
+import { Euro, Clock, TrendingUp, Users, Wallet, AlertCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import api from '../../lib/api';
 
@@ -116,10 +115,9 @@ export default function PayrollPage() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="name" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
                 <YAxis hide />
-                {/* FIX 2: Typisierung korrigiert (val?: number) und Fallback auf 0 */}
                 <Tooltip 
                   cursor={{fill: '#f8fafc'}}
-                  formatter={(val?: number) => formatEuro(val || 0)}
+                  formatter={(val?: any) => formatEuro(val)}
                   contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
                 />
                 <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={50}>

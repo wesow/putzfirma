@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Users, Briefcase, Euro, UserCheck, RefreshCw } from 'lucide-react';
+// NEU: Import für das Diagramm
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '../lib/api';
 
-// Definiere, wie die Daten vom Backend aussehen
 interface DashboardStats {
   revenue: number;
   openJobs: number;
   activeCustomers: number;
   teamSize: number;
+  // NEU: Daten für das Chart
+  chartData: { name: string; revenue: number }[];
 }
 
 export default function Dashboard() {
@@ -15,11 +18,11 @@ export default function Dashboard() {
     revenue: 0,
     openJobs: 0,
     activeCustomers: 0,
-    teamSize: 0
+    teamSize: 0,
+    chartData: [] // Default leer
   });
   const [loading, setLoading] = useState(true);
 
-  // Name aus dem LocalStorage holen (für die Begrüßung)
   const firstName = localStorage.getItem('firstName') || 'Chef';
 
   useEffect(() => {
@@ -29,7 +32,6 @@ export default function Dashboard() {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      // Hier rufen wir dein neues Backend auf!
       const res = await api.get('/dashboard');
       setStats(res.data);
     } catch (error) {
@@ -40,7 +42,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in duration-500">
       {/* --- HEADER --- */}
       <div className="flex justify-between items-end">
         <div>
@@ -65,13 +67,10 @@ export default function Dashboard() {
             <div className="p-3 bg-green-50 rounded-xl">
               <Euro className="h-6 w-6 text-green-600" />
             </div>
-            {/* Kleiner Indikator (optional) */}
-            <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">+12%</span>
           </div>
           <div>
             <p className="text-slate-500 font-medium text-sm">Umsatz (Monat)</p>
             <h3 className="text-2xl font-bold text-slate-800 mt-1">
-              {/* Hier formatieren wir die Zahl als Euro */}
               {loading ? "..." : stats.revenue.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
             </h3>
           </div>
@@ -121,19 +120,69 @@ export default function Dashboard() {
             </h3>
           </div>
         </div>
-
       </div>
 
-      {/* --- PLATZHALTER FÜR CHARTS ODER KALENDER (Optional) --- */}
+      {/* --- CHARTS --- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 p-6 h-80 flex items-center justify-center text-slate-400">
-           Hier könnte bald ein Umsatz-Chart stehen 📈
+        
+        {/* CHART: UMSATZENTWICKLUNG */}
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 p-6 shadow-sm min-h-[400px]">
+           <h3 className="text-lg font-bold text-slate-800 mb-6">Umsatzentwicklung (letzte 6 Monate)</h3>
+           
+           <div className="h-80 w-full">
+             {loading ? (
+                <div className="h-full flex items-center justify-center text-slate-400">Lade Diagramm...</div>
+             ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stats.chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis 
+                      dataKey="name" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{fill: '#64748b', fontSize: 12}} 
+                      dy={10}
+                    />
+                    <YAxis 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{fill: '#64748b', fontSize: 12}} 
+                      tickFormatter={(value) => `${value} €`}
+                    />
+                    <Tooltip 
+                      cursor={{fill: '#f8fafc'}}
+                      contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
+                      // FIX: Wir erlauben "undefined" (?) und nutzen "|| 0" als Fallback
+                      formatter={(value?: number) => [`${Number(value || 0).toFixed(2)} €`, 'Umsatz']}
+                    />
+                    <Bar 
+                      dataKey="revenue" 
+                      fill="#2563eb" 
+                      radius={[4, 4, 0, 0]} 
+                      barSize={40}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+             )}
+           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-100 p-6 h-80 flex items-center justify-center text-slate-400">
-           Hier könnten die nächsten Termine stehen 📅
+
+        {/* INFO BOX RECHTS (Könnte später ein Kalender sein) */}
+        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 text-white shadow-lg flex flex-col justify-between">
+           <div>
+              <h3 className="text-lg font-bold mb-2">Pro-Tipp 💡</h3>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                Regelmäßige Rechnungen verbessern den Cashflow.
+                Vergiss nicht, am Ende der Woche alle erledigten Jobs zu prüfen und abzurechnen.
+              </p>
+           </div>
+           
+           <div className="mt-8">
+             <div className="text-sm text-slate-400 mb-1">Nächste Steuer-Deadline</div>
+             <div className="text-2xl font-bold">10. Februar</div>
+           </div>
         </div>
       </div>
-
     </div>
   );
 }

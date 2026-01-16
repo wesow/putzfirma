@@ -17,6 +17,11 @@ import EditEmployeePage from './pages/team/EditEmployeePage';
 import CalendarPage from './pages/CalendarPage';
 import ReportsPage from './pages/ReportsPage';
 import InvoicesPage from './pages/invoices/InvoicesPage';
+import PayrollPage from './pages/team/PayrollPage';
+import ExpensesPage from './pages/finances/ExpensesPage';
+import AbsencesPage from './pages/team/AbsencesPage';
+import OffersPage from './pages/sales/OffersPage';
+
 
 function App() {
   return (
@@ -101,10 +106,35 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path="invoices" element={
-  <ProtectedRoute allowedRoles={['ADMIN']}>
-    <InvoicesPage />
-  </ProtectedRoute>
-} /></Route>
+        <ProtectedRoute allowedRoles={['ADMIN']}>
+          <InvoicesPage />
+        </ProtectedRoute>
+        } />
+        <Route path="team/payroll" element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <PayrollPage />
+          </ProtectedRoute>
+        } />
+        {/* FINANZEN */}
+      <Route path="expenses" element={
+        <ProtectedRoute allowedRoles={['ADMIN']}>
+          <ExpensesPage />
+        </ProtectedRoute>
+      } />
+
+      {/* TEAM */}
+      <Route path="absences" element={
+        <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
+          <AbsencesPage />
+        </ProtectedRoute>
+      } />
+
+      {/* VERTRIEB */}
+      <Route path="offers" element={
+        <ProtectedRoute allowedRoles={['ADMIN']}>
+          <OffersPage />
+        </ProtectedRoute>
+      } /></Route>
 
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>

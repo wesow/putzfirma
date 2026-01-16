@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { FileText, Plus, Download, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+// NEU: Mail und RefreshCw (Lade-Spinner) hinzugefügt
+import { FileText, Plus, Download, CheckCircle, Clock, AlertCircle, Mail, RefreshCw } from 'lucide-react';
 import api from '../../lib/api';
 
 // Typen definieren
@@ -14,6 +15,7 @@ interface Invoice {
     companyName: string | null;
     firstName: string;
     lastName: string;
+    email?: string; // Optional: Email für Anzeige prüfen
   };
   _count: { jobs: number };
 }
@@ -33,6 +35,9 @@ export default function InvoicesPage() {
   // Für das "Rechnung erstellen" Formular
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // NEU: State für den E-Mail Versand (welcher Button lädt gerade?)
+  const [sendingId, setSendingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -64,36 +69,49 @@ export default function InvoicesPage() {
       fetchData(); // Liste neu laden
     } catch (error: any) {
       console.error(error);
-      // Den Fehler vom Backend anzeigen (z.B. "Keine offenen Jobs")
       alert(error.response?.data?.message || "Fehler beim Erstellen.");
     } finally {
       setIsGenerating(false);
     }
   };
 
-  // --- NEU: PDF Download Funktion ---
+  // --- PDF Download Funktion ---
   const handleDownloadPdf = async (invoiceId: string, invoiceNumber: string) => {
     try {
-      // Wir fordern vom Server explizit einen 'blob' (Binärdatei) an
       const response = await api.get(`/invoices/${invoiceId}/pdf`, {
         responseType: 'blob', 
       });
 
-      // Erstellt einen temporären Link im Browser, klickt ihn an und löscht ihn wieder
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `Rechnung_${invoiceNumber}.pdf`); // Dateiname setzen
+      link.setAttribute('download', `Rechnung_${invoiceNumber}.pdf`);
       document.body.appendChild(link);
       link.click();
       
-      // Aufräumen
       link.parentNode?.removeChild(link);
       window.URL.revokeObjectURL(url);
 
     } catch (error) {
       console.error("Download Fehler:", error);
-      alert("Fehler beim Herunterladen des PDFs. Bitte versuche es erneut.");
+      alert("Fehler beim Herunterladen des PDFs.");
+    }
+  };
+
+  // --- NEU: E-Mail Senden Funktion ---
+  const handleSendEmail = async (invoiceId: string) => {
+    if (!confirm("Rechnung jetzt per E-Mail an den Kunden senden?")) return;
+
+    setSendingId(invoiceId); // Spinner starten
+    try {
+      await api.post(`/invoices/${invoiceId}/send`);
+      alert("E-Mail wurde erfolgreich versendet! 📧");
+      fetchData(); // Aktualisieren, damit Status auf SENT springt
+    } catch (error) {
+      console.error("E-Mail Fehler:", error);
+      alert("Fehler beim Senden der E-Mail. Prüfe die Server-Logs.");
+    } finally {
+      setSendingId(null); // Spinner stoppen
     }
   };
 
@@ -101,7 +119,7 @@ export default function InvoicesPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'PAID': return <span className="flex items-center gap-1 text-green-700 bg-green-100 px-2 py-1 rounded text-xs font-bold"><CheckCircle size={14}/> Bezahlt</span>;
-      case 'SENT': return <span className="flex items-center gap-1 text-blue-700 bg-blue-100 px-2 py-1 rounded text-xs font-bold"><Clock size={14}/> Versendet</span>;
+      case 'SENT': return <span className="flex items-center gap-1 text-blue-700 bg-blue-100 px-2 py-1 rounded text-xs font-bold"><Mail size={14}/> Versendet</span>;
       case 'OVERDUE': return <span className="flex items-center gap-1 text-red-700 bg-red-100 px-2 py-1 rounded text-xs font-bold"><AlertCircle size={14}/> Überfällig</span>;
       default: return <span className="text-slate-600 bg-slate-100 px-2 py-1 rounded text-xs font-bold">Entwurf</span>;
     }
@@ -198,13 +216,36 @@ export default function InvoicesPage() {
                       {getStatusBadge(inv.status)}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button 
-                        onClick={() => handleDownloadPdf(inv.id, inv.invoiceNumber)}
-                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors" 
-                        title="PDF Herunterladen"
-                      >
-                        <Download size={18} />
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        
+                        {/* DOWNLOAD BUTTON */}
+                        <button 
+                          onClick={() => handleDownloadPdf(inv.id, inv.invoiceNumber)}
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors" 
+                          title="PDF Herunterladen"
+                        >
+                          <Download size={18} />
+                        </button>
+
+                        {/* NEU: EMAIL BUTTON */}
+                        <button 
+                          onClick={() => handleSendEmail(inv.id)}
+                          disabled={sendingId === inv.id}
+                          className={`p-2 rounded-full transition-colors ${
+                            sendingId === inv.id 
+                              ? 'text-purple-400 bg-purple-50 cursor-wait' 
+                              : 'text-slate-400 hover:text-purple-600 hover:bg-purple-50'
+                          }`}
+                          title="Per E-Mail senden"
+                        >
+                          {sendingId === inv.id ? (
+                            <RefreshCw size={18} className="animate-spin" />
+                          ) : (
+                            <Mail size={18} />
+                          )}
+                        </button>
+
+                      </div>
                     </td>
                   </tr>
                 ))
