@@ -33,14 +33,22 @@ export default function SettingsPage() {
     try {
       // Wir simulieren hier kurz, dass wir die Daten vom User-Profil laden
       // Später bauen wir das Backend dafür genau passend
-      const res = await api.get('/auth/me'); 
+     const res = await api.get('/settings/company');
       // Falls du diese Felder im Backend noch nicht hast, lassen wir sie leer
       // oder füllen sie mit den User-Daten
-      setCompanyData(prev => ({
-          ...prev,
+      setCompanyData({
           companyName: res.data.companyName || '',
-          email: res.data.email || ''
-      }));
+          street: res.data.street || '',
+          zipCode: res.data.zipCode || '',
+          city: res.data.city || '',
+          email: res.data.email || '',
+          phone: res.data.phone || '',
+          taxId: res.data.taxId || '',
+          vatId: res.data.vatId || '',
+          iban: res.data.iban || '',
+          bic: res.data.bic || '',
+          bankName: res.data.bankName || ''
+      });
     } catch (e) {
       console.error(e);
     }

@@ -145,7 +145,7 @@ export default function Dashboard() {
                <span className="text-xs font-medium text-slate-400 bg-slate-50 px-2 py-1 rounded">Letzte 6 Monate</span>
            </div>
            
-           <div className="h-80 w-full">
+           <div className="h-80 w-full mt-4">
              {loading ? (
                 <div className="h-full flex items-center justify-center text-slate-400">
                     <div className="flex flex-col items-center gap-2">

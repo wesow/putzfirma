@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { FileText, Plus, Download, CheckCircle, AlertCircle, Mail, RefreshCw, Info } from 'lucide-react';
-import toast from 'react-hot-toast'; // Wir nutzen jetzt Toasts statt alerts!
+import toast from 'react-hot-toast'; // We use toasts instead of alerts!
 import api from '../../lib/api';
 
-// Typen definieren
+// Define Types
 interface Invoice {
   id: string;
   invoiceNumber: string;
@@ -32,7 +32,7 @@ export default function InvoicesPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Formular State
+  // Form State
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -53,40 +53,41 @@ export default function InvoicesPage() {
       setInvoices(invRes.data);
       setCustomers(custRes.data);
     } catch (error) {
-      toast.error("Konnte Daten nicht laden");
+      toast.error("Could not load data");
     } finally {
       setLoading(false);
     }
   };
 
   const handleGenerateInvoice = async () => {
-    if (!selectedCustomerId) return toast.error("Bitte wähle zuerst einen Kunden aus!");
+    if (!selectedCustomerId) return toast.error("Please select a customer first!");
     
     setIsGenerating(true);
-    // Loading Toast anzeigen
-    const toastId = toast.loading("Erstelle Rechnung...");
+    // Show Loading Toast
+    const toastId = toast.loading("Creating invoice...");
 
     try {
       await api.post('/invoices/generate', { customerId: selectedCustomerId });
       
-      // Erfolgsmeldung
-      toast.success("Rechnung erfolgreich erstellt!", { id: toastId });
+      // Success Message
+      toast.success("Invoice created successfully!", { id: toastId });
       
       setSelectedCustomerId(''); 
       fetchData(); 
     } catch (error: any) {
       console.error(error);
-      // HIER wird deine Backend-Nachricht ("Keine abrechenbaren Jobs...") angezeigt!
-      toast.error(error.response?.data?.message || "Fehler beim Erstellen.", { id: toastId });
+      // HERE your backend message ("No billable jobs...") is displayed!
+      const errorMessage = error.response?.data?.message || "Error creating invoice.";
+      toast.error(errorMessage, { id: toastId });
     } finally {
       setIsGenerating(false);
     }
   };
 
-  // --- PDF Download Funktion ---
+  // --- PDF Download Function ---
   const handleDownloadPdf = async (invoiceId: string, invoiceNumber: string) => {
     setDownloadingId(invoiceId);
-    const toastId = toast.loading("PDF wird generiert...");
+    const toastId = toast.loading("Generating PDF...");
 
     try {
       const response = await api.get(`/invoices/${invoiceId}/pdf`, {
@@ -96,36 +97,36 @@ export default function InvoicesPage() {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `Rechnung_${invoiceNumber}.pdf`);
+      link.setAttribute('download', `Invoice_${invoiceNumber}.pdf`);
       document.body.appendChild(link);
       link.click();
       
       link.parentNode?.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      toast.success("Download gestartet", { id: toastId });
+      toast.success("Download started", { id: toastId });
 
     } catch (error) {
-      console.error("Download Fehler:", error);
-      toast.error("Fehler beim Herunterladen.", { id: toastId });
+      console.error("Download Error:", error);
+      toast.error("Error downloading.", { id: toastId });
     } finally {
         setDownloadingId(null);
     }
   };
 
-  // --- E-Mail Senden Funktion ---
+  // --- Send Email Function ---
   const handleSendEmail = async (invoiceId: string) => {
-    if (!confirm("Rechnung jetzt verbindlich an den Kunden senden?")) return;
+    if (!confirm("Send invoice bindingly to the customer now?")) return;
 
     setSendingId(invoiceId); 
-    const toastId = toast.loading("Sende E-Mail...");
+    const toastId = toast.loading("Sending Email...");
 
     try {
       await api.post(`/invoices/${invoiceId}/send`);
-      toast.success("E-Mail wurde versendet! 📧", { id: toastId });
+      toast.success("Email was sent! 📧", { id: toastId });
       fetchData(); 
     } catch (error) {
-      toast.error("Fehler beim Senden. Prüfe die Server-Logs.", { id: toastId });
+      toast.error("Error sending. Check server logs.", { id: toastId });
     } finally {
       setSendingId(null); 
     }
@@ -133,10 +134,10 @@ export default function InvoicesPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'PAID': return <span className="flex items-center gap-1 text-green-700 bg-green-100 px-2 py-1 rounded text-xs font-bold border border-green-200"><CheckCircle size={14}/> Bezahlt</span>;
-      case 'SENT': return <span className="flex items-center gap-1 text-blue-700 bg-blue-100 px-2 py-1 rounded text-xs font-bold border border-blue-200"><Mail size={14}/> Versendet</span>;
-      case 'OVERDUE': return <span className="flex items-center gap-1 text-red-700 bg-red-100 px-2 py-1 rounded text-xs font-bold border border-red-200"><AlertCircle size={14}/> Überfällig</span>;
-      default: return <span className="text-slate-600 bg-slate-50 px-2 py-1 rounded text-xs font-bold border border-slate-200">Entwurf</span>;
+      case 'PAID': return <span className="flex items-center gap-1 text-green-700 bg-green-100 px-2 py-1 rounded text-xs font-bold border border-green-200"><CheckCircle size={14}/> Paid</span>;
+      case 'SENT': return <span className="flex items-center gap-1 text-blue-700 bg-blue-100 px-2 py-1 rounded text-xs font-bold border border-blue-200"><Mail size={14}/> Sent</span>;
+      case 'OVERDUE': return <span className="flex items-center gap-1 text-red-700 bg-red-100 px-2 py-1 rounded text-xs font-bold border border-red-200"><AlertCircle size={14}/> Overdue</span>;
+      default: return <span className="text-slate-600 bg-slate-50 px-2 py-1 rounded text-xs font-bold border border-slate-200">Draft</span>;
     }
   };
 
@@ -148,9 +149,9 @@ export default function InvoicesPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <FileText className="h-8 w-8 text-blue-600" /> 
-            Rechnungen
+            Invoices
           </h1>
-          <p className="text-slate-500 text-sm">Erstelle Rechnungen basierend auf erledigten Jobs.</p>
+          <p className="text-slate-500 text-sm">Create invoices based on completed jobs.</p>
         </div>
       </div>
 
@@ -158,18 +159,18 @@ export default function InvoicesPage() {
       <div className="bg-white p-6 rounded-2xl border border-blue-100 shadow-sm bg-gradient-to-r from-blue-50/50 to-white">
         <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
           <Plus className="h-5 w-5 text-blue-600" />
-          Neue Rechnung generieren
+          Generate New Invoice
         </h3>
         <div className="flex flex-col sm:flex-row gap-4 items-end">
           <div className="w-full sm:w-1/2">
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Kunde auswählen</label>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Customer</label>
             <div className="relative">
                 <select 
                 className="w-full p-3 border border-slate-300 rounded-xl outline-none focus:border-blue-500 bg-white shadow-sm appearance-none cursor-pointer"
                 value={selectedCustomerId}
                 onChange={(e) => setSelectedCustomerId(e.target.value)}
                 >
-                <option value="">-- Bitte wählen --</option>
+                <option value="">-- Please Select --</option>
                 {customers.map(c => (
                     <option key={c.id} value={c.id}>
                     {c.companyName || `${c.firstName} ${c.lastName}`}
@@ -178,7 +179,7 @@ export default function InvoicesPage() {
                 </select>
             </div>
             <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
-                <Info size={12} /> Nur Jobs mit Status "Erledigt" werden abgerechnet.
+                <Info size={12} /> Only jobs with status "Completed" are billed.
             </p>
           </div>
           <button 
@@ -187,17 +188,17 @@ export default function InvoicesPage() {
             className="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
           >
             {isGenerating ? <RefreshCw className="animate-spin" /> : <FileText size={20} />}
-            {isGenerating ? 'Erstelle...' : 'Rechnung generieren'}
+            {isGenerating ? 'Creating...' : 'Generate Invoice'}
           </button>
         </div>
       </div>
 
-      {/* --- LISTE --- */}
+      {/* --- LIST --- */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-           <h3 className="font-bold text-slate-800">Rechnungsarchiv</h3>
+           <h3 className="font-bold text-slate-800">Invoice Archive</h3>
            <span className="text-xs font-medium bg-white px-2 py-1 rounded border border-slate-200 text-slate-500">
-             {invoices.length} Einträge
+             {invoices.length} Entries
            </span>
         </div>
         
@@ -205,24 +206,24 @@ export default function InvoicesPage() {
           <table className="w-full text-left">
             <thead className="bg-slate-50 text-slate-500 uppercase text-xs font-bold tracking-wider">
               <tr>
-                <th className="px-6 py-4">Nr.</th>
-                <th className="px-6 py-4">Kunde</th>
-                <th className="px-6 py-4">Datum</th>
+                <th className="px-6 py-4">No.</th>
+                <th className="px-6 py-4">Customer</th>
+                <th className="px-6 py-4">Date</th>
                 <th className="px-6 py-4 text-center">Jobs</th>
-                <th className="px-6 py-4 text-right">Betrag</th>
+                <th className="px-6 py-4 text-right">Amount</th>
                 <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Aktion</th>
+                <th className="px-6 py-4 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={7} className="text-center py-12 text-slate-400">Lade Daten...</td></tr>
+                <tr><td colSpan={7} className="text-center py-12 text-slate-400">Loading Data...</td></tr>
               ) : invoices.length === 0 ? (
                 <tr>
                     <td colSpan={7} className="text-center py-12 text-slate-400">
                         <div className="flex flex-col items-center gap-2">
                             <FileText className="h-10 w-10 opacity-20" />
-                            Noch keine Rechnungen erstellt.
+                            No invoices created yet.
                         </div>
                     </td>
                 </tr>
@@ -255,7 +256,7 @@ export default function InvoicesPage() {
                           onClick={() => handleDownloadPdf(inv.id, inv.invoiceNumber)}
                           disabled={!!downloadingId}
                           className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100" 
-                          title="PDF Herunterladen"
+                          title="Download PDF"
                         >
                           {downloadingId === inv.id ? <RefreshCw size={18} className="animate-spin text-blue-500"/> : <Download size={18} />}
                         </button>
@@ -269,7 +270,7 @@ export default function InvoicesPage() {
                               ? 'text-purple-400 bg-purple-50 cursor-wait' 
                               : 'text-slate-400 hover:text-purple-600 hover:bg-purple-50 hover:border-purple-100'
                           }`}
-                          title="Per E-Mail senden"
+                          title="Send via Email"
                         >
                           {sendingId === inv.id ? (
                             <RefreshCw size={18} className="animate-spin" />

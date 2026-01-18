@@ -1,4 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast'; // <--- WICHTIG: Importieren
+
+// Pages & Layouts
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import Dashboard from './pages/Dashboard';
@@ -23,25 +26,32 @@ import AbsencesPage from './pages/team/AbsencesPage';
 import OffersPage from './pages/sales/OffersPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
-import EmployeeDashboard from './pages/EmployeeDashboard';
 import SettingsPage from './pages/SettingsPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
   return (
     <BrowserRouter>
+      {/* 1. TOASTER HIER EINFÜGEN (Damit Nachrichten sichtbar sind) */}
+      <Toaster 
+        position="top-right" 
+        toastOptions={{
+          duration: 4000,
+          style: { background: '#333', color: '#fff' },
+          success: { style: { background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' } },
+          error: { style: { background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' } },
+        }} 
+      />
+
       <Routes>
-        {/* === ÖFFENTLICHE ROUTEN (Jeder darf hier hin) === */}
+        {/* === ÖFFENTLICHE ROUTEN === */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        
-        {/* HIERHIN VERSCHOBEN: */}
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* === GESCHÜTZTER BEREICH (Dashboard) === */}
         <Route path="/dashboard" element={<DashboardLayout />}>
-          {/* Dashboard darf JEDER sehen */}
           <Route index element={<Dashboard />} />
           
           {/* KUNDEN */}
@@ -142,15 +152,20 @@ function App() {
               <OffersPage />
             </ProtectedRoute>
           } />
-        <Route path="settings" element={
+          
+          {/* EINSTELLUNGEN */}
+          <Route path="settings" element={
              <ProtectedRoute allowedRoles={['ADMIN']}>
                <SettingsPage />
              </ProtectedRoute>
            } />
-        </Route> {/* <--- HIER ENDET DAS DASHBOARD */}
+        </Route>
 
-        {/* Fallback für falsche URLs */}
-        <Route path="*" element={<Navigate to="/login" />} />
+        {/* 2. FALLBACK FÜR FALSCHE URLS */}
+        {/* Wir leiten die Root-URL auf Dashboard um */}
+        <Route path="/" element={<Navigate to="/dashboard" />} />
+        
+        {/* Alles andere landet auf der 404 Seite */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
