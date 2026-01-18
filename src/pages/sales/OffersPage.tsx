@@ -1,134 +1,295 @@
 import { useEffect, useState } from 'react';
-import { FilePlus, CheckCircle, FileText, ArrowRight } from 'lucide-react';
+import { FilePlus, CheckCircle, FileText, ArrowRight, X, Plus, AlertCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import api from '../../lib/api';
 
+// Typen definieren
+interface Customer { id: string; companyName: string | null; lastName: string; firstName: string; }
+interface Service { id: string; name: string; }
+interface Offer {
+    id: string;
+    offerNumber: string;
+    status: 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED';
+    totalNet: number;
+    customer: Customer;
+    items: { description: string }[];
+    validUntil: string;
+}
+
 export default function OffersPage() {
-  const [offers, setOffers] = useState<any[]>([]);
-  const [customers, setCustomers] = useState<any[]>([]);
-  
-  // Minimales Formular für neues Angebot
-  const [custId, setCustId] = useState('');
-  const [desc, setDesc] = useState('Unterhaltsreinigung');
-  const [price, setPrice] = useState('35.00');
-  const [qty, setQty] = useState('1');
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Modals
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showConvertModal, setShowConvertModal] = useState<Offer | null>(null);
+
+  // Formular State (Angebot erstellen)
+  const [newOffer, setNewOffer] = useState({
+      customerId: '',
+      description: 'Unterhaltsreinigung',
+      price: '35.00',
+      quantity: '1'
+  });
+
+  // Formular State (Vertrag erstellen)
+  const [convertData, setConvertData] = useState({
+      serviceId: '',
+      interval: 'MONTHLY'
+  });
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
-    const [resOff, resCust] = await Promise.all([
-      api.get('/offers'),
-      api.get('/customers')
-    ]);
-    setOffers(resOff.data);
-    setCustomers(resCust.data);
-    if(resCust.data.length > 0) setCustId(resCust.data[0].id);
+    try {
+      const [resOff, resCust, resServ] = await Promise.all([
+        api.get('/offers'),
+        api.get('/customers'),
+        api.get('/services')
+      ]);
+      setOffers(resOff.data);
+      setCustomers(resCust.data);
+      setServices(resServ.data);
+    } catch (error) {
+      toast.error("Daten konnten nicht geladen werden");
+    } finally {
+        setLoading(false);
+    }
   };
 
-  const createOffer = async (e: React.FormEvent) => {
+  const handleCreateOffer = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newOffer.customerId) {
+        toast.error("Bitte einen Kunden wählen");
+        return;
+    }
+
     try {
       await api.post('/offers', {
-        customerId: custId,
-        validUntil: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 Tage gültig
+        customerId: newOffer.customerId,
+        validUntil: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 Tage
         items: [{
-          description: desc,
-          quantity: qty,
+          description: newOffer.description,
+          quantity: newOffer.quantity,
           unit: 'Psch',
-          unitPrice: price
+          unitPrice: newOffer.price
         }]
       });
+      toast.success("Angebot erstellt");
+      setShowCreateModal(false);
       loadData();
-    } catch (err) { alert("Fehler"); }
+    } catch (err) { toast.error("Fehler beim Erstellen"); }
   };
 
-  const convertToContract = async (offerId: string) => {
-    if(!confirm("Angebot annehmen und Vertrag erstellen?")) return;
-    try {
-      // Wir brauchen für den Vertrag eine ServiceID. 
-      // Der Einfachheit halber: Wir müssten eigentlich Services laden und auswählen.
-      // Hier musst du evtl. hardcoden oder erweitern.
-      // const serviceId = prompt("Bitte Service-ID eingeben (Provisorisch):"); 
-      
-      // BESSER: Wir leiten den User einfach weiter oder machen es Quick&Dirty
-      // Hier senden wir Dummy Daten, damit es funktioniert:
-      // DU MUSST HIER EINE ECHTE SERVICE-ID VON DEINER DATENBANK NEHMEN!
-      // Hol dir eine aus der DB oder nimm die erste verfügbare.
-      
-      const services = await api.get('/services');
-      if(services.data.length === 0) return alert("Erst Service anlegen!");
-      const serviceId = services.data[0].id; // Wir nehmen den ersten Service
+  const handleConvert = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!showConvertModal) return;
+    if (!convertData.serviceId) {
+        toast.error("Bitte einen Service für den Vertrag wählen");
+        return;
+    }
 
-      await api.post(`/offers/${offerId}/convert`, {
+    try {
+      await api.post(`/offers/${showConvertModal.id}/convert`, {
         startDate: new Date(),
-        interval: 'MONTHLY',
-        serviceId: serviceId
+        interval: convertData.interval,
+        serviceId: convertData.serviceId
       });
       
-      alert("Erfolg! Vertrag erstellt.");
+      toast.success("Vertrag erfolgreich erstellt!");
+      setShowConvertModal(null);
       loadData();
-    } catch (err) { alert("Fehler beim Umwandeln"); }
+    } catch (err) { toast.error("Fehler beim Umwandeln"); }
   };
 
+  const formatEuro = (val: number) => Number(val).toLocaleString('de-DE', {style:'currency', currency:'EUR'});
+
+  if (loading) return <div className="p-10 text-center text-slate-400">Lade Angebote...</div>;
+
   return (
-    <div className="space-y-8">
-       <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-          <FilePlus className="text-purple-600" /> Angebote & Vertrieb
-       </h1>
-
-       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* LISTE */}
-          <div className="lg:col-span-2 space-y-4">
-             {offers.map(offer => (
-               <div key={offer.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                 <div className="flex justify-between items-start">
-                    <div>
-                       <span className={`text-xs px-2 py-1 rounded font-bold ${offer.status === 'ACCEPTED' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                         {offer.status}
-                       </span>
-                       <h3 className="font-bold text-lg mt-2">{offer.offerNumber}</h3>
-                       <p className="text-slate-500">{offer.customer?.companyName || offer.customer?.lastName}</p>
-                    </div>
-                    <div className="text-right">
-                       <div className="text-xl font-bold text-slate-800">
-                         {Number(offer.totalNet).toLocaleString('de-DE', {style:'currency', currency:'EUR'})}
-                       </div>
-                       <div className="text-xs text-slate-400">Netto</div>
-                    </div>
-                 </div>
-
-                 {/* Aktion */}
-                 {offer.status === 'SENT' && (
-                   <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end">
-                      <button 
-                        onClick={() => convertToContract(offer.id)}
-                        className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm"
-                      >
-                        <CheckCircle size={18} /> Als angenommen markieren & Vertrag erstellen
-                      </button>
-                   </div>
-                 )}
-               </div>
-             ))}
-          </div>
-
-          {/* NEUES ANGEBOT */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
-             <h3 className="font-bold mb-4">Schnellangebot</h3>
-             <form onSubmit={createOffer} className="space-y-4">
-               <select className="w-full p-2 border rounded" value={custId} onChange={e=>setCustId(e.target.value)}>
-                 {customers.map(c => <option key={c.id} value={c.id}>{c.companyName || c.lastName}</option>)}
-               </select>
-               <input className="w-full p-2 border rounded" placeholder="Leistung" value={desc} onChange={e=>setDesc(e.target.value)} />
-               <div className="grid grid-cols-2 gap-2">
-                 <input className="w-full p-2 border rounded" type="number" placeholder="Menge" value={qty} onChange={e=>setQty(e.target.value)} />
-                 <input className="w-full p-2 border rounded" type="number" placeholder="Preis" value={price} onChange={e=>setPrice(e.target.value)} />
-               </div>
-               <button className="w-full bg-purple-600 text-white py-2 rounded">Angebot erstellen</button>
-             </form>
-          </div>
+    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+       
+       {/* HEADER */}
+       <div className="flex justify-between items-center">
+            <div>
+                <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                    <FileText className="text-purple-600 h-8 w-8" /> Angebote
+                </h1>
+                <p className="text-slate-500 text-sm">Erstelle Angebote und wandle sie in Verträge um.</p>
+            </div>
+            <button 
+                onClick={() => setShowCreateModal(true)}
+                className="bg-purple-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-purple-700 transition flex items-center gap-2 shadow-lg shadow-purple-200 active:scale-95"
+            >
+                <Plus size={20} /> Neues Angebot
+            </button>
        </div>
+
+       {/* LISTE */}
+       {offers.length === 0 ? (
+           <div className="text-center py-20 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
+               <div className="flex justify-center mb-4"><FilePlus className="text-slate-300 w-12 h-12" /></div>
+               <p className="text-slate-500">Noch keine Angebote erstellt.</p>
+           </div>
+       ) : (
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+               {offers.map(offer => (
+                   <div key={offer.id} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition group relative overflow-hidden">
+                       
+                       {/* Status Stripe */}
+                       <div className={`absolute top-0 left-0 bottom-0 w-1.5 ${
+                           offer.status === 'ACCEPTED' ? 'bg-green-500' : 
+                           offer.status === 'SENT' ? 'bg-blue-500' : 'bg-slate-300'
+                       }`}></div>
+
+                       <div className="flex justify-between items-start mb-4 pl-3">
+                           <div>
+                               <span className={`text-xs px-2 py-0.5 rounded font-bold uppercase tracking-wider ${
+                                   offer.status === 'ACCEPTED' ? 'bg-green-100 text-green-700' : 
+                                   offer.status === 'SENT' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'
+                               }`}>
+                                   {offer.status === 'ACCEPTED' ? 'Angenommen' : offer.status === 'SENT' ? 'Offen' : 'Entwurf'}
+                               </span>
+                               <h3 className="font-bold text-lg text-slate-800 mt-2">{offer.offerNumber}</h3>
+                           </div>
+                           <div className="text-right">
+                               <div className="text-xl font-bold text-slate-800">{formatEuro(offer.totalNet)}</div>
+                               <div className="text-xs text-slate-400 uppercase">Netto</div>
+                           </div>
+                       </div>
+
+                       <div className="pl-3 space-y-2 mb-6">
+                           <div className="flex items-center gap-2 text-sm text-slate-600">
+                               <FileText size={16} className="text-slate-400" />
+                               <span className="font-medium">{offer.customer?.companyName || `${offer.customer?.firstName} ${offer.customer?.lastName}`}</span>
+                           </div>
+                          <div className="text-sm text-slate-500 pl-6 line-clamp-1">
+                          {/* Hier das Fragezeichen vor [0] hinzufügen und einen Fallback setzen */}
+                          {offer.items?.[0]?.description || 'Keine Beschreibung'} 
+                          
+                          {/* Auch hier sicherstellen, dass items existiert */}
+                          {(offer.items?.length || 0) > 1 && ` + ${(offer.items?.length || 0) - 1} weitere`}
+                      </div>
+                           <div className="text-xs text-slate-400 pl-6">
+                               Gültig bis: {new Date(offer.validUntil).toLocaleDateString()}
+                           </div>
+                       </div>
+
+                       {/* Action Button */}
+                       {offer.status === 'SENT' && (
+                           <button 
+                               onClick={() => setShowConvertModal(offer)}
+                               className="w-full bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 py-2.5 rounded-xl font-semibold transition flex items-center justify-center gap-2"
+                           >
+                               <CheckCircle size={18} /> Annehmen & Vertrag
+                           </button>
+                       )}
+                       {offer.status === 'ACCEPTED' && (
+                           <div className="w-full bg-slate-50 text-slate-500 py-2.5 rounded-xl font-medium text-center text-sm border border-slate-100 flex items-center justify-center gap-2">
+                               <CheckCircle size={16} /> Bereits Vertrag
+                           </div>
+                       )}
+                   </div>
+               ))}
+           </div>
+       )}
+
+       {/* --- MODAL: NEUES ANGEBOT --- */}
+       {showCreateModal && (
+           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+               <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 animate-in fade-in zoom-in duration-200">
+                   <div className="flex justify-between items-center mb-6">
+                       <h2 className="text-xl font-bold">Neues Angebot erstellen</h2>
+                       <button onClick={() => setShowCreateModal(false)}><X className="text-slate-400 hover:text-red-500" /></button>
+                   </div>
+                   
+                   <form onSubmit={handleCreateOffer} className="space-y-4">
+                       <div>
+                           <label className="block text-sm font-medium text-slate-700 mb-1">Kunde</label>
+                           <select className="w-full p-2.5 border rounded-lg bg-white" value={newOffer.customerId} onChange={e => setNewOffer({...newOffer, customerId: e.target.value})}>
+                               <option value="">Wählen...</option>
+                               {customers.map(c => <option key={c.id} value={c.id}>{c.companyName || `${c.firstName} ${c.lastName}`}</option>)}
+                           </select>
+                       </div>
+                       
+                       <div>
+                           <label className="block text-sm font-medium text-slate-700 mb-1">Leistungsbeschreibung</label>
+                           <input className="w-full p-2.5 border rounded-lg" value={newOffer.description} onChange={e => setNewOffer({...newOffer, description: e.target.value})} />
+                       </div>
+
+                       <div className="grid grid-cols-2 gap-4">
+                           <div>
+                               <label className="block text-sm font-medium text-slate-700 mb-1">Menge / Anzahl</label>
+                               <input type="number" step="0.5" className="w-full p-2.5 border rounded-lg" value={newOffer.quantity} onChange={e => setNewOffer({...newOffer, quantity: e.target.value})} />
+                           </div>
+                           <div>
+                               <label className="block text-sm font-medium text-slate-700 mb-1">Einzelpreis (€)</label>
+                               <input type="number" step="0.01" className="w-full p-2.5 border rounded-lg" value={newOffer.price} onChange={e => setNewOffer({...newOffer, price: e.target.value})} />
+                           </div>
+                       </div>
+
+                       <div className="pt-4">
+                            <button type="submit" className="w-full bg-purple-600 text-white font-bold py-3 rounded-xl hover:bg-purple-700">Angebot erstellen</button>
+                       </div>
+                   </form>
+               </div>
+           </div>
+       )}
+
+       {/* --- MODAL: VERTRAG ERSTELLEN --- */}
+       {showConvertModal && (
+           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+               <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-200">
+                   <div className="text-center mb-6">
+                       <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                           <FileText size={24} />
+                       </div>
+                       <h2 className="text-xl font-bold">Angebot annehmen</h2>
+                       <p className="text-sm text-slate-500 mt-1">
+                           Erstelle einen Vertrag für <strong>{showConvertModal.offerNumber}</strong>.
+                       </p>
+                   </div>
+
+                   <form onSubmit={handleConvert} className="space-y-4">
+                       <div>
+                           <label className="block text-sm font-medium text-slate-700 mb-1">Welcher Service wird ausgeführt?</label>
+                           <select 
+                               className="w-full p-2.5 border rounded-lg bg-white focus:ring-2 focus:ring-green-500 outline-none" 
+                               value={convertData.serviceId} 
+                               onChange={e => setConvertData({...convertData, serviceId: e.target.value})}
+                               required
+                           >
+                               <option value="">Service wählen...</option>
+                               {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                           </select>
+                           <p className="text-xs text-slate-400 mt-1">Bestimmt Dauer & Preisberechnung für Jobs.</p>
+                       </div>
+
+                       <div>
+                           <label className="block text-sm font-medium text-slate-700 mb-1">Intervall</label>
+                           <select 
+                               className="w-full p-2.5 border rounded-lg bg-white focus:ring-2 focus:ring-green-500 outline-none" 
+                               value={convertData.interval} 
+                               onChange={e => setConvertData({...convertData, interval: e.target.value})}
+                           >
+                               <option value="WEEKLY">Wöchentlich</option>
+                               <option value="BIWEEKLY">Alle 2 Wochen</option>
+                               <option value="MONTHLY">Monatlich</option>
+                           </select>
+                       </div>
+
+                       <div className="pt-2 flex gap-3">
+                           <button type="button" onClick={() => setShowConvertModal(null)} className="flex-1 py-3 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition">Abbrechen</button>
+                           <button type="submit" className="flex-1 bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 shadow-lg shadow-green-200">Vertrag erstellen</button>
+                       </div>
+                   </form>
+               </div>
+           </div>
+       )}
     </div>
   );
 }

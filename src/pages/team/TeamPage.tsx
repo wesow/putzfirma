@@ -1,193 +1,186 @@
 import { useEffect, useState } from 'react';
-// FIX 1: "Euro" entfernt, da es nicht genutzt wurde
-import { Clock, TrendingUp, Users, Wallet, AlertCircle } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Plus, Search, Filter, Mail, Phone, MoreHorizontal, 
+  Briefcase, User, Badge 
+} from 'lucide-react';
 import api from '../../lib/api';
+import toast from 'react-hot-toast';
 
-// Typen passend zum Backend-Response
-interface EmployeePayroll {
+interface Employee {
   id: string;
-  name: string;
-  hours: string;
-  hourlyWage: number;
-  payout: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  personnelNumber: string;
+  role: string;
 }
 
-interface PayrollStats {
-  month: string;
-  payroll: EmployeePayroll[];
-  summary: {
-    revenue: number;
-    laborCost: number;
-    profit: number;
-  };
-}
-
-export default function PayrollPage() {
-  const [data, setData] = useState<PayrollStats | null>(null);
+export default function TeamPage() {
+  const navigate = useNavigate();
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('ALL');
 
   useEffect(() => {
-    fetchPayrollData();
+    fetchEmployees();
   }, []);
 
-  const fetchPayrollData = async () => {
+  const fetchEmployees = async () => {
     try {
-      // Wir rufen den neuen Endpunkt auf
-      const res = await api.get('/stats/payroll');
-      setData(res.data);
+      const res = await api.get('/employees');
+      setEmployees(res.data);
     } catch (error) {
-      console.error("Fehler beim Laden der Abrechnung:", error);
+      toast.error('Konnte Team-Daten nicht laden');
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) return <div className="p-10 text-center text-slate-500">Lade Abrechnungsdaten...</div>;
-  if (!data) return <div className="p-10 text-center text-red-500">Fehler beim Laden der Daten.</div>;
+  // Filter-Logik
+  const filteredEmployees = employees.filter(emp => {
+    const matchesSearch = 
+      emp.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.personnelNumber.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesRole = roleFilter === 'ALL' || emp.role === roleFilter;
 
-  // Daten für das Diagramm aufbereiten
-  const chartData = [
-    { name: 'Umsatz', value: data.summary.revenue, color: '#16a34a' }, // Grün
-    { name: 'Lohnkosten', value: data.summary.laborCost, color: '#dc2626' }, // Rot
-    { name: 'Gewinn', value: data.summary.profit, color: '#2563eb' } // Blau
-  ];
+    return matchesSearch && matchesRole;
+  });
 
-  // Hilfsfunktion für Euro
-  const formatEuro = (val: number) => val.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+  if (loading) return <div className="p-10 text-center text-slate-400">Lade Team...</div>;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       
-      {/* HEADER */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-          <Wallet className="text-blue-600 h-8 w-8" />
-          Lohn & Abrechnung: <span className="text-blue-600">{data.month}</span>
-        </h1>
-        <p className="text-slate-500">Vergleich von Einnahmen durch Jobs und Ausgaben für Mitarbeiter.</p>
+      {/* HEADER & ACTIONS */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <User className="text-blue-600 h-8 w-8" /> Team Übersicht
+          </h1>
+          <p className="text-slate-500 text-sm">Verwalte deine {employees.length} Mitarbeiter.</p>
+        </div>
+        <button 
+          // KORRIGIERT: /dashboard/team/new
+          onClick={() => navigate('/dashboard/team/new')} 
+          className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center gap-2 active:scale-95"
+        >
+          <Plus size={20} /> Mitarbeiter anlegen
+        </button>
       </div>
 
-      {/* --- KPI KARTEN --- */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* FILTER BAR */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between">
         
-        {/* UMSATZ */}
-        <div className="bg-white p-6 rounded-xl border border-green-100 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <TrendingUp size={60} className="text-green-600" />
-          </div>
-          <p className="text-sm font-medium text-slate-500 mb-1">Echter Umsatz (Jobs)</p>
-          <div className="text-3xl font-bold text-green-600">
-            {formatEuro(data.summary.revenue)}
-          </div>
-          <p className="text-xs text-green-600/80 mt-2 font-medium">Basierend auf erledigten Aufträgen</p>
-        </div>
-        
-        {/* KOSTEN */}
-        <div className="bg-white p-6 rounded-xl border border-red-100 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <Users size={60} className="text-red-600" />
-          </div>
-          <p className="text-sm font-medium text-slate-500 mb-1">Personalkosten</p>
-          <div className="text-3xl font-bold text-red-600">
-             - {formatEuro(data.summary.laborCost)}
-          </div>
-          <p className="text-xs text-red-600/80 mt-2 font-medium">Summe aller Stundenlöhne</p>
+        {/* Suche */}
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-2.5 text-slate-400 w-5 h-5" />
+          <input 
+            type="text" 
+            placeholder="Suchen nach Name oder Personal-Nr..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition"
+          />
         </div>
 
-        {/* GEWINN */}
-        <div className={`p-6 rounded-xl border shadow-sm relative overflow-hidden ${data.summary.profit >= 0 ? 'bg-blue-50 border-blue-100' : 'bg-red-50 border-red-100'}`}>
-          <p className="text-sm font-medium text-slate-500 mb-1">Rohertrag (Gewinn)</p>
-          <div className={`text-3xl font-bold ${data.summary.profit >= 0 ? 'text-blue-700' : 'text-red-700'}`}>
-            {formatEuro(data.summary.profit)}
-          </div>
-          <p className="text-xs text-slate-500 mt-2">Vor Steuern und sonstigen Ausgaben</p>
+        {/* Filter Dropdown */}
+        <div className="relative min-w-[200px]">
+           <Filter className="absolute left-3 top-2.5 text-slate-400 w-5 h-5" />
+           <select 
+             value={roleFilter}
+             onChange={(e) => setRoleFilter(e.target.value)}
+             className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white appearance-none cursor-pointer"
+           >
+             <option value="ALL">Alle Positionen</option>
+             <option value="Reinigungskraft">Reinigungskräfte</option>
+             <option value="Vorarbeiter">Vorarbeiter</option>
+             <option value="Büro">Büro</option>
+             <option value="Manager">Manager</option>
+           </select>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* --- LINKS: CHART --- */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 lg:col-span-1 min-h-[300px]">
-          <h3 className="font-bold text-slate-700 mb-6">Verhältnis auf einen Blick</h3>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
-                <YAxis hide />
-                {/* FIX 2: Typisierung korrigiert (val?: number) und Fallback auf 0 */}
-                <Tooltip 
-                  cursor={{fill: '#f8fafc'}}
-                  formatter={(val?: number) => formatEuro(val || 0)}
-                  contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
-                />
-                <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={50}>
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+      {/* GRID VIEW */}
+      {filteredEmployees.length === 0 ? (
+        <div className="text-center py-20 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
+          <p className="text-slate-400">Keine Mitarbeiter gefunden.</p>
         </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredEmployees.map(emp => (
+            <div 
+              key={emp.id} 
+              // KORRIGIERT: /dashboard/team/...
+              onClick={() => navigate(`/dashboard/team/${emp.id}`)}
+              className="group bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all cursor-pointer relative overflow-hidden"
+            >
+              {/* Farbiger Balken links */}
+              <div className={`absolute left-0 top-0 bottom-0 w-1 ${
+                emp.role === 'Manager' ? 'bg-purple-500' : 
+                emp.role === 'Vorarbeiter' ? 'bg-orange-500' : 'bg-blue-500'
+              }`}></div>
 
-        {/* --- RECHTS: LOHNLISTE --- */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 lg:col-span-2 overflow-hidden flex flex-col">
-          <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-            <h3 className="font-bold text-slate-700">Detaillierte Lohnliste</h3>
-            <span className="text-xs bg-white border border-slate-200 px-2 py-1 rounded text-slate-500">
-              {data.payroll.length} Mitarbeiter aktiv
-            </span>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-semibold">
-                <tr>
-                  <th className="px-6 py-4">Mitarbeiter</th>
-                  <th className="px-6 py-4 text-right">Stunden</th>
-                  <th className="px-6 py-4 text-right">Stundenlohn</th>
-                  <th className="px-6 py-4 text-right">Auszahlung</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {data.payroll.map((emp) => (
-                  <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-slate-800">
-                      {emp.name}
-                    </td>
-                    <td className="px-6 py-4 text-right text-slate-600">
-                      <div className="flex justify-end items-center gap-2">
-                         <span className="font-mono">{emp.hours}</span>
-                         <Clock size={14} className="text-slate-400"/>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right text-slate-600 text-sm">
-                      {formatEuro(emp.hourlyWage)} / h
-                    </td>
-                    <td className="px-6 py-4 text-right font-bold text-slate-800">
-                      {formatEuro(emp.payout)}
-                    </td>
-                  </tr>
-                ))}
+              <div className="flex justify-between items-start mb-4 pl-3">
+                <div className="flex items-center gap-3">
+                  {/* Initialen */}
+                  <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-lg border-2 border-white shadow-sm">
+                    {emp.firstName.charAt(0)}{emp.lastName.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-lg leading-tight group-hover:text-blue-600 transition-colors">
+                      {emp.firstName} {emp.lastName}
+                    </h3>
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wide flex items-center gap-1 mt-0.5">
+                      <Briefcase size={12} /> {emp.role}
+                    </p>
+                  </div>
+                </div>
+                {/* Edit Button */}
+                <button className="text-slate-300 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition">
+                  <MoreHorizontal size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-3 pl-3">
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                   <Badge size={16} className="text-slate-400" />
+                   <span className="font-mono bg-slate-50 px-1.5 py-0.5 rounded text-xs text-slate-500 border border-slate-200">
+                     {emp.personnelNumber}
+                   </span>
+                </div>
                 
-                {data.payroll.length === 0 && (
-                   <tr>
-                     <td colSpan={4} className="text-center py-12 text-slate-400">
-                       <div className="flex flex-col items-center gap-2">
-                         <AlertCircle className="h-8 w-8 opacity-20" />
-                         Keine erledigten Jobs in diesem Monat.
-                       </div>
-                     </td>
-                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                <div className="flex items-center gap-2 text-sm text-slate-600 truncate">
+                   <Mail size={16} className="text-slate-400" />
+                   <a href={`mailto:${emp.email}`} onClick={e => e.stopPropagation()} className="hover:underline hover:text-blue-600 truncate">
+                     {emp.email}
+                   </a>
+                </div>
+              </div>
 
-      </div>
+              {/* Footer Actions */}
+              <div className="mt-6 pt-4 border-t border-slate-50 flex gap-2 pl-3">
+                 <button 
+                   onClick={(e) => { e.stopPropagation(); window.location.href=`mailto:${emp.email}`; }}
+                   className="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-600 py-2 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2"
+                 >
+                   <Mail size={16} /> Email
+                 </button>
+                 <button 
+                   onClick={(e) => { e.stopPropagation(); toast('Anruf-Funktion folgt...', { icon: '📞' }); }}
+                   className="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-600 py-2 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2"
+                 >
+                   <Phone size={16} /> Anruf
+                 </button>
+              </div>
+
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

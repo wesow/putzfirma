@@ -12,8 +12,11 @@ import {
   Camera, 
   UploadCloud,
   ExternalLink,
-  ImagePlus // NEU: Icon für reinen Upload
+  ImagePlus,
+  Trash2, // NEU: Für Löschen Icon
+  UserPlus
 } from 'lucide-react'; 
+import toast from 'react-hot-toast'; // NEU: Toast Notifications
 import api from '../../lib/api';
 
 const API_BASE_URL = 'http://localhost:3000'; 
@@ -47,7 +50,6 @@ export default function JobsPage() {
 
   // --- MODAL STATE ---
   const [isModalOpen, setIsModalOpen] = useState(false);
-  // NEU: Welcher Modus? 'COMPLETE' (Abschluss) oder 'UPLOAD' (Nur Foto)
   const [modalMode, setModalMode] = useState<'COMPLETE' | 'UPLOAD'>('COMPLETE');
   
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -72,8 +74,9 @@ export default function JobsPage() {
 
       const [jobsRes, employeesRes] = await Promise.all(promises);
 
+      // Sortieren: Neueste zuerst
       const sortedJobs = jobsRes.data.sort((a: Job, b: Job) => 
-        new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime()
+        new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime()
       );
 
       setJobs(sortedJobs);
@@ -81,6 +84,7 @@ export default function JobsPage() {
 
     } catch (error) {
       console.error(error);
+      toast.error("Daten konnten nicht geladen werden.");
     } finally {
       setLoading(false);
     }
@@ -89,12 +93,12 @@ export default function JobsPage() {
   const handleGenerateJobs = async () => { 
       setIsGenerating(true);
       try { 
-        await api.post('/jobs/generate'); 
+        const res = await api.post('/jobs/generate'); 
         await fetchData(); 
-        alert("Jobs erfolgreich generiert!"); 
+        toast.success(res.data.message || "Jobs erfolgreich generiert!"); 
       } catch(e: any) { 
         console.error(e);
-        alert(e.response?.data?.message || "Fehler beim Generieren."); 
+        toast.error(e.response?.data?.message || "Fehler beim Generieren."); 
       } finally {
         setIsGenerating(false);
       }
@@ -104,37 +108,54 @@ export default function JobsPage() {
      if(!confirm("Möchtest du den Status wirklich ändern?")) return;
      try { 
        await api.patch(`/jobs/${id}/status`, { status: s }); 
+       toast.success("Status aktualisiert");
        fetchData(); 
      } catch(e) { 
-       alert("Fehler beim Status-Update"); 
+       toast.error("Fehler beim Status-Update"); 
      }
   };
 
+  // Zuweisen mit intelligenter Fehlermeldung
   const handleAssignEmployee = async (jid: string, eid: string) => {
+     if(!eid) return;
+     const toastId = toast.loading("Prüfe Verfügbarkeit...");
      try { 
        await api.post(`/jobs/${jid}/assign`, { employeeId: eid }); 
+       toast.success("Mitarbeiter zugewiesen", { id: toastId });
        fetchData(); 
-     } catch(e) { 
-       alert("Fehler bei der Zuweisung"); 
+     } catch(e: any) { 
+       // Hier zeigen wir die Konflikt-Nachricht vom Backend an!
+       const msg = e.response?.data?.message || "Fehler bei der Zuweisung";
+       toast.error(msg, { id: toastId, duration: 5000 }); 
      }
   };
 
-  // --- MODAL LOGIK ---
+  // NEU: Mitarbeiter entfernen
+  const handleUnassignEmployee = async (jid: string, eid: string) => {
+      if(!confirm("Mitarbeiter von diesem Job entfernen?")) return;
+      try {
+          // DELETE Request mit Body (muss bei axios oft in 'data' gewrappt werden)
+          await api.delete(`/jobs/${jid}/assign`, { data: { employeeId: eid } });
+          toast.success("Zuweisung entfernt");
+          fetchData();
+      } catch (error) {
+          toast.error("Konnte Mitarbeiter nicht entfernen");
+      }
+  }
 
-  // 1. Abschluss-Dialog öffnen
+  // --- MODAL LOGIK ---
   const openCompletionModal = (jobId: string) => {
     setSelectedJobId(jobId);
-    setModalMode('COMPLETE'); // Modus: Abschließen
+    setModalMode('COMPLETE'); 
     setDurationInput(''); 
     setSelectedFile(null);
     setPreviewUrl(null);
     setIsModalOpen(true);
   };
 
-  // 2. Nur Upload-Dialog öffnen (NEU)
   const openUploadModal = (jobId: string) => {
     setSelectedJobId(jobId);
-    setModalMode('UPLOAD'); // Modus: Nur Foto
+    setModalMode('UPLOAD'); 
     setSelectedFile(null);
     setPreviewUrl(null);
     setIsModalOpen(true);
@@ -152,18 +173,12 @@ export default function JobsPage() {
   const handleSubmit = async () => {
     if (!selectedJobId) return;
     
-    // Validierung je nach Modus
-    if (modalMode === 'COMPLETE' && !durationInput) {
-        return alert("Bitte Zeit eintragen!");
-    }
-    if (modalMode === 'UPLOAD' && !selectedFile) {
-        return alert("Bitte ein Foto auswählen!");
-    }
+    if (modalMode === 'COMPLETE' && !durationInput) return toast.error("Bitte Zeit eintragen!");
+    if (modalMode === 'UPLOAD' && !selectedFile) return toast.error("Bitte ein Foto auswählen!");
 
     setIsSubmitting(true);
 
     try {
-        // 1. Foto hochladen (falls ausgewählt)
         if (selectedFile) {
           const formData = new FormData();
           formData.append('image', selectedFile);
@@ -172,19 +187,20 @@ export default function JobsPage() {
           });
         }
 
-        // 2. Status Update (NUR wenn Modus = COMPLETE)
         if (modalMode === 'COMPLETE') {
             await api.patch(`/jobs/${selectedJobId}`, {
                 status: 'COMPLETED',
                 actualDurationMinutes: Number(durationInput)
             });
+            toast.success("Job abgeschlossen!");
+        } else {
+            toast.success("Foto hochgeladen!");
         }
         
         setIsModalOpen(false);
         fetchData(); 
     } catch (error) {
-        console.error(error);
-        alert("Fehler beim Speichern.");
+        toast.error("Fehler beim Speichern.");
     } finally {
         setIsSubmitting(false);
     }
@@ -199,7 +215,7 @@ export default function JobsPage() {
   };
 
   return (
-    <div className="space-y-6 relative">
+    <div className="space-y-6 relative pb-20 animate-in fade-in duration-500">
       
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -252,8 +268,8 @@ export default function JobsPage() {
                 </div>
                 
                 <div className="flex flex-wrap gap-4 text-sm text-slate-600">
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="h-4 w-4 text-slate-400" />
+                  <div className="flex items-center gap-1.5 font-medium">
+                    <Calendar className="h-4 w-4 text-blue-500" />
                     {new Date(job.scheduledDate).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: 'long' })}
                   </div>
                   <div className="flex items-center gap-1.5">
@@ -265,6 +281,11 @@ export default function JobsPage() {
                         <Clock className="h-4 w-4" /> {job.actualDurationMinutes} Min.
                       </div>
                   )}
+                </div>
+                
+                {/* Service Name */}
+                <div className="text-sm text-slate-500 bg-slate-50 inline-block px-2 py-1 rounded border border-slate-100">
+                    {job.service.name}
                 </div>
 
                 {/* BEWEISFOTOS ANZEIGEN */}
@@ -299,19 +320,34 @@ export default function JobsPage() {
               <div className="w-full lg:w-auto flex flex-col gap-2 min-w-[200px]">
                 <div className="flex flex-wrap gap-2">
                   {job.assignments.map((assignment, index) => (
-                    <span key={index} className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-sm font-medium border border-indigo-100">
+                    <div key={index} className="group relative bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-sm font-medium border border-indigo-100 flex items-center gap-1">
                       {assignment.employee.firstName}
-                    </span>
+                      {isAdmin && job.status === 'SCHEDULED' && (
+                          <button 
+                            onClick={() => handleUnassignEmployee(job.id, assignment.employee.id)}
+                            className="ml-1 p-0.5 rounded-full hover:bg-red-100 hover:text-red-600 transition"
+                            title="Entfernen"
+                          >
+                              <X size={12} />
+                          </button>
+                      )}
+                    </div>
                   ))}
+                  
                   {isAdmin && job.status === 'SCHEDULED' && (
-                    <select 
-                      className="text-sm bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 outline-none focus:border-blue-500 cursor-pointer hover:bg-white transition" 
-                      onChange={(e) => handleAssignEmployee(job.id, e.target.value)}
-                      defaultValue=""
-                    >
-                      <option value="" disabled>+</option>
-                      {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</option>)}
-                    </select>
+                    <div className="relative">
+                        <select 
+                          className="w-8 h-8 opacity-0 absolute inset-0 cursor-pointer" 
+                          onChange={(e) => handleAssignEmployee(job.id, e.target.value)}
+                          value=""
+                        >
+                          <option value="" disabled>+</option>
+                          {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</option>)}
+                        </select>
+                        <div className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-300 border-dashed flex items-center justify-center text-slate-500 cursor-pointer transition">
+                            <UserPlus size={14} />
+                        </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -320,16 +356,14 @@ export default function JobsPage() {
               <div className="flex items-center gap-2 border-t lg:border-t-0 lg:border-l border-slate-100 pt-4 lg:pt-0 lg:pl-6 mt-2 lg:mt-0 w-full lg:w-auto justify-end">
                 {job.status === 'SCHEDULED' && (
                   <>
-                     {/* 1. BUTTON: NUR UPLOAD (NEU) */}
-                    <button 
+                     <button 
                       onClick={() => openUploadModal(job.id)}
                       className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-transparent hover:border-blue-100 transition-colors"
-                      title="Foto hinzufügen (ohne Abschluss)"
+                      title="Foto hinzufügen"
                     >
                       <ImagePlus size={20} />
                     </button>
 
-                     {/* 2. BUTTON: STORNIEREN */}
                     <button 
                       onClick={() => handleStatusChange(job.id, 'CANCELLED')}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-100 transition-colors"
@@ -338,7 +372,6 @@ export default function JobsPage() {
                       <XCircle size={20} />
                     </button>
 
-                     {/* 3. BUTTON: ERLEDIGT MELDEN */}
                     <button 
                       onClick={() => openCompletionModal(job.id)}
                       className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors shadow-sm whitespace-nowrap flex items-center gap-2"
@@ -351,7 +384,7 @@ export default function JobsPage() {
             </div>
           ))}
           {jobs.length === 0 && (
-            <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+            <div className="text-center py-20 bg-slate-50 rounded-xl border border-dashed border-slate-300">
               <p className="text-slate-500">Keine Aufträge gefunden.</p>
             </div>
           )}
@@ -378,7 +411,6 @@ export default function JobsPage() {
                 </div>
 
                 <div className="p-6 overflow-y-auto space-y-6">
-                    
                     {/* FOTO UPLOAD */}
                     <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
@@ -440,7 +472,6 @@ export default function JobsPage() {
                             </div>
                         </>
                     )}
-
                 </div>
 
                 <div className="p-5 border-t border-slate-100 bg-slate-50">
@@ -461,11 +492,9 @@ export default function JobsPage() {
                         )}
                     </button>
                 </div>
-
             </div>
         </div>
       )}
-
     </div>
   );
 }

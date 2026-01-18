@@ -23,6 +23,9 @@ import AbsencesPage from './pages/team/AbsencesPage';
 import OffersPage from './pages/sales/OffersPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import EmployeeDashboard from './pages/EmployeeDashboard';
+import SettingsPage from './pages/SettingsPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
   return (
@@ -139,11 +142,16 @@ function App() {
               <OffersPage />
             </ProtectedRoute>
           } />
-
+        <Route path="settings" element={
+             <ProtectedRoute allowedRoles={['ADMIN']}>
+               <SettingsPage />
+             </ProtectedRoute>
+           } />
         </Route> {/* <--- HIER ENDET DAS DASHBOARD */}
 
         {/* Fallback für falsche URLs */}
         <Route path="*" element={<Navigate to="/login" />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   );
