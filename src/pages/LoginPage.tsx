@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Lock, Mail } from 'lucide-react'; // Schöne Icons
 import api from '../lib/api';
 
@@ -76,7 +76,11 @@ export default function LoginPage() {
               />
             </div>
           </div>
-
+          <div className="flex justify-end mt-2">
+            <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline">
+              Passwort vergessen?
+            </Link>
+          </div>
           <button
             type="submit"
             disabled={loading}

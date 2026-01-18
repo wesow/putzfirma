@@ -9,10 +9,10 @@ import ServicesPage from './pages/services/ServicesPage';
 import CreateServicePage from './pages/services/CreateServicePage'; 
 import ContractsPage from './pages/contracts/ContractsPage';
 import CreateContractPage from './pages/contracts/CreateContractPage';
-import JobsPage from './pages/jobs/JobsPage'; // <--- WICHTIG: Import muss da sein
+import JobsPage from './pages/jobs/JobsPage';
 import TeamPage from './pages/team/TeamPage';
 import CreateEmployeePage from './pages/team/CreateEmployeePage';
-import ProtectedRoute from './components/ProtectedRoute'; // <--- WICHTIG: Importieren!
+import ProtectedRoute from './components/ProtectedRoute';
 import EditEmployeePage from './pages/team/EditEmployeePage';
 import CalendarPage from './pages/CalendarPage';
 import ReportsPage from './pages/ReportsPage';
@@ -21,20 +21,27 @@ import PayrollPage from './pages/team/PayrollPage';
 import ExpensesPage from './pages/finances/ExpensesPage';
 import AbsencesPage from './pages/team/AbsencesPage';
 import OffersPage from './pages/sales/OffersPage';
-
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* === ÖFFENTLICHE ROUTEN (Jeder darf hier hin) === */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         
+        {/* HIERHIN VERSCHOBEN: */}
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+        {/* === GESCHÜTZTER BEREICH (Dashboard) === */}
         <Route path="/dashboard" element={<DashboardLayout />}>
           {/* Dashboard darf JEDER sehen */}
           <Route index element={<Dashboard />} />
           
-          {/* KUNDEN: Nur Admin und Mitarbeiter */}
+          {/* KUNDEN */}
           <Route path="customers" element={
             <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
               <CustomersPage />
@@ -46,7 +53,7 @@ function App() {
             </ProtectedRoute>
           } />
           
-          {/* SERVICES: Nur Admin */}
+          {/* SERVICES */}
           <Route path="services" element={
             <ProtectedRoute allowedRoles={['ADMIN']}>
               <ServicesPage />
@@ -58,7 +65,7 @@ function App() {
             </ProtectedRoute>
           } />
 
-          {/* VERTRÄGE: Nur Admin */}
+          {/* VERTRÄGE */}
           <Route path="contracts" element={
             <ProtectedRoute allowedRoles={['ADMIN']}>
               <ContractsPage />
@@ -70,14 +77,14 @@ function App() {
             </ProtectedRoute>
           } />
           
-          {/* JOBS: Admin und Mitarbeiter */}
+          {/* JOBS */}
           <Route path="jobs" element={
             <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
               <JobsPage />
             </ProtectedRoute>
           } />
 
-          {/* TEAM: Nur Admin (Das war dein Beispiel!) */}
+          {/* TEAM */}
           <Route path="team" element={
             <ProtectedRoute allowedRoles={['ADMIN']}>
               <TeamPage />
@@ -88,54 +95,54 @@ function App() {
               <CreateEmployeePage />
             </ProtectedRoute>
           } />
+          <Route path="team/:id" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <EditEmployeePage />
+            </ProtectedRoute>
+          } />
+          <Route path="team/payroll" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <PayrollPage />
+            </ProtectedRoute>
+          } />
+          <Route path="absences" element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
+              <AbsencesPage />
+            </ProtectedRoute>
+          } />
 
-        
-        <Route path="team/:id" element={
-          <ProtectedRoute allowedRoles={['ADMIN']}>
-            <EditEmployeePage />
-          </ProtectedRoute>
-        } />
-        <Route path="calendar" element={
-        <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
-          <CalendarPage />
-        </ProtectedRoute>
-      } />
-        <Route path="reports" element={
-          <ProtectedRoute allowedRoles={['ADMIN']}>
-            <ReportsPage />
-          </ProtectedRoute>
-        } />
-        <Route path="invoices" element={
-        <ProtectedRoute allowedRoles={['ADMIN']}>
-          <InvoicesPage />
-        </ProtectedRoute>
-        } />
-        <Route path="team/payroll" element={
-          <ProtectedRoute allowedRoles={['ADMIN']}>
-            <PayrollPage />
-          </ProtectedRoute>
-        } />
-        {/* FINANZEN */}
-      <Route path="expenses" element={
-        <ProtectedRoute allowedRoles={['ADMIN']}>
-          <ExpensesPage />
-        </ProtectedRoute>
-      } />
+          {/* KALENDER & BERICHTE */}
+          <Route path="calendar" element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
+              <CalendarPage />
+            </ProtectedRoute>
+          } />
+          <Route path="reports" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <ReportsPage />
+            </ProtectedRoute>
+          } />
 
-      {/* TEAM */}
-      <Route path="absences" element={
-        <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
-          <AbsencesPage />
-        </ProtectedRoute>
-      } />
+          {/* FINANZEN & VERTRIEB */}
+          <Route path="invoices" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <InvoicesPage />
+            </ProtectedRoute>
+          } />
+          <Route path="expenses" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <ExpensesPage />
+            </ProtectedRoute>
+          } />
+          <Route path="offers" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <OffersPage />
+            </ProtectedRoute>
+          } />
 
-      {/* VERTRIEB */}
-      <Route path="offers" element={
-        <ProtectedRoute allowedRoles={['ADMIN']}>
-          <OffersPage />
-        </ProtectedRoute>
-      } /></Route>
+        </Route> {/* <--- HIER ENDET DAS DASHBOARD */}
 
+        {/* Fallback für falsche URLs */}
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>
