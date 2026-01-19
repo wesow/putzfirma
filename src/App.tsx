@@ -28,6 +28,7 @@ import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import SettingsPage from './pages/SettingsPage';
 import NotFoundPage from './pages/NotFoundPage';
+import InventoryPage from './pages/inventory/InventoryPage';
 
 function App() {
   return (
@@ -159,7 +160,13 @@ function App() {
                <SettingsPage />
              </ProtectedRoute>
            } />
+             <Route path="inventory" element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
+              <InventoryPage />
+            </ProtectedRoute>
+          } />
         </Route>
+      
 
         {/* 2. FALLBACK FÜR FALSCHE URLS */}
         {/* Wir leiten die Root-URL auf Dashboard um */}

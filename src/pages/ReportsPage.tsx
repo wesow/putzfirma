@@ -1,214 +1,198 @@
 import { useEffect, useState } from 'react';
-import { BarChart3, Calendar, ChevronDown, ChevronRight, Clock, MapPin } from 'lucide-react';
-import api from '../lib/api';
+import { BarChart3, Download, FileText, Calendar, Filter, PieChart, TrendingUp } from 'lucide-react';
+import toast from 'react-hot-toast';
 
-// --- TYPEN ---
-interface JobDetail {
+// Typen definieren
+interface Report {
   id: string;
+  title: string;
+  type: 'FINANCE' | 'PERFORMANCE' | 'HR' | 'INVENTORY';
   date: string;
-  customerName: string;
-  serviceName: string;
-  durationMinutes: number;
-}
-
-interface PayrollEntry {
-  id: string;
-  firstName: string;
-  lastName: string;
-  jobCount: number;
-  totalMinutes: number;
-  totalHours: number;
-  details: JobDetail[]; // Das ist neu!
+  size: string;
 }
 
 export default function ReportsPage() {
-  const [reportData, setReportData] = useState<PayrollEntry[]>([]);
-  const [loading, setLoading] = useState(false);
-  
-  // State für "aufgeklappte" Mitarbeiter
-  const [expandedEmployeeId, setExpandedEmployeeId] = useState<string | null>(null);
-  
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(true);
 
+  // 1. Daten simulieren (Mock)
   useEffect(() => {
-    fetchReport();
-    setExpandedEmployeeId(null); // Zuklappen wenn Monat gewechselt wird
-  }, [selectedMonth, selectedYear]);
-
-  const fetchReport = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get(`/reports/payroll?month=${selectedMonth}&year=${selectedYear}`);
-      setReportData(res.data);
-    } catch (error) {
-      console.error(error);
-    } finally {
+    // Wir tun so, als würden wir Daten laden
+    const timer = setTimeout(() => {
+      setReports([
+        { id: '1', title: 'Umsatzbericht Q1 2026', type: 'FINANCE', date: '2026-04-01', size: '2.4 MB' },
+        { id: '2', title: 'Mitarbeiter Stundenübersicht', type: 'HR', date: '2026-03-15', size: '1.1 MB' },
+        { id: '3', title: 'Materialverbrauch & Lager', type: 'INVENTORY', date: '2026-03-01', size: '850 KB' },
+        { id: '4', title: 'Jahresabschluss 2025', type: 'FINANCE', date: '2026-01-10', size: '5.2 MB' },
+        { id: '5', title: 'Kunden-Zufriedenheitsanalyse', type: 'PERFORMANCE', date: '2025-12-20', size: '1.8 MB' },
+      ]);
       setLoading(false);
+    }, 800); // Kurze Ladezeit simulieren
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // 2. Download Funktion (Client-Side Simulation)
+  const handleDownload = (id: string, title: string) => {
+    const toastId = toast.loading("Download wird vorbereitet...");
+
+    try {
+      // Wir simulieren den Inhalt der Datei
+      const dummyContent = `
+=========================================
+BERICHT: ${title}
+ID: ${id}
+Erstellt am: ${new Date().toLocaleDateString()}
+=========================================
+
+Dies ist ein automatisch generierter Beispiel-Bericht aus der CleanOps App.
+
+ZUSAMMENFASSUNG:
+- Umsatz: Stabil
+- Mitarbeiter: Alle anwesend
+- Lagerbestand: OK
+
+-----------------------------------------
+(c) 2026 CleanOps GmbH
+      `;
+
+      // Erstelle ein "Blob" (Datei im Speicher)
+      const blob = new Blob([dummyContent], { type: 'text/plain;charset=utf-8' });
+      
+      // Erstelle eine URL für diesen Blob
+      const url = window.URL.createObjectURL(blob);
+      
+      // Erstelle einen unsichtbaren Link und klicke ihn
+      const link = document.createElement('a');
+      link.href = url;
+      // Dateiname setzen (Leerzeichen durch Unterstriche ersetzen)
+      link.setAttribute('download', `${title.replace(/\s+/g, '_')}.txt`);
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      // Aufräumen
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Download erfolgreich!", { id: toastId });
+    } catch (error) {
+      toast.error("Download fehlgeschlagen", { id: toastId });
     }
   };
 
-  const toggleExpand = (id: string) => {
-    if (expandedEmployeeId === id) {
-      setExpandedEmployeeId(null); // Zuklappen
-    } else {
-      setExpandedEmployeeId(id); // Aufklappen
+  const getCategoryBadge = (type: string) => {
+    switch (type) {
+        case 'FINANCE': return <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded border border-green-200 font-bold">Finanzen</span>;
+        case 'HR': return <span className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded border border-purple-200 font-bold">Personal</span>;
+        case 'INVENTORY': return <span className="bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded border border-orange-200 font-bold">Lager</span>;
+        default: return <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded border border-blue-200 font-bold">Allgemein</span>;
     }
   };
-
-  const totalHoursCompany = reportData.reduce((sum, item) => sum + item.totalHours, 0);
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+      
       {/* HEADER */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <BarChart3 className="h-8 w-8 text-blue-600" /> 
-            Auswertungen
+            <BarChart3 className="text-blue-600" /> Berichte & Analysen
           </h1>
-          <p className="text-slate-500">Detaillierte Arbeitszeitnachweise</p>
+          <p className="text-slate-500 text-sm">Lade Auswertungen und Statistiken herunter.</p>
         </div>
-
-        {/* DATUM FILTER */}
-        <div className="flex gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
-           <div className="flex items-center gap-2 px-2">
-              <Calendar size={16} className="text-slate-400"/>
-           </div>
-           <select 
-             value={selectedMonth} 
-             onChange={(e) => setSelectedMonth(Number(e.target.value))}
-             className="bg-transparent outline-none font-medium text-slate-700 cursor-pointer"
-           >
-             {[...Array(12)].map((_, i) => (
-               <option key={i + 1} value={i + 1}>{new Date(0, i).toLocaleDateString('de-DE', { month: 'long' })}</option>
-             ))}
-           </select>
-           <select 
-             value={selectedYear} 
-             onChange={(e) => setSelectedYear(Number(e.target.value))}
-             className="bg-transparent outline-none font-medium text-slate-700 border-l pl-2 cursor-pointer"
-           >
-             <option value="2024">2024</option>
-             <option value="2025">2025</option>
-             <option value="2026">2026</option>
-           </select>
-        </div>
+        <button className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl hover:bg-slate-50 flex items-center gap-2 text-sm font-bold shadow-sm transition">
+            <Filter size={16} /> Zeitraum filtern
+        </button>
       </div>
 
-      {/* KPI BOXEN */}
+      {/* KPI KARTEN (Platzhalter Statistiken) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-             <p className="text-sm text-slate-500 font-medium uppercase">Gesamtstunden</p>
-             <p className="text-3xl font-bold text-slate-800 mt-2">{totalHoursCompany.toFixed(1)} h</p>
+          <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl p-6 text-white shadow-lg shadow-blue-200">
+              <div className="flex justify-between items-start mb-4">
+                  <div className="bg-white/20 p-2 rounded-lg"><TrendingUp size={24} color="white"/></div>
+                  <span className="text-blue-100 text-xs font-bold bg-white/10 px-2 py-1 rounded">+12%</span>
+              </div>
+              <p className="text-blue-100 text-sm font-medium mb-1">Gesamtumsatz (Monat)</p>
+              <h3 className="text-3xl font-bold">12.450 €</h3>
           </div>
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-             <p className="text-sm text-slate-500 font-medium uppercase">Lohn-Minuten</p>
-             <p className="text-3xl font-bold text-slate-800 mt-2">{(totalHoursCompany * 60).toFixed(0)} min</p>
+
+          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+              <div className="flex justify-between items-start mb-4">
+                   <div className="bg-purple-50 p-2 rounded-lg"><FileText size={24} className="text-purple-600"/></div>
+              </div>
+              <p className="text-slate-400 text-sm font-medium mb-1">Generierte Berichte</p>
+              <h3 className="text-3xl font-bold text-slate-800">24</h3>
           </div>
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-             <p className="text-sm text-slate-500 font-medium uppercase">Aktive Mitarbeiter</p>
-             <p className="text-3xl font-bold text-slate-800 mt-2">{reportData.filter(d => d.totalHours > 0).length}</p>
+
+          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+              <div className="flex justify-between items-start mb-4">
+                   <div className="bg-orange-50 p-2 rounded-lg"><PieChart size={24} className="text-orange-600"/></div>
+              </div>
+              <p className="text-slate-400 text-sm font-medium mb-1">Offene Posten</p>
+              <h3 className="text-3xl font-bold text-slate-800">3.200 €</h3>
           </div>
       </div>
 
-      {/* HAUPTTABELLE */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-6 border-b border-slate-100">
-           <h3 className="font-bold text-lg text-slate-800">Stundenzettel {selectedMonth}/{selectedYear}</h3>
+      {/* TABELLE */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+            <h3 className="font-bold text-slate-800">Verfügbare Downloads</h3>
+            <span className="text-xs text-slate-500 bg-white px-2 py-1 rounded border border-slate-200">{reports.length} Dateien</span>
         </div>
-        
+
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-slate-50 text-slate-500 uppercase text-xs font-semibold">
-              <tr>
-                <th className="px-6 py-4 w-10"></th> {/* Pfeil Spalte */}
-                <th className="px-6 py-4">Mitarbeiter</th>
-                <th className="px-6 py-4 text-center">Einsätze</th>
-                <th className="px-6 py-4 text-right">Summe Stunden</th>
-              </tr>
+            <table className="w-full text-left">
+            <thead className="bg-slate-50 text-slate-500 uppercase text-xs font-bold">
+                <tr>
+                    <th className="px-6 py-4">Name</th>
+                    <th className="px-6 py-4">Kategorie</th>
+                    <th className="px-6 py-4">Datum</th>
+                    <th className="px-6 py-4">Größe</th>
+                    <th className="px-6 py-4 text-right">Aktion</th>
+                </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {loading ? (
-                <tr><td colSpan={4} className="text-center py-8 text-slate-500">Lade Daten...</td></tr>
-              ) : reportData.length === 0 ? (
-                <tr><td colSpan={4} className="text-center py-8 text-slate-500">Keine Daten für diesen Monat.</td></tr>
-              ) : (
-                reportData.map((row) => (
-                  <>
-                    {/* ZUSAMMENFASSUNG ZEILE */}
-                    <tr 
-                        key={row.id} 
-                        onClick={() => toggleExpand(row.id)}
-                        className={`cursor-pointer transition-colors ${expandedEmployeeId === row.id ? 'bg-blue-50/50' : 'hover:bg-slate-50'}`}
-                    >
-                      <td className="px-6 py-4 text-slate-400">
-                         {expandedEmployeeId === row.id ? <ChevronDown size={20}/> : <ChevronRight size={20}/>}
-                      </td>
-                      <td className="px-6 py-4 font-bold text-slate-800">
-                        {row.firstName} {row.lastName}
-                      </td>
-                      <td className="px-6 py-4 text-center text-slate-600">
-                        <span className="bg-slate-100 px-2 py-1 rounded text-xs font-bold">{row.jobCount}</span>
-                      </td>
-                      <td className="px-6 py-4 text-right font-mono font-bold text-blue-600">
-                        {row.totalHours.toLocaleString('de-DE')} h
-                      </td>
-                    </tr>
-
-                    {/* DETAIL TABELLE (Nur sichtbar wenn aufgeklappt) */}
-                    {expandedEmployeeId === row.id && (
-                        <tr className="bg-slate-50/50 animate-in fade-in slide-in-from-top-1">
-                            <td colSpan={4} className="p-4 sm:p-6 border-b border-slate-100 shadow-inner">
-                                <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-                                    <table className="w-full text-sm">
-                                        <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
-                                            <tr>
-                                                <th className="px-4 py-2 text-left font-medium">Datum</th>
-                                                <th className="px-4 py-2 text-left font-medium">Kunde</th>
-                                                <th className="px-4 py-2 text-left font-medium">Service</th>
-                                                <th className="px-4 py-2 text-right font-medium">Dauer</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {row.details.length === 0 ? (
-                                                <tr><td colSpan={4} className="p-4 text-center text-slate-400">Keine Einträge</td></tr>
-                                            ) : (
-                                                row.details.map((detail) => (
-                                                    <tr key={detail.id} className="hover:bg-slate-50">
-                                                        <td className="px-4 py-3 text-slate-600">
-                                                            {new Date(detail.date).toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'})}
-                                                        </td>
-                                                        <td className="px-4 py-3 font-medium text-slate-800">
-                                                            {detail.customerName}
-                                                        </td>
-                                                        <td className="px-4 py-3 text-slate-600">
-                                                            {detail.serviceName}
-                                                        </td>
-                                                        <td className="px-4 py-3 text-right font-mono text-slate-700">
-                                                            {detail.durationMinutes} min
-                                                        </td>
-                                                    </tr>
-                                                ))
-                                            )}
-                                        </tbody>
-                                        {/* Summenzeile unten drunter */}
-                                        <tfoot className="bg-slate-50 border-t border-slate-200">
-                                            <tr>
-                                                <td colSpan={3} className="px-4 py-2 text-right font-bold text-slate-500 uppercase text-xs">Summe:</td>
-                                                <td className="px-4 py-2 text-right font-bold text-slate-800">{row.totalMinutes} min</td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
+                {loading ? (
+                    <tr><td colSpan={5} className="p-12 text-center text-slate-400">Lade Berichte...</td></tr>
+                ) : reports.length === 0 ? (
+                    <tr><td colSpan={5} className="p-12 text-center text-slate-400">Keine Berichte verfügbar.</td></tr>
+                ) : (
+                    reports.map((report) => (
+                    <tr key={report.id} className="hover:bg-blue-50/50 transition group">
+                        <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-slate-100 p-2 rounded-lg text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition">
+                                    <FileText size={20} />
                                 </div>
-                            </td>
-                        </tr>
-                    )}
-                  </>
-                ))
-              )}
+                                <span className="font-bold text-slate-700 group-hover:text-blue-700 transition">{report.title}</span>
+                            </div>
+                        </td>
+                        <td className="px-6 py-4">
+                            {getCategoryBadge(report.type)}
+                        </td>
+                        <td className="px-6 py-4 text-slate-500 text-sm font-medium flex items-center gap-2">
+                            <Calendar size={14} className="text-slate-400" />
+                            {new Date(report.date).toLocaleDateString('de-DE')}
+                        </td>
+                        <td className="px-6 py-4 text-slate-400 text-xs font-mono">
+                            {report.size}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                            <button 
+                                onClick={() => handleDownload(report.id, report.title)}
+                                className="text-slate-400 hover:text-blue-600 transition p-2 hover:bg-blue-50 rounded-lg flex items-center gap-2 ml-auto"
+                                title="Herunterladen"
+                            >
+                                <span className="text-xs font-bold hidden group-hover:inline">Download</span>
+                                <Download size={18} />
+                            </button>
+                        </td>
+                    </tr>
+                    ))
+                )}
             </tbody>
-          </table>
+            </table>
         </div>
       </div>
     </div>

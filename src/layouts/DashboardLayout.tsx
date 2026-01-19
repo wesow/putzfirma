@@ -14,8 +14,10 @@ import {
   Wallet, 
   Palmtree, 
   Percent,
-  Settings, // NEU
-  UserCircle
+  Settings,
+  UserCircle,
+  Package,
+  Banknote // <--- NEU: Icon für Gehalt importieren
 } from 'lucide-react';
 
 export default function DashboardLayout() {
@@ -42,9 +44,13 @@ export default function DashboardLayout() {
     { icon: Briefcase, label: 'Jobs & Einsätze', path: '/dashboard/jobs' },
     
     // Verwaltung (Nur Admin)
-    { icon: Users, label: 'Kunden', path: '/dashboard/customers', adminOnly: true }, // Nur Pfad korrigiert
+    { icon: Users, label: 'Kunden', path: '/dashboard/customers', adminOnly: true },
     { icon: FileText, label: 'Verträge', path: '/dashboard/contracts', adminOnly: true },
+    
+    // --- TEAM BEREICH ---
     { icon: Users, label: 'Team', path: '/dashboard/team', adminOnly: true },
+    // HIER NEU EINFÜGEN:
+    { icon: Banknote, label: 'Lohn & Gehalt', path: '/dashboard/team/payroll', adminOnly: true },
     
     // Finanzen (Nur Admin)
     { icon: Percent, label: 'Angebote', path: '/dashboard/offers', adminOnly: true },
@@ -52,10 +58,13 @@ export default function DashboardLayout() {
     { icon: Wallet, label: 'Ausgaben', path: '/dashboard/expenses', adminOnly: true },
     { icon: PieChart, label: 'Berichte', path: '/dashboard/reports', adminOnly: true },
     
+    // Lager
+    { icon: Package, label: 'Lager & Material', path: '/dashboard/inventory' },
+
     // HR
     { icon: Palmtree, label: 'Urlaub & Krank', path: '/dashboard/absences' },
 
-    // NEU: EINSTELLUNGEN (Nur Admin)
+    // Einstellungen
     { icon: Settings, label: 'Einstellungen', path: '/dashboard/settings', adminOnly: true },
   ];
 
