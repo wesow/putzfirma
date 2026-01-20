@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FilePlus, CheckCircle, FileText, ArrowRight, X, Plus, AlertCircle } from 'lucide-react';
+import { FilePlus, CheckCircle, FileText, ArrowRight, X, Plus, AlertCircle, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
 
@@ -37,7 +37,8 @@ export default function OffersPage() {
   // Formular State (Vertrag erstellen)
   const [convertData, setConvertData] = useState({
       serviceId: '',
-      interval: 'MONTHLY'
+      interval: 'MONTHLY',
+      startDate: new Date().toISOString().split('T')[0] // Standard: Heute (als YYYY-MM-DD)
   });
 
   useEffect(() => {
@@ -71,7 +72,7 @@ export default function OffersPage() {
     try {
       await api.post('/offers', {
         customerId: newOffer.customerId,
-        validUntil: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 Tage
+        validUntil: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 Tage gültig
         items: [{
           description: newOffer.description,
           quantity: newOffer.quantity,
@@ -81,6 +82,7 @@ export default function OffersPage() {
       });
       toast.success("Angebot erstellt");
       setShowCreateModal(false);
+      setNewOffer({ customerId: '', description: 'Unterhaltsreinigung', price: '35.00', quantity: '1' }); // Reset
       loadData();
     } catch (err) { toast.error("Fehler beim Erstellen"); }
   };
@@ -95,7 +97,7 @@ export default function OffersPage() {
 
     try {
       await api.post(`/offers/${showConvertModal.id}/convert`, {
-        startDate: new Date(),
+        startDate: new Date(convertData.startDate), // Das gewählte Datum nutzen
         interval: convertData.interval,
         serviceId: convertData.serviceId
       });
@@ -165,17 +167,14 @@ export default function OffersPage() {
                        <div className="pl-3 space-y-2 mb-6">
                            <div className="flex items-center gap-2 text-sm text-slate-600">
                                <FileText size={16} className="text-slate-400" />
-                               <span className="font-medium">{offer.customer?.companyName || `${offer.customer?.firstName} ${offer.customer?.lastName}`}</span>
+                               <span className="font-medium truncate">{offer.customer?.companyName || `${offer.customer?.firstName} ${offer.customer?.lastName}`}</span>
                            </div>
                           <div className="text-sm text-slate-500 pl-6 line-clamp-1">
-                          {/* Hier das Fragezeichen vor [0] hinzufügen und einen Fallback setzen */}
                           {offer.items?.[0]?.description || 'Keine Beschreibung'} 
-                          
-                          {/* Auch hier sicherstellen, dass items existiert */}
                           {(offer.items?.length || 0) > 1 && ` + ${(offer.items?.length || 0) - 1} weitere`}
                       </div>
                            <div className="text-xs text-slate-400 pl-6">
-                               Gültig bis: {new Date(offer.validUntil).toLocaleDateString()}
+                               Gültig bis: {new Date(offer.validUntil).toLocaleDateString('de-DE')}
                            </div>
                        </div>
 
@@ -269,17 +268,32 @@ export default function OffersPage() {
                            <p className="text-xs text-slate-400 mt-1">Bestimmt Dauer & Preisberechnung für Jobs.</p>
                        </div>
 
-                       <div>
-                           <label className="block text-sm font-medium text-slate-700 mb-1">Intervall</label>
-                           <select 
-                               className="w-full p-2.5 border rounded-lg bg-white focus:ring-2 focus:ring-green-500 outline-none" 
-                               value={convertData.interval} 
-                               onChange={e => setConvertData({...convertData, interval: e.target.value})}
-                           >
-                               <option value="WEEKLY">Wöchentlich</option>
-                               <option value="BIWEEKLY">Alle 2 Wochen</option>
-                               <option value="MONTHLY">Monatlich</option>
-                           </select>
+                       <div className="grid grid-cols-2 gap-4">
+                           <div>
+                               <label className="block text-sm font-medium text-slate-700 mb-1">Intervall</label>
+                               <select 
+                                   className="w-full p-2.5 border rounded-lg bg-white focus:ring-2 focus:ring-green-500 outline-none" 
+                                   value={convertData.interval} 
+                                   onChange={e => setConvertData({...convertData, interval: e.target.value})}
+                               >
+                                   <option value="WEEKLY">Wöchentlich</option>
+                                   <option value="BIWEEKLY">Alle 2 Wochen</option>
+                                   <option value="MONTHLY">Monatlich</option>
+                               </select>
+                           </div>
+                           
+                           <div>
+                               <label className="block text-sm font-medium text-slate-700 mb-1">Startdatum</label>
+                               <div className="relative">
+                                   <input 
+                                       type="date" 
+                                       className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                                       value={convertData.startDate}
+                                       onChange={e => setConvertData({...convertData, startDate: e.target.value})}
+                                       required
+                                   />
+                               </div>
+                           </div>
                        </div>
 
                        <div className="pt-2 flex gap-3">

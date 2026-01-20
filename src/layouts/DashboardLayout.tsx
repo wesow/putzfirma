@@ -17,7 +17,7 @@ import {
   Settings,
   UserCircle,
   Package,
-  Banknote // <--- NEU: Icon für Gehalt importieren
+  Banknote // Wichtig für Payroll Icon
 } from 'lucide-react';
 
 export default function DashboardLayout() {
@@ -39,17 +39,16 @@ export default function DashboardLayout() {
   const menuItems = [
     { icon: LayoutDashboard, label: 'Übersicht', path: '/dashboard', exact: true },
     
-    // Operativ
+    // Operativ (sehen alle)
     { icon: Calendar, label: 'Kalender', path: '/dashboard/calendar' },
-    { icon: Briefcase, label: 'Jobs & Einsätze', path: '/dashboard/jobs' },
+    { icon: Briefcase, label: 'Alle Jobs', path: '/dashboard/jobs' }, 
     
     // Verwaltung (Nur Admin)
     { icon: Users, label: 'Kunden', path: '/dashboard/customers', adminOnly: true },
     { icon: FileText, label: 'Verträge', path: '/dashboard/contracts', adminOnly: true },
     
-    // --- TEAM BEREICH ---
+    // --- TEAM BEREICH (Nur Admin) ---
     { icon: Users, label: 'Team', path: '/dashboard/team', adminOnly: true },
-    // HIER NEU EINFÜGEN:
     { icon: Banknote, label: 'Lohn & Gehalt', path: '/dashboard/team/payroll', adminOnly: true },
     
     // Finanzen (Nur Admin)
@@ -58,13 +57,13 @@ export default function DashboardLayout() {
     { icon: Wallet, label: 'Ausgaben', path: '/dashboard/expenses', adminOnly: true },
     { icon: PieChart, label: 'Berichte', path: '/dashboard/reports', adminOnly: true },
     
-    // Lager
+    // Lager (sehen alle)
     { icon: Package, label: 'Lager & Material', path: '/dashboard/inventory' },
 
-    // HR
+    // HR (Urlaub sehen alle, aber Admin sieht alle Anträge)
     { icon: Palmtree, label: 'Urlaub & Krank', path: '/dashboard/absences' },
 
-    // Einstellungen
+    // Einstellungen (Nur Admin)
     { icon: Settings, label: 'Einstellungen', path: '/dashboard/settings', adminOnly: true },
   ];
 
@@ -110,7 +109,7 @@ export default function DashboardLayout() {
         {/* Navigation Items */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
           {menuItems.map((item, index) => {
-            // Admin Check
+            // Admin Check: Wenn adminOnly true ist UND Rolle NICHT Admin -> Verstecken
             if (item.adminOnly && role !== 'ADMIN') return null;
 
             return (

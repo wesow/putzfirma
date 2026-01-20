@@ -1,11 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast'; // <--- WICHTIG: Importieren
+import { Toaster } from 'react-hot-toast';
 
 // Pages & Layouts
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import Dashboard from './pages/Dashboard';
+import EmployeeDashboard from './pages/EmployeeDashboard'; // <--- NEU
 import DashboardLayout from './layouts/DashboardLayout';
+// ... (restliche Imports bleiben gleich)
 import CustomersPage from './pages/customers/CustomersPage';
 import CreateCustomerPage from './pages/customers/CreateCustomerPage';
 import ServicesPage from './pages/services/ServicesPage'; 
@@ -30,10 +32,16 @@ import SettingsPage from './pages/SettingsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import InventoryPage from './pages/inventory/InventoryPage';
 
+// --- HILFSKOMPONENTE FÜR DASHBOARD-WEICHE ---
+const DashboardSwitcher = () => {
+  const role = localStorage.getItem('role');
+  // Wenn Admin -> Admin Dashboard, sonst -> Mitarbeiter Dashboard
+  return role === 'ADMIN' ? <Dashboard /> : <EmployeeDashboard />;
+};
+
 function App() {
   return (
     <BrowserRouter>
-      {/* 1. TOASTER HIER EINFÜGEN (Damit Nachrichten sichtbar sind) */}
       <Toaster 
         position="top-right" 
         toastOptions={{
@@ -53,7 +61,9 @@ function App() {
 
         {/* === GESCHÜTZTER BEREICH (Dashboard) === */}
         <Route path="/dashboard" element={<DashboardLayout />}>
-          <Route index element={<Dashboard />} />
+          
+          {/* HIER IST DIE WEICHE: */}
+          <Route index element={<DashboardSwitcher />} />
           
           {/* KUNDEN */}
           <Route path="customers" element={
@@ -154,25 +164,22 @@ function App() {
             </ProtectedRoute>
           } />
           
-          {/* EINSTELLUNGEN */}
+          {/* LAGER & EINSTELLUNGEN */}
+          <Route path="inventory" element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
+              <InventoryPage />
+            </ProtectedRoute>
+          } />
           <Route path="settings" element={
              <ProtectedRoute allowedRoles={['ADMIN']}>
                <SettingsPage />
              </ProtectedRoute>
            } />
-             <Route path="inventory" element={
-            <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
-              <InventoryPage />
-            </ProtectedRoute>
-          } />
         </Route>
       
 
         {/* 2. FALLBACK FÜR FALSCHE URLS */}
-        {/* Wir leiten die Root-URL auf Dashboard um */}
         <Route path="/" element={<Navigate to="/dashboard" />} />
-        
-        {/* Alles andere landet auf der 404 Seite */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
