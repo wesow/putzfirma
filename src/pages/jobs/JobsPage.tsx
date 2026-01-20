@@ -13,10 +13,9 @@ import {
   UploadCloud,
   ExternalLink,
   ImagePlus,
-  Trash2, // NEU: Für Löschen Icon
   UserPlus
 } from 'lucide-react'; 
-import toast from 'react-hot-toast'; // NEU: Toast Notifications
+import toast from 'react-hot-toast'; 
 import api from '../../lib/api';
 
 const API_BASE_URL = 'http://localhost:3000'; 
@@ -45,7 +44,6 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [isGenerating, setIsGenerating] = useState(false);
 
   // --- MODAL STATE ---
@@ -115,7 +113,6 @@ export default function JobsPage() {
      }
   };
 
-  // Zuweisen mit intelligenter Fehlermeldung
   const handleAssignEmployee = async (jid: string, eid: string) => {
      if(!eid) return;
      const toastId = toast.loading("Prüfe Verfügbarkeit...");
@@ -124,17 +121,14 @@ export default function JobsPage() {
        toast.success("Mitarbeiter zugewiesen", { id: toastId });
        fetchData(); 
      } catch(e: any) { 
-       // Hier zeigen wir die Konflikt-Nachricht vom Backend an!
        const msg = e.response?.data?.message || "Fehler bei der Zuweisung";
        toast.error(msg, { id: toastId, duration: 5000 }); 
      }
   };
 
-  // NEU: Mitarbeiter entfernen
   const handleUnassignEmployee = async (jid: string, eid: string) => {
       if(!confirm("Mitarbeiter von diesem Job entfernen?")) return;
       try {
-          // DELETE Request mit Body (muss bei axios oft in 'data' gewrappt werden)
           await api.delete(`/jobs/${jid}/assign`, { data: { employeeId: eid } });
           toast.success("Zuweisung entfernt");
           fetchData();
@@ -283,7 +277,6 @@ export default function JobsPage() {
                   )}
                 </div>
                 
-                {/* Service Name */}
                 <div className="text-sm text-slate-500 bg-slate-50 inline-block px-2 py-1 rounded border border-slate-100">
                     {job.service.name}
                 </div>
@@ -391,7 +384,7 @@ export default function JobsPage() {
         </div>
       )}
 
-      {/* --- MODAL (FÜR BEIDES) --- */}
+      {/* --- MODAL --- */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
