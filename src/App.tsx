@@ -1,87 +1,119 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { HelmetProvider } from 'react-helmet-async'; // <--- NEU: SEO Provider
+import { HelmetProvider } from 'react-helmet-async';
 
-// Pages & Layouts
+// --- LAYOUTS ---
+import DashboardLayout from './layouts/DashboardLayout';
+import ProtectedRoute from './components/ProtectedRoute';
+
+// --- PUBLIC PAGES ---
 import LandingPage from './pages/public/LandingPage';
+import ImpressumPage from './pages/public/ImpressumPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import Dashboard from './pages/Dashboard';
-import EmployeeDashboard from './pages/EmployeeDashboard'; 
-import DashboardLayout from './layouts/DashboardLayout';
-
-import CustomersPage from './pages/customers/CustomersPage';
-import CreateCustomerPage from './pages/customers/CreateCustomerPage';
-import ServicesPage from './pages/services/ServicesPage'; 
-import CreateServicePage from './pages/services/CreateServicePage'; 
-import ContractsPage from './pages/contracts/ContractsPage';
-import CreateContractPage from './pages/contracts/CreateContractPage';
-import JobsPage from './pages/jobs/JobsPage';
-import TeamPage from './pages/team/TeamPage';
-import CreateEmployeePage from './pages/team/CreateEmployeePage';
-import ProtectedRoute from './components/ProtectedRoute';
-import EditEmployeePage from './pages/team/EditEmployeePage';
-import CalendarPage from './pages/CalendarPage';
-import ReportsPage from './pages/ReportsPage';
-import InvoicesPage from './pages/invoices/InvoicesPage';
-import PayrollPage from './pages/team/PayrollPage';
-import ExpensesPage from './pages/finances/ExpensesPage';
-import AbsencesPage from './pages/team/AbsencesPage';
-import OffersPage from './pages/sales/OffersPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
-import SettingsPage from './pages/SettingsPage';
 import NotFoundPage from './pages/NotFoundPage';
-import InventoryPage from './pages/inventory/InventoryPage';
-import ImpressumPage from './pages/public/ImpressumPage';
+
+// --- DASHBOARDS ---
+import Dashboard from './pages/Dashboard'; // Admin Dashboard
+import EmployeeDashboard from './pages/EmployeeDashboard';
 import CustomerDashboard from './pages/CustomerDashboard';
 
-// --- HILFSKOMPONENTE FÜR DASHBOARD-WEICHE ---
+// --- OPERATIVE PAGES (Jobs, Kalender) ---
+import JobsPage from './pages/jobs/JobsPage';
+import CalendarPage from './pages/CalendarPage';
+import AbsencesPage from './pages/team/AbsencesPage';
+
+// --- VERWALTUNG (Kunden, Services, Verträge) ---
+import CustomersPage from './pages/customers/CustomersPage';
+import CreateCustomerPage from './pages/customers/CreateCustomerPage';
+import ServicesPage from './pages/services/ServicesPage';
+import CreateServicePage from './pages/services/CreateServicePage';
+import ContractsPage from './pages/contracts/ContractsPage';
+import CreateContractPage from './pages/contracts/CreateContractPage';
+
+// --- TEAM & HR ---
+import TeamPage from './pages/team/TeamPage';
+import CreateEmployeePage from './pages/team/CreateEmployeePage';
+import EditEmployeePage from './pages/team/EditEmployeePage';
+import PayrollPage from './pages/team/PayrollPage'; // Pfad angepasst falls nötig
+
+// --- FINANZEN & VERTRIEB ---
+import OffersPage from './pages/sales/OffersPage';
+import InvoicesPage from './pages/invoices/InvoicesPage';
+import ExpensesPage from './pages/finances/ExpensesPage';
+import ReportsPage from './pages/ReportsPage';
+
+// --- LAGER & SONSTIGES ---
+import InventoryPage from './pages/inventory/InventoryPage';
+import SettingsPage from './pages/SettingsPage';
+import EditServicePage from './pages/services/EditServicePage';
+
+// --- HILFSKOMPONENTE: DASHBOARD WEICHE ---
 const DashboardSwitcher = () => {
   const role = localStorage.getItem('role');
 
   if (role === 'ADMIN') {
     return <Dashboard />;
   } 
-  
   if (role === 'CUSTOMER') {
-    return <CustomerDashboard />; // <--- NEU: Zeige Kunden-Dashboard
+    return <CustomerDashboard />;
   }
-
-  // Fallback für EMPLOYEE (oder unbekannte Rollen)
+  // Fallback für Mitarbeiter
   return <EmployeeDashboard />;
 };
+
 function App() {
   return (
-    <HelmetProvider> {/* <--- NEU: Umschließt die ganze App für SEO */}
+    <HelmetProvider>
       <BrowserRouter>
+        {/* Toast Konfiguration (Benachrichtigungen) */}
         <Toaster 
           position="top-right" 
           toastOptions={{
             duration: 4000,
-            style: { background: '#333', color: '#fff' },
+            style: { background: '#1e293b', color: '#fff' },
             success: { style: { background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' } },
             error: { style: { background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' } },
           }} 
         />
 
         <Routes>
-          {/* === 1. ÖFFENTLICHE STARTSEITE (SEO WICHTIG) === */}
+          {/* === 1. ÖFFENTLICHE SEITEN === */}
           <Route path="/" element={<LandingPage />} />
-          <Route path="/impressum" element={<ImpressumPage />} /> {/* <--- NEU */}
-
-          {/* === 2. AUTHENTIFIZIERUNG === */}
+          <Route path="/impressum" element={<ImpressumPage />} />
+          
+          {/* AUTH */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-          {/* === 3. GESCHÜTZTER BEREICH (Dashboard) === */}
+          {/* === 2. GESCHÜTZTER DASHBOARD BEREICH === */}
           <Route path="/dashboard" element={<DashboardLayout />}>
             
+            {/* Startseite (Weiche je nach Rolle) */}
             <Route index element={<DashboardSwitcher />} />
-            
-            {/* KUNDEN */}
+
+            {/* --- JOBS & KALENDER (Für Alle relevant) --- */}
+            <Route path="jobs" element={
+              <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
+                <JobsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="calendar" element={
+              <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
+                <CalendarPage />
+              </ProtectedRoute>
+            } />
+            <Route path="absences" element={
+              <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
+                <AbsencesPage />
+              </ProtectedRoute>
+            } />
+
+            {/* --- KUNDEN (Admin & Büro) --- */}
             <Route path="customers" element={
               <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
                 <CustomersPage />
@@ -92,8 +124,8 @@ function App() {
                 <CreateCustomerPage />
               </ProtectedRoute>
             } />
-            
-            {/* SERVICES */}
+
+            {/* --- SERVICES (Admin) --- */}
             <Route path="services" element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
                 <ServicesPage />
@@ -104,8 +136,12 @@ function App() {
                 <CreateServicePage />
               </ProtectedRoute>
             } />
-
-            {/* VERTRÄGE */}
+            <Route path="services/:id" element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <EditServicePage />
+              </ProtectedRoute>
+            } />
+            {/* --- VERTRÄGE (Admin) --- */}
             <Route path="contracts" element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
                 <ContractsPage />
@@ -116,15 +152,8 @@ function App() {
                 <CreateContractPage />
               </ProtectedRoute>
             } />
-            
-            {/* JOBS */}
-            <Route path="jobs" element={
-              <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
-                <JobsPage />
-              </ProtectedRoute>
-            } />
 
-            {/* TEAM */}
+            {/* --- TEAM & HR (Admin) --- */}
             <Route path="team" element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
                 <TeamPage />
@@ -140,30 +169,20 @@ function App() {
                 <EditEmployeePage />
               </ProtectedRoute>
             } />
-            <Route path="team/payroll" element={
+            
+            {/* PAYROLL (Jetzt Top-Level unter Dashboard) */}
+            <Route path="payroll" element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
                 <PayrollPage />
               </ProtectedRoute>
             } />
-            <Route path="absences" element={
-              <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
-                <AbsencesPage />
-              </ProtectedRoute>
-            } />
 
-            {/* KALENDER & BERICHTE */}
-            <Route path="calendar" element={
-              <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
-                <CalendarPage />
-              </ProtectedRoute>
-            } />
-            <Route path="reports" element={
+            {/* --- FINANZEN & SALES (Admin) --- */}
+            <Route path="offers" element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
-                <ReportsPage />
+                <OffersPage />
               </ProtectedRoute>
             } />
-
-            {/* FINANZEN & VERTRIEB */}
             <Route path="invoices" element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
                 <InvoicesPage />
@@ -174,28 +193,31 @@ function App() {
                 <ExpensesPage />
               </ProtectedRoute>
             } />
-            <Route path="offers" element={
+            <Route path="reports" element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
-                <OffersPage />
+                <ReportsPage />
               </ProtectedRoute>
             } />
-            
-            {/* LAGER & EINSTELLUNGEN */}
+
+            {/* --- LAGER (Admin & Mitarbeiter) --- */}
             <Route path="inventory" element={
               <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
                 <InventoryPage />
               </ProtectedRoute>
             } />
-            <Route path="settings" element={
-               <ProtectedRoute allowedRoles={['ADMIN']}>
-                 <SettingsPage />
-               </ProtectedRoute>
-             } />
-          </Route>
-        
 
-          {/* 4. FALLBACK: Alles Unbekannte geht zur Startseite */}
-          <Route path="*" element={<Navigate to="/" />} />
+            {/* --- EINSTELLUNGEN (Admin) --- */}
+            <Route path="settings" element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <SettingsPage />
+              </ProtectedRoute>
+            } />
+
+          </Route>
+
+          {/* === 3. FALLBACK === */}
+          <Route path="*" element={<NotFoundPage />} />
+        
         </Routes>
       </BrowserRouter>
     </HelmetProvider>

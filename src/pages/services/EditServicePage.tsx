@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { 
   Save, 
   ArrowLeft, 
@@ -9,86 +9,12 @@ import {
   Loader2, 
   ListTodo, 
   Plus, 
-  Trash2, 
-  Sparkles, 
-  Copy 
+  Trash2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../../lib/api';
 
-// --- KONSTANTEN ---
-const SERVICE_TEMPLATES = [
-  {
-    label: "Büroreinigung (Standard)",
-    data: {
-      name: "Unterhaltsreinigung Büro",
-      description: "Regelmäßige Reinigung der Büroflächen, Sanitäranlagen und Küchenbereiche.",
-      priceNet: "35.00",
-      unit: "hour",
-      checklist: [
-        "Mülleimer leeren & Beutel wechseln",
-        "Schreibtische frei abwischen",
-        "Böden saugen & nass wischen",
-        "Sanitäranlagen reinigen & auffüllen",
-        "Griffspuren an Türen entfernen",
-        "Geschirrspüler ein-/ausräumen"
-      ]
-    }
-  },
-  {
-    label: "Glasreinigung (Fenster)",
-    data: {
-      name: "Glas- & Rahmenreinigung",
-      description: "Professionelle Reinigung der Glasflächen inkl. Rahmen und Falzen.",
-      priceNet: "4.50",
-      unit: "sqm",
-      checklist: [
-        "Glasflächen einwaschen",
-        "Grobverschmutzungen entfernen",
-        "Abziehen ohne Schlieren",
-        "Rahmen & Falzen feucht reinigen",
-        "Fensterbänke abwischen"
-      ]
-    }
-  },
-  {
-    label: "Treppenhausreinigung",
-    data: {
-      name: "Treppenhausreinigung",
-      description: "Reinigung vom Dachgeschoss bis zum Keller inkl. Eingangsbereich.",
-      priceNet: "28.00",
-      unit: "flat",
-      checklist: [
-        "Stufen fegen & wischen",
-        "Handläufe & Geländer abwischen",
-        "Eingangstür Glas reinigen",
-        "Briefkästen & Klingelanlage abwischen",
-        "Spinnweben entfernen",
-        "Kellergänge fegen"
-      ]
-    }
-  },
-  {
-    label: "Endreinigung / Umzug",
-    data: {
-      name: "Grundreinigung (Umzug)",
-      description: "Intensive Reinigung der gesamten Wohnung zur Übergabe.",
-      priceNet: "45.00",
-      unit: "hour",
-      checklist: [
-        "Alle Böden intensiv reinigen",
-        "Fenster komplett reinigen",
-        "Türen & Zargen abwaschen",
-        "Steckdosen & Lichtschalter reinigen",
-        "Küche innen & außen reinigen",
-        "Bad/WC entkalken & desinfizieren",
-        "Heizkörper reinigen"
-      ]
-    }
-  }
-];
-
-// --- HELPER COMPONENTS (AUSSERHALB) ---
+// --- HELPER COMPONENTS ---
 const FormInput = ({ label, name, value, onChange, type="text", required, placeholder, icon: Icon, step }: any) => (
   <div>
     <label className="block text-sm font-semibold text-slate-700 mb-1.5">{label} {required && '*'}</label>
@@ -149,9 +75,12 @@ const FormSelect = ({ label, name, value, onChange, icon: Icon, options }: any) 
   </div>
 );
 
-export default function CreateServicePage() {
+export default function EditServicePage() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const { id } = useParams(); // ID aus der URL holen
+
+  const [loadingData, setLoadingData] = useState(true);
+  const [saving, setSaving] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -163,21 +92,32 @@ export default function CreateServicePage() {
   const [checklist, setChecklist] = useState<string[]>([]);
   const [newItem, setNewItem] = useState('');
 
-  const applyTemplate = (indexStr: string) => {
-    const index = parseInt(indexStr);
-    const template = SERVICE_TEMPLATES[index];
-    
-    if (template) {
-      setFormData({
-        name: template.data.name,
-        description: template.data.description,
-        priceNet: template.data.priceNet,
-        unit: template.data.unit
-      });
-      setChecklist(template.data.checklist);
-      toast.success(`Vorlage "${template.label}" übernommen!`, { icon: '✨' });
-    }
-  };
+  // DATEN LADEN
+  useEffect(() => {
+    const loadService = async () => {
+        try {
+            const res = await api.get(`/services/${id}`);
+            const data = res.data;
+            
+            setFormData({
+                name: data.name,
+                description: data.description || '',
+                priceNet: data.priceNet,
+                unit: data.unit
+            });
+            // Checklist laden (falls vorhanden)
+            if (Array.isArray(data.checklist)) {
+                setChecklist(data.checklist);
+            }
+        } catch (error) {
+            toast.error("Konnte Leistung nicht laden.");
+            navigate('/dashboard/services');
+        } finally {
+            setLoadingData(false);
+        }
+    };
+    if (id) loadService();
+  }, [id, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -203,30 +143,30 @@ export default function CreateServicePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    const toastId = toast.loading('Leistung wird angelegt...');
+    setSaving(true);
+    const toastId = toast.loading('Speichere Änderungen...');
     
     try {
-      const priceFloat = parseFloat(formData.priceNet.replace(',', '.'));
-      if (isNaN(priceFloat)) throw new Error("Bitte einen gültigen Preis eingeben.");
-
+      const priceFloat = parseFloat(String(formData.priceNet).replace(',', '.'));
+      
       const payload = {
         ...formData,
         priceNet: priceFloat,
         checklist: checklist 
       };
 
-      await api.post('/services', payload);
+      await api.put(`/services/${id}`, payload); // PUT statt POST
       
-      toast.success('Dienstleistung erstellt!', { id: toastId });
+      toast.success('Gespeichert!', { id: toastId });
       navigate('/dashboard/services');
     } catch (error: any) {
-      const msg = error.response?.data?.message || 'Fehler beim Speichern.';
-      toast.error(msg, { id: toastId });
+      toast.error('Fehler beim Speichern.', { id: toastId });
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loadingData) return <div className="min-h-screen flex items-center justify-center text-slate-400"><Loader2 className="animate-spin mr-2"/> Lade Daten...</div>;
 
   return (
     <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
@@ -239,34 +179,11 @@ export default function CreateServicePage() {
         >
           <ArrowLeft className="h-4 w-4" /> Zurück zur Liste
         </button>
-        <h1 className="text-3xl font-bold text-slate-800">Neue Dienstleistung</h1>
+        <h1 className="text-3xl font-bold text-slate-800">Leistung bearbeiten</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         
-        {/* --- 0. SMART TEMPLATE SELECTION --- */}
-        <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600">
-                <Sparkles size={24} />
-            </div>
-            <div className="flex-1 w-full">
-                <label className="text-xs font-bold text-indigo-800 uppercase mb-1 block">Schnellstart: Vorlage wählen</label>
-                <div className="relative">
-                    <select 
-                        onChange={(e) => applyTemplate(e.target.value)}
-                        defaultValue=""
-                        className="w-full appearance-none bg-white border border-indigo-200 text-slate-700 py-2 pl-4 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-sm hover:border-indigo-300 transition-colors"
-                    >
-                        <option value="" disabled>-- Bitte wählen --</option>
-                        {SERVICE_TEMPLATES.map((tmpl, idx) => (
-                            <option key={idx} value={idx}>{tmpl.label}</option>
-                        ))}
-                    </select>
-                    <Copy size={16} className="absolute right-3 top-2.5 text-indigo-400 pointer-events-none" />
-                </div>
-            </div>
-        </div>
-
         {/* CARD 1: BASIS DATEN */}
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
             <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
@@ -279,7 +196,6 @@ export default function CreateServicePage() {
                 value={formData.name} 
                 onChange={handleChange} 
                 required 
-                placeholder="z.B. Unterhaltsreinigung Standard" 
             />
 
             <FormTextArea 
@@ -287,7 +203,6 @@ export default function CreateServicePage() {
                 name="description" 
                 value={formData.description} 
                 onChange={handleChange} 
-                placeholder="Was beinhaltet diese Leistung?" 
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -299,7 +214,6 @@ export default function CreateServicePage() {
                     value={formData.priceNet} 
                     onChange={handleChange} 
                     required 
-                    placeholder="0.00" 
                     icon={Euro} 
                 />
 
@@ -370,7 +284,7 @@ export default function CreateServicePage() {
                 {checklist.length === 0 && (
                     <div className="text-center py-8 border-2 border-dashed border-slate-100 rounded-xl bg-slate-50/50">
                         <ListTodo className="mx-auto text-slate-300 mb-2" size={32} />
-                        <span className="text-slate-400 text-sm">Keine Aufgaben definiert. Wähle oben eine Vorlage!</span>
+                        <span className="text-slate-400 text-sm">Keine Aufgaben in der Liste.</span>
                     </div>
                 )}
             </ul>
@@ -388,11 +302,11 @@ export default function CreateServicePage() {
           
           <button 
             type="submit" 
-            disabled={loading}
+            disabled={saving}
             className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 flex items-center gap-2 disabled:opacity-70 active:scale-95"
           >
-            {loading ? <Loader2 className="animate-spin" /> : <Save size={20} />}
-            Leistung speichern
+            {saving ? <Loader2 className="animate-spin" /> : <Save size={20} />}
+            Änderungen speichern
           </button>
         </div>
 

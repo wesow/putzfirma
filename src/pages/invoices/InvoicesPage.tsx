@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react';
-import { FileText, Plus, Download, CheckCircle, AlertCircle, Mail, RefreshCw, Info } from 'lucide-react';
-import toast from 'react-hot-toast'; // We use toasts instead of alerts!
+import { 
+  FileText, 
+  Plus, 
+  Download, 
+  CheckCircle, 
+  AlertCircle, 
+  Mail, 
+  Info,
+  Loader2
+} from 'lucide-react';
+import toast from 'react-hot-toast';
 import api from '../../lib/api';
 
 // Define Types
@@ -63,20 +72,17 @@ export default function InvoicesPage() {
     if (!selectedCustomerId) return toast.error("Please select a customer first!");
     
     setIsGenerating(true);
-    // Show Loading Toast
     const toastId = toast.loading("Creating invoice...");
 
     try {
       await api.post('/invoices/generate', { customerId: selectedCustomerId });
       
-      // Success Message
       toast.success("Invoice created successfully!", { id: toastId });
       
       setSelectedCustomerId(''); 
       fetchData(); 
     } catch (error: any) {
       console.error(error);
-      // HERE your backend message ("No billable jobs...") is displayed!
       const errorMessage = error.response?.data?.message || "Error creating invoice.";
       toast.error(errorMessage, { id: toastId });
     } finally {
@@ -142,31 +148,31 @@ export default function InvoicesPage() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       
       {/* HEADER */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <FileText className="h-8 w-8 text-blue-600" /> 
+          <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-3">
+            <FileText className="text-blue-600" /> 
             Invoices
           </h1>
-          <p className="text-slate-500 text-sm">Create invoices based on completed jobs.</p>
+          <p className="text-slate-500 mt-1">Create invoices based on completed jobs.</p>
         </div>
       </div>
 
       {/* --- GENERATOR BOX --- */}
-      <div className="bg-white p-6 rounded-2xl border border-blue-100 shadow-sm bg-gradient-to-r from-blue-50/50 to-white">
+      <div className="bg-gradient-to-r from-blue-50/80 to-white p-6 rounded-2xl border border-blue-100 shadow-sm">
         <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
           <Plus className="h-5 w-5 text-blue-600" />
           Generate New Invoice
         </h3>
         <div className="flex flex-col sm:flex-row gap-4 items-end">
-          <div className="w-full sm:w-1/2">
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Customer</label>
+          <div className="w-full sm:flex-1">
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Select Customer</label>
             <div className="relative">
                 <select 
-                className="w-full p-3 border border-slate-300 rounded-xl outline-none focus:border-blue-500 bg-white shadow-sm appearance-none cursor-pointer"
+                className="w-full p-3 border border-slate-300 rounded-xl outline-none focus:border-blue-500 bg-white shadow-sm appearance-none cursor-pointer text-slate-700 font-medium transition-all focus:ring-2 focus:ring-blue-100"
                 value={selectedCustomerId}
                 onChange={(e) => setSelectedCustomerId(e.target.value)}
                 >
@@ -178,7 +184,7 @@ export default function InvoicesPage() {
                 ))}
                 </select>
             </div>
-            <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
+            <p className="text-xs text-slate-400 mt-2 flex items-center gap-1 ml-1">
                 <Info size={12} /> Only jobs with status "Completed" are billed.
             </p>
           </div>
@@ -187,7 +193,7 @@ export default function InvoicesPage() {
             disabled={isGenerating || !selectedCustomerId}
             className="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
           >
-            {isGenerating ? <RefreshCw className="animate-spin" /> : <FileText size={20} />}
+            {isGenerating ? <Loader2 className="animate-spin" /> : <FileText size={20} />}
             {isGenerating ? 'Creating...' : 'Generate Invoice'}
           </button>
         </div>
@@ -206,21 +212,21 @@ export default function InvoicesPage() {
           <table className="w-full text-left">
             <thead className="bg-slate-50 text-slate-500 uppercase text-xs font-bold tracking-wider">
               <tr>
-                <th className="px-6 py-4">No.</th>
-                <th className="px-6 py-4">Customer</th>
-                <th className="px-6 py-4">Date</th>
-                <th className="px-6 py-4 text-center">Jobs</th>
-                <th className="px-6 py-4 text-right">Amount</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Action</th>
+                <th className="px-6 py-4 border-b border-slate-100">No.</th>
+                <th className="px-6 py-4 border-b border-slate-100">Customer</th>
+                <th className="px-6 py-4 border-b border-slate-100">Date</th>
+                <th className="px-6 py-4 border-b border-slate-100 text-center">Jobs</th>
+                <th className="px-6 py-4 border-b border-slate-100 text-right">Amount</th>
+                <th className="px-6 py-4 border-b border-slate-100">Status</th>
+                <th className="px-6 py-4 border-b border-slate-100 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={7} className="text-center py-12 text-slate-400">Loading Data...</td></tr>
+                <tr><td colSpan={7} className="text-center py-20 text-slate-400"><Loader2 className="animate-spin mx-auto mb-2"/> Loading Data...</td></tr>
               ) : invoices.length === 0 ? (
                 <tr>
-                    <td colSpan={7} className="text-center py-12 text-slate-400">
+                    <td colSpan={7} className="text-center py-20 text-slate-400">
                         <div className="flex flex-col items-center gap-2">
                             <FileText className="h-10 w-10 opacity-20" />
                             No invoices created yet.
@@ -229,7 +235,7 @@ export default function InvoicesPage() {
                 </tr>
               ) : (
                 invoices.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-blue-50/30 transition-colors group">
+                  <tr key={inv.id} className="hover:bg-slate-50 transition-colors group">
                     <td className="px-6 py-4 font-mono text-sm text-slate-600 font-bold group-hover:text-blue-600 transition-colors">
                       {inv.invoiceNumber}
                     </td>
@@ -258,7 +264,7 @@ export default function InvoicesPage() {
                           className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100" 
                           title="Download PDF"
                         >
-                          {downloadingId === inv.id ? <RefreshCw size={18} className="animate-spin text-blue-500"/> : <Download size={18} />}
+                          {downloadingId === inv.id ? <Loader2 size={18} className="animate-spin text-blue-500"/> : <Download size={18} />}
                         </button>
 
                         {/* EMAIL BUTTON */}
@@ -273,7 +279,7 @@ export default function InvoicesPage() {
                           title="Send via Email"
                         >
                           {sendingId === inv.id ? (
-                            <RefreshCw size={18} className="animate-spin" />
+                            <Loader2 size={18} className="animate-spin" />
                           ) : (
                             <Mail size={18} />
                           )}

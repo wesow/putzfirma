@@ -6,11 +6,11 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { 
-  X, UserPlus, User, Plus, Calendar as CalIcon, 
-  Clock, MapPin, AlertTriangle, CheckCircle, Palmtree, Thermometer,
-  Briefcase, ArrowRight, Trash2
+  X, Plus, Calendar as CalIcon, 
+  Clock, MapPin, CheckCircle, Palmtree, Thermometer,
+  Trash2, Loader2, Info 
 } from 'lucide-react'; 
-import toast, { Toaster } from 'react-hot-toast'; 
+import toast from 'react-hot-toast'; 
 import api from '../lib/api';
 
 // --- SETUP ---
@@ -21,7 +21,12 @@ const DnDCalendar = dragAndDropFn(Calendar);
 
 // --- TYPEN ---
 interface Employee { id: string; firstName: string; lastName: string; }
-interface Service { id: string; name: string; duration?: number; }
+interface Service { 
+  id: string; 
+  name: string; 
+  duration?: number; 
+  priceNet: number | string; // Erlaube beides vom Backend
+}
 interface Customer { id: string; companyName: string | null; lastName: string; firstName: string; }
 
 interface Job {
@@ -29,7 +34,8 @@ interface Job {
   scheduledDate: string;
   customer: Customer;
   service: Service;
-  status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
+  status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' | 'IN_PROGRESS';
+  address: { street: string; city: string };
   assignments: { employee: Employee }[];
 }
 
@@ -52,8 +58,35 @@ interface CalendarEvent {
   };
 }
 
+// --- HELPER COMPONENT (AUSSERHALB) ---
+const EventComponent = ({ event }: any) => {
+    const isJob = event.resource.type === 'JOB';
+    const data = event.resource.data;
+    
+    if (!isJob) {
+        return (
+            <div className="flex items-center gap-1.5 h-full w-full px-2 overflow-hidden italic opacity-90">
+                {data.type === 'SICKNESS' ? <Thermometer size={12}/> : <Palmtree size={12}/>}
+                <span className="text-[11px] font-bold truncate">{event.title}</span>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex flex-col h-full justify-center px-2 border-l-4 border-black/10">
+            <div className="text-[11px] font-extrabold truncate flex items-center gap-1">
+                {data.status === 'COMPLETED' && <CheckCircle size={10} className="text-white" />}
+                {event.title}
+            </div>
+            <div className="text-[9px] font-medium opacity-80 truncate flex items-center gap-1 mt-0.5">
+                <Clock size={9} />
+                {format(event.start, 'HH:mm')} - {format(event.end, 'HH:mm')}
+            </div>
+        </div>
+    );
+};
+
 export default function CalendarPage() {
-  // --- STATE ---
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -61,7 +94,6 @@ export default function CalendarPage() {
   
   const [view, setView] = useState<View>(Views.MONTH);
   const [date, setDate] = useState(new Date());
-
   const [isLoading, setIsLoading] = useState(false); 
   const [isSaving, setIsSaving] = useState(false);   
 
@@ -69,494 +101,348 @@ export default function CalendarPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   
-  const [newJobData, setNewJobData] = useState({
-    date: new Date(),
-    customerId: '',
-    serviceId: ''
-  });
+ const [newJobData, setNewJobData] = useState({ 
+  date: new Date(), 
+  time: '08:00', // Standard-Uhrzeit
+  customerId: '', 
+  serviceId: '' 
+});
 
-  // --- INITIAL LOAD ---
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
       const [jobsRes, empRes, custRes, servRes, absRes] = await Promise.all([
-        api.get('/jobs'),
-        api.get('/employees'),
-        api.get('/customers'),
-        api.get('/services'),
-        api.get('/absences')
+        api.get('/jobs'), api.get('/employees'), api.get('/customers'), api.get('/services'), api.get('/absences')
       ]);
 
       setEmployees(empRes.data);
       setCustomers(custRes.data);
       setServices(servRes.data);
 
-      // 1. Jobs mappen
-      const jobEvents: CalendarEvent[] = jobsRes.data.map((job: Job) => {
-        const startDate = new Date(job.scheduledDate);
-        const duration = job.service.duration || 120; 
-        const endDate = new Date(startDate.getTime() + duration * 60000); 
-        const customerName = job.customer.companyName || `${job.customer.firstName} ${job.customer.lastName}`;
+      const jobEvents = jobsRes.data.map((job: Job) => ({
+          title: `${job.customer.companyName || job.customer.lastName} (${job.service.name})`,
+          start: new Date(job.scheduledDate),
+          end: new Date(new Date(job.scheduledDate).getTime() + (job.service.duration || 120) * 60000),
+          resource: { type: 'JOB', data: job }
+      }));
 
-        return {
-          title: `${job.service.name} - ${customerName}`,
-          start: startDate,
-          end: endDate,
-          allDay: false,
-          resource: { type: 'JOB', data: job },
-        };
-      });
-
-      // 2. Abwesenheiten mappen
-      const absenceEvents: CalendarEvent[] = absRes.data.map((abs: Absence) => {
-         const start = new Date(abs.startDate); start.setHours(0,0,0);
-         const end = new Date(abs.endDate); end.setHours(23,59,59);
-
-         return {
-             title: `${abs.employee.firstName}: ${abs.type === 'VACATION' ? 'Urlaub' : 'Krank'}`,
-             start: start,
-             end: end,
-             allDay: true,
-             resource: { type: 'ABSENCE', data: abs }
-         };
-      });
+      const absenceEvents = absRes.data.map((abs: Absence) => ({
+          title: `${abs.employee.firstName}: ${abs.type === 'VACATION' ? 'Urlaub' : 'Krank'}`,
+          start: new Date(abs.startDate),
+          end: new Date(abs.endDate),
+          allDay: true,
+          resource: { type: 'ABSENCE', data: abs }
+      }));
 
       setEvents([...jobEvents, ...absenceEvents]);
-    } catch (error) {
-      toast.error('Konnte Kalenderdaten nicht laden.');
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (e) { toast.error('Laden fehlgeschlagen'); } finally { setIsLoading(false); }
   };
 
-  // --- ACTIONS ---
-
-  const handleSelectSlot = ({ start }: { start: Date }) => {
-    setNewJobData({ ...newJobData, date: start, customerId: '', serviceId: '' });
-    setIsCreateModalOpen(true);
-  };
-
-  const handleCreateJob = async () => {
-    if (!newJobData.customerId || !newJobData.serviceId) {
-      toast.error("Bitte Kunde und Service auswählen");
-      return;
-    }
-    
-    setIsSaving(true);
-    try {
-      await api.post('/jobs', { 
-        customerId: newJobData.customerId,
-        serviceId: newJobData.serviceId,
-        scheduledDate: newJobData.date
-      });
-      
-      toast.success("Job erfolgreich erstellt!");
-      setIsCreateModalOpen(false);
-      fetchData(); 
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Fehler beim Erstellen");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleSelectEvent = (event: CalendarEvent) => {
-    if (event.resource.type === 'ABSENCE') {
-       const abs = event.resource.data as Absence;
-       toast(`${abs.employee.firstName} ist abwesend (${abs.type === 'VACATION' ? 'Urlaub' : 'Krank'})`, {
-         icon: abs.type === 'VACATION' ? '🌴' : '🤒',
-       });
-       return;
-    }
-    setSelectedJob(event.resource.data as Job);
-    setIsEditModalOpen(true);
-  };
-
+  // --- HANDLERS ---
   const handleEventDrop = async ({ event, start }: any) => {
-    if (event.resource.type === 'ABSENCE') {
-      toast.error("Abwesenheiten können hier nicht verschoben werden.");
-      return;
-    }
-
+    if (event.resource.type === 'ABSENCE') return toast.error("Abwesenheiten sind fixiert.");
     const job = event.resource.data as Job;
-    const duration = event.end.getTime() - event.start.getTime();
-    
-    // Optimistic UI Update
-    setEvents(prev => prev.map(e => {
-        if (e.resource.type === 'JOB' && (e.resource.data as Job).id === job.id) {
-            return { ...e, start, end: new Date(start.getTime() + duration) };
-        }
-        return e;
-    }));
-
     try {
       await api.patch(`/jobs/${job.id}`, { scheduledDate: start });
-      toast.success("Termin verschoben", { id: 'drag-toast' }); 
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Fehler beim Verschieben!");
-      fetchData(); 
-    }
+      toast.success("Termin verschoben", { id: 'drag' });
+      fetchData();
+    } catch (e) { toast.error("Fehler beim Verschieben"); }
   };
 
-  const handleStatusChange = async (newStatus: string) => {
-    if (!selectedJob) return;
-    try {
-        await api.patch(`/jobs/${selectedJob.id}/status`, { status: newStatus });
-        setSelectedJob({ ...selectedJob, status: newStatus as any });
-        toast.success("Status aktualisiert");
-        fetchData(); 
-    } catch (error) { toast.error("Konnte Status nicht ändern"); }
-  };
+const handleJobUpdate = async (updates: { status?: string; scheduledDate?: Date }) => {
+  if (!selectedJob) return;
+  const toastId = toast.loading("Aktualisiere Auftrag...");
+  try {
+    const payload = {
+      status: updates.status || selectedJob.status,
+      scheduledDate: updates.scheduledDate ? updates.scheduledDate.toISOString() : selectedJob.scheduledDate
+    };
+
+    await api.patch(`/jobs/${selectedJob.id}`, payload);
+    toast.success("Änderungen gespeichert", { id: toastId });
+    fetchData();
+    setIsEditModalOpen(false);
+  } catch (e) {
+    toast.error("Fehler beim Aktualisieren", { id: toastId });
+  }
+};
 
   const handleAssignEmployee = async (employeeId: string) => {
-    if (!selectedJob || !employeeId) return;
-    const toastId = toast.loading("Prüfe Verfügbarkeit...");
-
+    if (!selectedJob) return;
+    const toastId = toast.loading("Zuweisung...");
     try {
       await api.post(`/jobs/${selectedJob.id}/assign`, { employeeId });
-      toast.success("Mitarbeiter zugewiesen!", { id: toastId });
+      toast.success("Team aktualisiert", { id: toastId });
+      fetchData();
       setIsEditModalOpen(false);
-      fetchData(); 
-
-    } catch (error: any) {
-      const msg = error.response?.data?.message || "Fehler bei der Zuweisung";
-      toast.error(msg, { id: toastId, duration: 4000 }); 
-    }
+    } catch (e: any) { toast.error(e.response?.data?.message || "Fehler", { id: toastId }); }
   };
 
   const handleRemoveEmployee = async (employeeId: string) => {
     if (!selectedJob) return;
     const previousAssignments = selectedJob.assignments;
-    
-    // Optimistic UI
     setSelectedJob({
-        ...selectedJob,
-        assignments: selectedJob.assignments.filter(a => a.employee.id !== employeeId)
+      ...selectedJob,
+      assignments: selectedJob.assignments.filter(a => a.employee.id !== employeeId)
+    });
+    try {
+      await api.delete(`/jobs/${selectedJob.id}/assign`, { data: { employeeId } });
+      toast.success("Mitarbeiter entfernt");
+      fetchData();
+    } catch (error) {
+      setSelectedJob({ ...selectedJob, assignments: previousAssignments });
+      toast.error("Entfernen fehlgeschlagen");
+    }
+  };
+
+const handleCreateJob = async () => {
+  if (!newJobData.customerId || !newJobData.serviceId) return toast.error("Daten unvollständig");
+  
+  setIsSaving(true);
+  try {
+    // Datum und Uhrzeit kombinieren
+    const [hours, minutes] = newJobData.time.split(':');
+    const combinedDate = new Date(newJobData.date);
+    combinedDate.setHours(parseInt(hours), parseInt(minutes), 0);
+
+    await api.post('/jobs', { 
+      customerId: newJobData.customerId,
+      serviceId: newJobData.serviceId,
+      scheduledDate: combinedDate.toISOString() // Als ISO-String senden
     });
 
-    try {
-        await api.delete(`/jobs/${selectedJob.id}/assign`, { data: { employeeId } });
-        toast.success("Mitarbeiter entfernt");
-        fetchData(); 
-    } catch (error) {
-        setSelectedJob({ ...selectedJob, assignments: previousAssignments });
-        toast.error("Konnte Mitarbeiter nicht entfernen");
-    }
-  };
+    toast.success("Job erstellt!");
+    setIsCreateModalOpen(false);
+    fetchData();
+  } catch (e) { 
+    toast.error("Fehler beim Erstellen"); 
+  } finally { 
+    setIsSaving(false); 
+  }
+};
 
-  // --- CUSTOM EVENT COMPONENT ---
-  const EventComponent = ({ event }: any) => {
-      const isJob = event.resource.type === 'JOB';
-      const data = event.resource.data;
-      
-      if (!isJob) {
-          const isSick = data.type === 'SICKNESS';
-          return (
-              <div className="flex items-center gap-1.5 h-full w-full px-1 overflow-hidden">
-                  {isSick ? <Thermometer size={12} className="shrink-0"/> : <Palmtree size={12} className="shrink-0"/>}
-                  <span className="text-[11px] font-medium truncate">{event.title}</span>
-              </div>
-          );
-      }
-
-      return (
-          <div className="flex flex-col h-full justify-center px-1.5 border-l-2 border-white/20">
-              <div className="text-[11px] font-bold truncate flex items-center gap-1">
-                  {data.status === 'COMPLETED' && <CheckCircle size={10} />}
-                  {event.title}
-              </div>
-              <div className="text-[10px] opacity-90 truncate flex items-center gap-1">
-                  <Clock size={9} />
-                  {format(event.start, 'HH:mm')} - {format(event.end, 'HH:mm')}
-              </div>
-          </div>
-      );
-  };
-
-  // --- COLOR LOGIC (Das Wichtige!) ---
   const eventStyleGetter = (event: CalendarEvent) => {
-    const type = event.resource.type;
-    const data = event.resource.data;
-    
-    let backgroundColor = '#3b82f6'; // Default Blau
-
-    if (type === 'JOB') {
-        const job = data as Job;
-        if (job.status === 'COMPLETED') {
-            backgroundColor = '#10b981'; // Grün (Erledigt)
-        } else if (job.status === 'CANCELLED') {
-            backgroundColor = '#f43f5e'; // Rot (Storniert)
-        } else if (job.assignments && job.assignments.length > 0) {
-            backgroundColor = '#f59e0b'; // Orange (Zugewiesen)
-        } else {
-            backgroundColor = '#3b82f6'; // Blau (Offen)
-        }
+    let backgroundColor = '#3b82f6';
+    if (event.resource.type === 'JOB') {
+        const job = event.resource.data as Job;
+        if (job.status === 'COMPLETED') backgroundColor = '#10b981';
+        else if (job.status === 'CANCELLED') backgroundColor = '#ef4444';
+        else if (job.assignments.length > 0) backgroundColor = '#f59e0b';
     } else {
-        const abs = data as Absence;
-        if (abs.type === 'VACATION') backgroundColor = '#8b5cf6'; // Lila (Urlaub)
-        if (abs.type === 'SICKNESS') backgroundColor = '#ef4444'; // Rot (Krank)
+        backgroundColor = (event.resource.data as Absence).type === 'VACATION' ? '#8b5cf6' : '#f43f5e';
     }
-
-    return { 
-        style: { 
-            backgroundColor, 
-            borderRadius: '6px', 
-            border: 'none', 
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)', // Shadow
-            color: 'white',
-            fontSize: '12px'
-        } 
-    };
+    return { style: { backgroundColor, borderRadius: '8px', border: 'none', color: 'white' } };
   };
 
   return (
-    <div className="h-[calc(100vh-100px)] flex flex-col gap-5 animate-in fade-in duration-500">
-      <Toaster position="top-right" />
-
-      {/* --- Modern Header --- */}
-      <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
-         <div>
-            <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-                <div className="bg-blue-100 p-2 rounded-xl text-blue-600"><CalIcon size={24} /></div>
-                Einsatzplaner
-            </h1>
-            <p className="text-slate-500 text-sm mt-1 ml-1">
-               {isLoading ? 'Lade Daten...' : `Planung für ${format(date, 'MMMM yyyy', { locale: de })}`}
-            </p>
-         </div>
-         
-         {/* Legende */}
-         <div className="flex flex-wrap gap-3 text-xs font-medium text-slate-600 bg-slate-50 px-4 py-2.5 rounded-xl border border-slate-200 shadow-inner">
-             <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-blue-500 rounded-full ring-2 ring-blue-200"></div> Offen</div>
-             <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-amber-500 rounded-full ring-2 ring-amber-200"></div> Zugewiesen</div>
-             <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-emerald-200"></div> Erledigt</div>
-             <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-rose-500 rounded-full ring-2 ring-rose-200"></div> Problem/Krank</div>
-             <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-violet-500 rounded-full ring-2 ring-violet-200"></div> Urlaub</div>
-         </div>
-      </div>
+    <div className="h-[calc(100vh-120px)] flex flex-col gap-6 animate-in fade-in duration-500 pb-10">
       
-      {/* --- Calendar Container --- */}
-      <div className="flex-1 bg-white p-4 rounded-3xl shadow-xl shadow-slate-200/50 border border-white relative overflow-hidden">
+      {/* HEADER */}
+      <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col lg:flex-row justify-between items-center gap-6">
+        <div className="flex items-center gap-4">
+            <div className="bg-blue-600 p-3 rounded-2xl text-white shadow-lg shadow-blue-100">
+                <CalIcon size={28} />
+            </div>
+            <div>
+                <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">Einsatzplaner</h1>
+                <p className="text-slate-500 font-medium text-sm flex items-center gap-2">
+                    <Info size={14} className="text-blue-500" /> Verwalte Aufträge und Abwesenheiten per Drag & Drop
+                </p>
+            </div>
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-3 bg-slate-50 p-2 rounded-2xl border border-slate-100">
+            <div className="flex items-center gap-2 px-3 py-1 bg-white rounded-lg shadow-sm border border-slate-100 text-[11px] font-bold text-slate-600">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div> Offen
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1 bg-white rounded-lg shadow-sm border border-slate-100 text-[11px] font-bold text-slate-600">
+                <div className="w-2 h-2 bg-amber-500 rounded-full"></div> Team aktiv
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1 bg-white rounded-lg shadow-sm border border-slate-100 text-[11px] font-bold text-slate-600">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full"></div> Erledigt
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1 bg-white rounded-lg shadow-sm border border-slate-100 text-[11px] font-bold text-slate-600">
+                <div className="w-2 h-2 bg-violet-500 rounded-full"></div> Abwesend
+            </div>
+        </div>
+      </div>
+
+      {/* CALENDAR */}
+      <div className="flex-1 bg-white p-6 rounded-[2rem] shadow-2xl shadow-slate-200/60 border border-white relative overflow-hidden">
         {isLoading && (
-            <div className="absolute inset-0 bg-white/80 z-20 flex items-center justify-center backdrop-blur-sm">
-                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-600"></div>
+            <div className="absolute inset-0 bg-white/60 z-20 backdrop-blur-[2px] flex items-center justify-center">
+                <Loader2 className="animate-spin text-blue-600" size={40} />
             </div>
         )}
-        
         <DnDCalendar
           localizer={localizer}
           events={events}
-          view={view} 
           date={date}
-          onView={setView}
           onNavigate={setDate}
-          selectable={true}
-          onSelectSlot={handleSelectSlot}
-          onEventDrop={handleEventDrop} 
-          resizable={false}
-          startAccessor="start"
-          endAccessor="end"
-          style={{ height: '100%' }}
-          culture="de"
-          messages={{ 
-              next: "Weiter", previous: "Zurück", today: "Heute", 
-              month: "Monat", week: "Woche", day: "Tag", agenda: "Liste" 
-          }}
+          view={view}
+          onView={setView}
+          selectable
+          onSelectSlot={({ start }: { start: Date }) => { setNewJobData({ ...newJobData, date: start }); setIsCreateModalOpen(true); }}
+          onSelectEvent={(e: any) => { if(e.resource.type === 'JOB') { setSelectedJob(e.resource.data); setIsEditModalOpen(true); } }}
+          onEventDrop={handleEventDrop}
           eventPropGetter={eventStyleGetter}
           components={{ event: EventComponent }}
-          onSelectEvent={handleSelectEvent}
-          className="modern-calendar" // CSS Klasse für custom Styling falls nötig
+          style={{ height: '100%' }}
+          culture="de"
+          messages={{ next: "Vor", previous: "Zurück", today: "Heute", month: "Monat", week: "Woche", day: "Tag", agenda: "Liste" }}
         />
       </div>
 
-      {/* --- CREATE MODAL --- */}
+      {/* CREATE MODAL */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in zoom-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/80">
-              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                <div className="bg-blue-100 p-1.5 rounded-lg text-blue-600"><Plus size={18} /></div> 
-                Neuer Auftrag
-              </h2>
-              <button onClick={() => setIsCreateModalOpen(false)} className="text-slate-400 hover:text-red-500 transition hover:bg-red-50 p-1 rounded-full">
-                  <X size={20} />
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-5">
-              <div className="bg-blue-50 text-blue-800 px-4 py-3 rounded-xl text-sm flex items-center gap-3 border border-blue-100 shadow-sm">
-                 <CalIcon size={18} className="shrink-0"/>
-                 <div>
-                    <span className="block text-xs uppercase font-bold opacity-70">Gewähltes Datum</span>
-                    <span className="font-semibold">{newJobData.date.toLocaleDateString('de-DE', { dateStyle: 'full' })}</span>
-                 </div>
-              </div>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
+              <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden border border-white">
+                  <div className="p-8">
+                      <div className="flex justify-between items-center mb-8">
+                          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
+                              <div className="bg-blue-100 p-2 rounded-xl text-blue-600"><Plus size={24} /></div>
+                              Neuer Auftrag
+                          </h2>
+                          <button onClick={() => setIsCreateModalOpen(false)} className="bg-slate-50 p-2 rounded-full hover:bg-slate-100 transition"><X /></button>
+                      </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Kunde</label>
-                <select 
-                  className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 outline-none transition bg-white shadow-sm"
-                  onChange={(e) => setNewJobData({...newJobData, customerId: e.target.value})}
-                  value={newJobData.customerId}
-                >
-                  <option value="">-- Bitte wählen --</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.companyName || `${c.lastName}, ${c.firstName}`}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Service</label>
-                <select 
-                  className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 outline-none transition bg-white shadow-sm"
-                  onChange={(e) => setNewJobData({...newJobData, serviceId: e.target.value})}
-                  value={newJobData.serviceId}
-                >
-                  <option value="">-- Bitte wählen --</option>
-                  {services.map(s => <option key={s.id} value={s.id}>{s.name} {s.duration ? `(${s.duration} min)` : ''}</option>)}
-                </select>
-              </div>
-
-              <div className="pt-4">
-                  <button 
-                    onClick={handleCreateJob}
-                    disabled={isSaving}
-                    className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
-                  >
-                    {isSaving ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : 'Auftrag erstellen'}
-                  </button>
-              </div>
-            </div>
-          </div>
+                  <div className="space-y-6">
+    {/* Datum & Zeit Row */}
+    <div className="grid grid-cols-2 gap-4">
+        <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
+            <label className="text-[10px] font-bold text-blue-400 uppercase tracking-widest block mb-1">Datum</label>
+            <div className="text-blue-800 font-bold">{format(newJobData.date, 'dd.MM.yyyy', { locale: de })}</div>
         </div>
+        
+        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Uhrzeit</label>
+            <input 
+                type="time" 
+                value={newJobData.time}
+                onChange={e => setNewJobData({...newJobData, time: e.target.value})}
+                className="bg-transparent font-bold text-slate-800 outline-none w-full cursor-pointer"
+            />
+        </div>
+    </div>
+    
+    {/* Kunde wählen */}
+    <div>
+        <label className="block text-xs font-bold text-slate-400 uppercase mb-2 ml-1">Kunde wählen</label>
+        <select className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 outline-none font-medium focus:ring-2 focus:ring-blue-500 transition-all" 
+            onChange={e => setNewJobData({...newJobData, customerId: e.target.value})} value={newJobData.customerId}>
+            <option value="">Bitte wählen...</option>
+            {customers.map(c => <option key={c.id} value={c.id}>{c.companyName || `${c.lastName}, ${c.firstName}`}</option>)}
+        </select>
+    </div>
+
+    {/* Leistung wählen */}
+    <div>
+        <label className="block text-xs font-bold text-slate-400 uppercase mb-2 ml-1">Leistung wählen</label>
+        <select className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 outline-none font-medium focus:ring-2 focus:ring-blue-500 transition-all" 
+            onChange={e => setNewJobData({...newJobData, serviceId: e.target.value})} value={newJobData.serviceId}>
+            <option value="">Bitte wählen...</option>
+            {services.map(s => <option key={s.id} value={s.id}>{s.name} ({Number(s.priceNet).toFixed(2)} €)</option>)}
+        </select>
+    </div>
+
+    <button onClick={handleCreateJob} disabled={isSaving} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-100 transition-all active:scale-95 flex items-center justify-center gap-2">
+        {isSaving ? <Loader2 className="animate-spin" /> : <CheckCircle size={20} />}
+        Auftrag planen
+    </button>
+</div>
+                  </div>
+              </div>
+          </div>
       )}
 
-      {/* --- EDIT MODAL --- */}
+      {/* EDIT MODAL */}
       {isEditModalOpen && selectedJob && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4 animate-in fade-in zoom-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden border border-white/50">
-             
-             {/* Modal Header */}
-             <div className="bg-slate-50/80 backdrop-blur px-6 py-5 border-b border-slate-100 flex justify-between items-start">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                     <span className="bg-white border border-slate-200 text-slate-500 text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-wider shadow-sm">
-                        Job-ID: {selectedJob.id.slice(0,6)}
-                     </span>
-                </div>
-                <h2 className="text-xl font-bold text-slate-800 leading-tight">{selectedJob.service.name}</h2>
-                <div className="flex items-center gap-1.5 text-slate-500 mt-1 text-sm">
-                    <MapPin size={14} className="text-blue-500"/>
-                    <span className="font-medium">
-                       {selectedJob.customer.companyName || `${selectedJob.customer.firstName} ${selectedJob.customer.lastName}`}
-                    </span>
-                </div>
-              </div>
-              <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-100 p-2 rounded-full shadow-sm border border-slate-100 transition">
-                <X size={20} />
-              </button>
-            </div>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-lg animate-in fade-in zoom-in duration-200">
+              <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh] overflow-hidden">
+                  <div className="p-8 overflow-y-auto space-y-8">
+                      <div className="flex justify-between items-start">
+                          <div className="space-y-1">
+                              <h2 className="text-2xl font-black text-slate-900 leading-tight">{selectedJob.service.name}</h2>
+                              <div className="flex items-center gap-2 text-slate-500 font-bold">
+                                  <MapPin size={16} className="text-blue-500" /> {selectedJob.customer.companyName || selectedJob.customer.lastName}
+                              </div>
+                          </div>
+                          <button onClick={() => setIsEditModalOpen(false)} className="bg-slate-100 p-2.5 rounded-full hover:bg-slate-200 transition"><X /></button>
+                      </div>
 
-            {/* Modal Body */}
-            <div className="p-6 overflow-y-auto space-y-6 bg-white">
-                
-                {/* Info Cards */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 shadow-sm">
-                        <p className="text-[10px] text-slate-400 uppercase font-bold mb-2 flex items-center gap-1"><Clock size={10}/> Zeitplan</p>
-                        <p className="font-bold text-slate-700">
-                            {new Date(selectedJob.scheduledDate).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: 'short' })}
-                        </p>
-                        <p className="text-sm text-slate-500 mt-0.5">
-                            {new Date(selectedJob.scheduledDate).toLocaleTimeString('de-DE', { hour: '2-digit', minute:'2-digit' })} Uhr
-                        </p>
-                    </div>
+                      {/* EDIT MODAL BODY */}
+<div className="grid grid-cols-2 gap-4">
+  {/* Status Select */}
+  <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100 shadow-sm">
+    <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Status</label>
+    <select 
+      value={selectedJob.status} 
+      onChange={e => handleJobUpdate({ status: e.target.value })} 
+      className="w-full bg-transparent font-bold text-slate-800 outline-none cursor-pointer"
+    >
+      <option value="SCHEDULED">🕒 Geplant</option>
+      <option value="IN_PROGRESS">🔄 In Arbeit</option>
+      <option value="COMPLETED">✅ Erledigt</option>
+      <option value="CANCELLED">❌ Storniert</option>
+    </select>
+  </div>
 
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 shadow-sm">
-                        <p className="text-[10px] text-slate-400 uppercase font-bold mb-2 flex items-center gap-1"><AlertTriangle size={10}/> Status</p>
-                        <select 
-                            value={selectedJob.status} 
-                            onChange={(e) => handleStatusChange(e.target.value)} 
-                            className={`w-full border rounded-lg px-2 py-1.5 text-sm outline-none font-bold cursor-pointer transition
-                                ${selectedJob.status === 'COMPLETED' ? 'text-emerald-700 border-emerald-200 bg-emerald-50' : 
-                                  selectedJob.status === 'CANCELLED' ? 'text-rose-700 border-rose-200 bg-rose-50' : 'text-blue-700 border-blue-200 bg-blue-50'}`}
-                        >
-                            <option value="SCHEDULED">Geplant 🕒</option>
-                            <option value="COMPLETED">Erledigt ✅</option>
-                            <option value="CANCELLED">Storniert ❌</option>
-                        </select>
-                    </div>
-                </div>
+  {/* Uhrzeit Bearbeiten */}
+  <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100 shadow-sm">
+    <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Uhrzeit anpassen</label>
+    <input 
+      type="time"
+      defaultValue={format(new Date(selectedJob.scheduledDate), 'HH:mm')}
+      onBlur={(e) => {
+        const [hours, minutes] = e.target.value.split(':');
+        const newDate = new Date(selectedJob.scheduledDate);
+        newDate.setHours(parseInt(hours), parseInt(minutes));
+        handleJobUpdate({ scheduledDate: newDate });
+      }}
+      className="w-full bg-transparent font-bold text-slate-800 outline-none cursor-pointer"
+    />
+  </div>
+</div>
 
-                <div className="w-full h-px bg-slate-100 my-2"></div>
-
-                {/* Team Section */}
-                <div>
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
-                           <UserPlus className="h-4 w-4 text-indigo-500" /> Team Zuweisung
-                        </h3>
-                        {selectedJob.assignments.length > 0 && 
-                            <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
-                                {selectedJob.assignments.length} Zugewiesen
-                            </span>
-                        }
-                    </div>
-
-                    {/* Assigned List */}
-                    <div className="flex flex-col gap-2 mb-4">
-                        {selectedJob.assignments.length > 0 ? (
-                            selectedJob.assignments.map((a, i) => (
-                                <div key={i} className="flex justify-between items-center bg-white border border-slate-200 p-3 rounded-xl shadow-sm hover:border-indigo-200 transition group">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold text-xs">
-                                            {a.employee.firstName.charAt(0)}{a.employee.lastName.charAt(0)}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-700">{a.employee.firstName} {a.employee.lastName}</p>
-                                            <p className="text-[10px] text-slate-400">Reinigungskraft</p>
-                                        </div>
-                                    </div>
-                                    <button 
-                                        onClick={() => handleRemoveEmployee(a.employee.id)}
-                                        className="text-slate-300 hover:text-rose-500 hover:bg-rose-50 p-2 rounded-lg transition"
-                                        title="Entfernen"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                </div>
-                            ))
-                        ) : ( 
-                            <div className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50 text-slate-400 gap-2">
-                                <Briefcase size={24} className="opacity-20"/>
-                                <span className="text-xs font-medium">Noch niemand zugewiesen</span>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Assign Action */}
-                    <div className="relative group">
-                        <select 
-                           className="w-full p-3.5 pl-11 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition appearance-none cursor-pointer text-sm font-medium text-slate-700 shadow-sm"
-                           onChange={(e) => handleAssignEmployee(e.target.value)} 
-                           value=""
-                        >
-                            <option value="" disabled>+ Mitarbeiter hinzufügen...</option>
-                            {employees.map(emp => ( <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</option> ))}
-                        </select>
-                        <UserPlus className="absolute left-3.5 top-3.5 text-indigo-500 w-5 h-5 pointer-events-none group-hover:scale-110 transition-transform" />
-                    </div>
-                    <p className="text-[10px] text-slate-400 mt-2 flex items-center gap-1.5 ml-1">
-                        <CheckCircle size={10} className="text-emerald-500"/> Automatische Konfliktprüfung aktiviert
-                    </p>
-                </div>
-            </div>
-          </div>
+{/* Datums-Info (Nur Anzeige, da Verschieben per Drag & Drop geht) */}
+<div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 flex items-center justify-between">
+    <div className="flex items-center gap-3">
+        <CalIcon size={18} className="text-blue-600" />
+        <div>
+            <p className="text-[10px] font-bold text-blue-400 uppercase">Geplanter Tag</p>
+            <p className="text-sm font-bold text-blue-900">
+                {format(new Date(selectedJob.scheduledDate), 'EEEE, dd. MMMM yyyy', { locale: de })}
+            </p>
         </div>
+    </div>
+    <div className="text-xs text-blue-600 font-medium italic">
+        Verschieben per Drag & Drop
+    </div>
+</div>
+
+                      <div className="space-y-4">
+                          <h3 className="font-black text-slate-800 text-sm uppercase px-1">Team Management</h3>
+                          <div className="flex flex-col gap-3">
+                              {selectedJob.assignments.map(a => (
+                                  <div key={a.employee.id} className="flex justify-between items-center bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100/50">
+                                      <span className="font-bold text-slate-800">{a.employee.firstName} {a.employee.lastName}</span>
+                                      <button onClick={() => handleRemoveEmployee(a.employee.id)} className="text-slate-300 hover:text-red-500 transition-colors p-2"><Trash2 size={18}/></button>
+                                  </div>
+                              ))}
+                              <select onChange={e => handleAssignEmployee(e.target.value)} value=""
+                                className="w-full bg-white border-2 border-dashed border-slate-200 p-4 rounded-2xl font-bold text-slate-400 outline-none cursor-pointer appearance-none text-center">
+                                  <option value="">+ Mitarbeiter zuweisen</option>
+                                  {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</option>)}
+                              </select>
+                          </div>
+                      </div>
+
+                      <button onClick={() => setIsEditModalOpen(false)} className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl shadow-xl active:scale-95 transition">Schließen</button>
+                  </div>
+              </div>
+          </div>
       )}
     </div>
   );
