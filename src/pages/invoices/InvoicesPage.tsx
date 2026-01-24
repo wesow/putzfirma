@@ -240,7 +240,7 @@ export default function InvoicesPage() {
                       {new Date(inv.date).toLocaleDateString('de-DE')}
                     </td>
                     <td className="px-6 py-4 text-center text-slate-500">
-                      <span className="bg-slate-100 px-2 py-1 rounded text-xs font-mono">{inv._count.jobs}</span>
+                      <span className="bg-slate-100 px-2 py-1 rounded text-xs font-mono">{inv._count?.jobs || 0}</span>
                     </td>
                     <td className="px-6 py-4 text-right font-bold text-slate-800">
                       {Number(inv.totalGross).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
