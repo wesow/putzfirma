@@ -7,12 +7,14 @@ import {
   AlertCircle, 
   Mail, 
   Info,
-  Loader2
+  Loader2,
+  Clock,
+  Send,
+  History
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
 
-// Define Types
 interface Invoice {
   id: string;
   invoiceNumber: string;
@@ -40,12 +42,8 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Form State
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-
-  // Action States
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
@@ -62,38 +60,34 @@ export default function InvoicesPage() {
       setInvoices(invRes.data);
       setCustomers(custRes.data);
     } catch (error) {
-      toast.error("Could not load data");
+      toast.error("Daten konnten nicht geladen werden");
     } finally {
       setLoading(false);
     }
   };
 
   const handleGenerateInvoice = async () => {
-    if (!selectedCustomerId) return toast.error("Please select a customer first!");
+    if (!selectedCustomerId) return toast.error("Bitte wählen Sie zuerst einen Kunden!");
     
     setIsGenerating(true);
-    const toastId = toast.loading("Creating invoice...");
+    const toastId = toast.loading("Rechnung wird erstellt...");
 
     try {
       await api.post('/invoices/generate', { customerId: selectedCustomerId });
-      
-      toast.success("Invoice created successfully!", { id: toastId });
-      
+      toast.success("Rechnung erfolgreich erstellt!", { id: toastId });
       setSelectedCustomerId(''); 
       fetchData(); 
     } catch (error: any) {
-      console.error(error);
-      const errorMessage = error.response?.data?.message || "Error creating invoice.";
+      const errorMessage = error.response?.data?.message || "Fehler beim Erstellen.";
       toast.error(errorMessage, { id: toastId });
     } finally {
       setIsGenerating(false);
     }
   };
 
-  // --- PDF Download Function ---
   const handleDownloadPdf = async (invoiceId: string, invoiceNumber: string) => {
     setDownloadingId(invoiceId);
-    const toastId = toast.loading("Generating PDF...");
+    const toastId = toast.loading("PDF wird generiert...");
 
     try {
       const response = await api.get(`/invoices/${invoiceId}/pdf`, {
@@ -103,36 +97,32 @@ export default function InvoicesPage() {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `Invoice_${invoiceNumber}.pdf`);
+      link.setAttribute('download', `Rechnung_${invoiceNumber}.pdf`);
       document.body.appendChild(link);
       link.click();
-      
       link.parentNode?.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      toast.success("Download started", { id: toastId });
-
+      toast.success("Download gestartet", { id: toastId });
     } catch (error) {
-      console.error("Download Error:", error);
-      toast.error("Error downloading.", { id: toastId });
+      toast.error("Fehler beim Download.", { id: toastId });
     } finally {
         setDownloadingId(null);
     }
   };
 
-  // --- Send Email Function ---
   const handleSendEmail = async (invoiceId: string) => {
-    if (!confirm("Send invoice bindingly to the customer now?")) return;
+    if (!confirm("Rechnung jetzt verbindlich an den Kunden senden?")) return;
 
     setSendingId(invoiceId); 
-    const toastId = toast.loading("Sending Email...");
+    const toastId = toast.loading("E-Mail wird versendet...");
 
     try {
       await api.post(`/invoices/${invoiceId}/send`);
-      toast.success("Email was sent! 📧", { id: toastId });
+      toast.success("E-Mail wurde versendet! 📧", { id: toastId });
       fetchData(); 
     } catch (error) {
-      toast.error("Error sending. Check server logs.", { id: toastId });
+      toast.error("Fehler beim Versand.", { id: toastId });
     } finally {
       setSendingId(null); 
     }
@@ -140,149 +130,155 @@ export default function InvoicesPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'PAID': return <span className="flex items-center gap-1 text-green-700 bg-green-100 px-2 py-1 rounded text-xs font-bold border border-green-200"><CheckCircle size={14}/> Paid</span>;
-      case 'SENT': return <span className="flex items-center gap-1 text-blue-700 bg-blue-100 px-2 py-1 rounded text-xs font-bold border border-blue-200"><Mail size={14}/> Sent</span>;
-      case 'OVERDUE': return <span className="flex items-center gap-1 text-red-700 bg-red-100 px-2 py-1 rounded text-xs font-bold border border-red-200"><AlertCircle size={14}/> Overdue</span>;
-      default: return <span className="text-slate-600 bg-slate-50 px-2 py-1 rounded text-xs font-bold border border-slate-200">Draft</span>;
+      case 'PAID': 
+        return <span className="status-badge bg-emerald-50 text-emerald-700 border-emerald-100"><CheckCircle size={10}/> BEZAHLT</span>;
+      case 'SENT': 
+        return <span className="status-badge bg-blue-50 text-blue-700 border-blue-100"><Send size={10}/> VERSENDET</span>;
+      case 'OVERDUE': 
+        return <span className="status-badge bg-red-50 text-red-700 border-red-100"><AlertCircle size={10}/> ÜBERFÄLLIG</span>;
+      default: 
+        return <span className="status-badge bg-slate-50 text-slate-500 border-slate-200">ENTWURF</span>;
     }
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+    <div className="page-container">
       
-      {/* HEADER */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-3">
-            <FileText className="text-blue-600" /> 
-            Invoices
-          </h1>
-          <p className="text-slate-500 mt-1">Create invoices based on completed jobs.</p>
+      {/* HEADER SECTION */}
+      <div className="header-section">
+        <div className="text-left">
+          <h1 className="page-title leading-none">Rechnungs-Zentrale</h1>
+          <p className="page-subtitle text-slate-500 mt-2 font-medium">Archivierung und automatisierte Abrechnung abgeschlossener Leistungen.</p>
         </div>
       </div>
 
-      {/* --- GENERATOR BOX --- */}
-      <div className="bg-gradient-to-r from-blue-50/80 to-white p-6 rounded-2xl border border-blue-100 shadow-sm">
-        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <Plus className="h-5 w-5 text-blue-600" />
-          Generate New Invoice
-        </h3>
-        <div className="flex flex-col sm:flex-row gap-4 items-end">
-          <div className="w-full sm:flex-1">
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Select Customer</label>
-            <div className="relative">
+      {/* RECHNUNGS-GENERATOR BOX */}
+      <div className="form-card !bg-blue-50/40 !border-blue-100 shadow-xl shadow-blue-900/5 animate-in fade-in slide-in-from-top-4 duration-500">
+        <div className="flex flex-col md:flex-row gap-6 items-end">
+          <div className="w-full md:flex-1 space-y-1.5">
+            <label className="label-caps !text-blue-600 !ml-0">Empfänger für neuen Abrechnungslauf wählen</label>
+            <div className="relative group">
                 <select 
-                className="w-full p-3 border border-slate-300 rounded-xl outline-none focus:border-blue-500 bg-white shadow-sm appearance-none cursor-pointer text-slate-700 font-medium transition-all focus:ring-2 focus:ring-blue-100"
-                value={selectedCustomerId}
-                onChange={(e) => setSelectedCustomerId(e.target.value)}
+                  className="input-standard appearance-none cursor-pointer pr-10 pl-4 font-bold text-slate-700 border-blue-200 focus:border-blue-500 focus:ring-blue-500/10"
+                  value={selectedCustomerId}
+                  onChange={(e) => setSelectedCustomerId(e.target.value)}
                 >
-                <option value="">-- Please Select --</option>
-                {customers.map(c => (
-                    <option key={c.id} value={c.id}>
-                    {c.companyName || `${c.firstName} ${c.lastName}`}
-                    </option>
-                ))}
+                  <option value="">-- Kundenstamm durchsuchen --</option>
+                  {customers.map(c => (
+                      <option key={c.id} value={c.id}>
+                      {c.companyName || `${c.firstName} ${c.lastName}`}
+                      </option>
+                  ))}
                 </select>
+                <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-blue-500">
+                  <Plus size={18} strokeWidth={3} />
+                </div>
             </div>
-            <p className="text-xs text-slate-400 mt-2 flex items-center gap-1 ml-1">
-                <Info size={12} /> Only jobs with status "Completed" are billed.
-            </p>
           </div>
           <button 
             onClick={handleGenerateInvoice}
             disabled={isGenerating || !selectedCustomerId}
-            className="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
+            className="btn-primary w-full md:w-auto py-3 px-10 shadow-xl shadow-blue-500/20 uppercase tracking-widest text-[10px] font-black"
           >
-            {isGenerating ? <Loader2 className="animate-spin" /> : <FileText size={20} />}
-            {isGenerating ? 'Creating...' : 'Generate Invoice'}
+            {isGenerating ? <Loader2 className="animate-spin" size={18} /> : <FileText size={18} />}
+            {isGenerating ? 'Wird erstellt...' : 'Rechnung generieren'}
           </button>
+        </div>
+        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-blue-100/50">
+            <Info size={14} className="text-blue-500 shrink-0" />
+            <p className="text-[10px] text-blue-800/70 font-black uppercase tracking-tight">
+              Hinweis: Das System erfasst nur Aufträge mit dem Status <span className="text-blue-600">"Abgeschlossen"</span>.
+            </p>
         </div>
       </div>
 
-      {/* --- LIST --- */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-           <h3 className="font-bold text-slate-800">Invoice Archive</h3>
-           <span className="text-xs font-medium bg-white px-2 py-1 rounded border border-slate-200 text-slate-500">
-             {invoices.length} Entries
-           </span>
+      {/* INVOICE ARCHIVE TABLE */}
+      <div className="table-container shadow-xl shadow-slate-200/50 animate-in fade-in duration-700">
+        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
+            <div className="flex items-center gap-2">
+               <History size={18} className="text-slate-400" />
+               <h3 className="font-black text-slate-800 uppercase tracking-widest text-[11px]">Rechnungsarchiv</h3>
+            </div>
+            <span className="status-badge bg-slate-100 text-slate-600 border-slate-200 font-black">
+                {invoices.length} DOKUMENTE
+            </span>
         </div>
         
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-slate-50 text-slate-500 uppercase text-xs font-bold tracking-wider">
+          <table className="table-main">
+            <thead className="table-head">
               <tr>
-                <th className="px-6 py-4 border-b border-slate-100">No.</th>
-                <th className="px-6 py-4 border-b border-slate-100">Customer</th>
-                <th className="px-6 py-4 border-b border-slate-100">Date</th>
-                <th className="px-6 py-4 border-b border-slate-100 text-center">Jobs</th>
-                <th className="px-6 py-4 border-b border-slate-100 text-right">Amount</th>
-                <th className="px-6 py-4 border-b border-slate-100">Status</th>
-                <th className="px-6 py-4 border-b border-slate-100 text-right">Action</th>
+                <th className="table-cell">Nr. / Referenz</th>
+                <th className="table-cell">Auftraggeber</th>
+                <th className="table-cell">Belegdatum</th>
+                <th className="table-cell text-center">Leistungen</th>
+                <th className="table-cell text-right">Bruttobetrag</th>
+                <th className="table-cell text-center">Status</th>
+                <th className="table-cell text-right">Export</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="text-center py-20 text-slate-400"><Loader2 className="animate-spin mx-auto mb-2"/> Loading Data...</td></tr>
+                <tr><td colSpan={7} className="py-24 text-center"><Loader2 className="animate-spin mx-auto mb-3 text-blue-600" size={40}/><span className="label-caps italic">Synchronisiere Belege...</span></td></tr>
               ) : invoices.length === 0 ? (
                 <tr>
-                    <td colSpan={7} className="text-center py-20 text-slate-400">
-                        <div className="flex flex-col items-center gap-2">
-                            <FileText className="h-10 w-10 opacity-20" />
-                            No invoices created yet.
+                    <td colSpan={7} className="py-24 text-center">
+                        <div className="flex flex-col items-center gap-3 text-slate-300">
+                            <FileText size={48} className="opacity-20" />
+                            <p className="font-black uppercase tracking-widest text-xs">Keine Rechnungen im Archiv</p>
                         </div>
                     </td>
                 </tr>
               ) : (
                 invoices.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-slate-50 transition-colors group">
-                    <td className="px-6 py-4 font-mono text-sm text-slate-600 font-bold group-hover:text-blue-600 transition-colors">
-                      {inv.invoiceNumber}
+                  <tr key={inv.id} className="table-row group">
+                    <td className="table-cell">
+                      <div className="font-black text-blue-600 text-sm tracking-tighter">#{inv.invoiceNumber}</div>
+                      <div className="text-[9px] text-slate-400 font-bold uppercase">UID: {inv.id.split('-')[0]}</div>
                     </td>
-                    <td className="px-6 py-4 font-bold text-slate-700">
-                      {inv.customer.companyName || `${inv.customer.firstName} ${inv.customer.lastName}`}
+                    <td className="table-cell">
+                      <div className="font-black text-slate-800 text-sm truncate max-w-[200px]">
+                        {inv.customer.companyName || `${inv.customer.firstName} ${inv.customer.lastName}`}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-slate-500 text-sm">
-                      {new Date(inv.date).toLocaleDateString('de-DE')}
+                    <td className="table-cell">
+                      <div className="flex items-center gap-2 font-bold text-slate-500 text-xs whitespace-nowrap">
+                        <Clock size={12} className="text-slate-300"/>
+                        {formatDate(inv.date)}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-center text-slate-500">
-                      <span className="bg-slate-100 px-2 py-1 rounded text-xs font-mono">{inv._count?.jobs || 0}</span>
+                    <td className="table-cell text-center">
+                      <span className="bg-slate-100 px-2 py-0.5 rounded-md text-[10px] font-black text-slate-600 border border-slate-200">
+                        {inv._count?.jobs || 0} JOBS
+                      </span>
                     </td>
-                    <td className="px-6 py-4 text-right font-bold text-slate-800">
-                      {Number(inv.totalGross).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                    <td className="table-cell text-right">
+                      <span className="font-black text-slate-900 text-sm">
+                        {Number(inv.totalGross).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                      </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="table-cell text-center">
                       {getStatusBadge(inv.status)}
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2">
+                    <td className="table-cell text-right">
+                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
                         
-                        {/* DOWNLOAD BUTTON */}
                         <button 
                           onClick={() => handleDownloadPdf(inv.id, inv.invoiceNumber)}
                           disabled={!!downloadingId}
-                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100" 
-                          title="Download PDF"
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                          title="PDF herunterladen"
                         >
-                          {downloadingId === inv.id ? <Loader2 size={18} className="animate-spin text-blue-500"/> : <Download size={18} />}
+                          {downloadingId === inv.id ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
                         </button>
 
-                        {/* EMAIL BUTTON */}
                         <button 
                           onClick={() => handleSendEmail(inv.id)}
                           disabled={sendingId === inv.id}
-                          className={`p-2 rounded-lg transition-colors border border-transparent ${
-                            sendingId === inv.id 
-                              ? 'text-purple-400 bg-purple-50 cursor-wait' 
-                              : 'text-slate-400 hover:text-purple-600 hover:bg-purple-50 hover:border-purple-100'
-                          }`}
-                          title="Send via Email"
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                          title="E-Mail Versand"
                         >
-                          {sendingId === inv.id ? (
-                            <Loader2 size={18} className="animate-spin" />
-                          ) : (
-                            <Mail size={18} />
-                          )}
+                          {sendingId === inv.id ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
                         </button>
 
                       </div>
@@ -296,4 +292,13 @@ export default function InvoicesPage() {
       </div>
     </div>
   );
+}
+
+// Hilfsfunktion für lokales Datum
+function formatDate(dateStr: string) {
+    return new Date(dateStr).toLocaleDateString('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: '2-digit'
+    });
 }

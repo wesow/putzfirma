@@ -1,192 +1,43 @@
 import { useEffect, useState, useRef } from 'react';
 import { 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
-  Calendar, 
-  MapPin, 
-  Play, 
-  RefreshCw, 
-  X, 
-  Loader2, 
-  Camera, 
-  UploadCloud,
-  UserPlus,
-  Filter,
-  Trash2
+  CheckCircle, Calendar, MapPin, Play, RefreshCw, X, 
+  Loader2, Camera, UploadCloud, UserPlus, Filter, Trash2,
+  Clock, Plus
 } from 'lucide-react'; 
+import { format } from 'date-fns';
 import toast from 'react-hot-toast'; 
 import api from '../../lib/api';
+import ViewSwitcher from '../../components/ViewSwitcher';
 
 const API_BASE_URL = import.meta.env.PROD ? 'https://glanzops.de' : 'http://localhost:3000';
 
-// --- TYPEN ---
 interface Employee { id: string; firstName: string; lastName: string; }
 interface JobProof { id: string; url: string; type: string; }
+
 interface Job {
   id: string;
   scheduledDate: string;
   status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' | 'IN_PROGRESS';
-  customer: { companyName: string | null; firstName: string; lastName: string; };
+  customer: { 
+    companyName: string | null; 
+    firstName: string; 
+    lastName: string;
+    addresses?: { street: string; city: string; zipCode: string }[];
+  };
   service: { name: string };
-  address: { street: string; city: string };
+  address?: { street: string; city: string; zipCode: string };
   assignments: { employee: Employee }[];
   actualDurationMinutes: number | null;
   proofs: JobProof[];
-}
-
-// --- HELPER COMPONENT: STATUS BADGE ---
-const StatusBadge = ({ status }: { status: string }) => {
-    switch (status) {
-      case 'COMPLETED': return <span className="flex items-center gap-1 text-green-700 bg-green-100 px-2.5 py-1 rounded-full text-xs font-bold border border-green-200"><CheckCircle size={14}/> Erledigt</span>;
-      case 'CANCELLED': return <span className="flex items-center gap-1 text-red-700 bg-red-100 px-2.5 py-1 rounded-full text-xs font-bold border border-red-200"><XCircle size={14}/> Storniert</span>;
-      case 'IN_PROGRESS': return <span className="flex items-center gap-1 text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full text-xs font-bold border border-amber-200"><Clock size={14}/> In Arbeit</span>;
-      default: return <span className="flex items-center gap-1 text-blue-700 bg-blue-100 px-2.5 py-1 rounded-full text-xs font-bold border border-blue-200"><Calendar size={14}/> Geplant</span>;
-    }
-};
-
-// --- HELPER COMPONENT: JOB LIST ITEM ---
-const JobListItem = ({ job, isAdmin, employees, onOpenUpload, onOpenComplete, onStatusChange, onAssign, onUnassign }: any) => {
-    return (
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-all group relative overflow-hidden">
-            {/* Status Stripe */}
-            <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${job.status === 'COMPLETED' ? 'bg-green-500' : job.status === 'CANCELLED' ? 'bg-red-500' : 'bg-blue-500'}`}></div>
-
-            <div className="flex flex-col lg:flex-row gap-6 pl-4">
-                
-                {/* TEIL 1: INFOS */}
-                <div className="flex-1 space-y-3">
-                    <div className="flex items-center justify-between lg:justify-start gap-4">
-                        <h3 className="font-bold text-lg text-slate-900 truncate">
-                            {job.customer.companyName || `${job.customer.firstName} ${job.customer.lastName}`}
-                        </h3>
-                        <StatusBadge status={job.status} />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6 text-sm text-slate-600">
-                        <div className="flex items-center gap-2">
-                            <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg"><Calendar size={16}/></div>
-                            <span className="font-medium">
-                                {new Date(job.scheduledDate).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric' })}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg"><MapPin size={16}/></div>
-                            <span className="truncate">{job.address?.street}, {job.address?.city}</span>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wide bg-slate-50 px-2 py-1 rounded border border-slate-100">
-                            {job.service.name}
-                        </span>
-                        {job.actualDurationMinutes && (
-                            <span className="text-xs font-bold text-green-700 bg-green-50 px-2 py-1 rounded border border-green-100 flex items-center gap-1">
-                                <Clock size={12}/> {job.actualDurationMinutes} Min
-                            </span>
-                        )}
-                    </div>
-                </div>
-
-                {/* TEIL 2: MITARBEITER */}
-                <div className="flex flex-col gap-2 min-w-[200px] border-t lg:border-t-0 lg:border-l border-slate-100 pt-4 lg:pt-0 lg:pl-6">
-                    <p className="text-xs font-bold text-slate-400 uppercase">Team</p>
-                    <div className="flex flex-wrap gap-2">
-                        {job.assignments.map((assignment: any) => (
-                            <div key={assignment.employee.id} className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium">
-                                {assignment.employee.firstName}
-                                {isAdmin && ['SCHEDULED', 'IN_PROGRESS'].includes(job.status) && (
-                                    <button 
-                                        onClick={() => onUnassign(job.id, assignment.employee.id)}
-                                        className="text-slate-400 hover:text-red-500 transition ml-1"
-                                    >
-                                        <X size={14} />
-                                    </button>
-                                )}
-                            </div>
-                        ))}
-                        
-                        {/* Add Employee Button */}
-                        {isAdmin && ['SCHEDULED', 'IN_PROGRESS'].includes(job.status) && (
-                            <div className="relative inline-block">
-                                <select 
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    onChange={(e) => onAssign(job.id, e.target.value)}
-                                    value=""
-                                >
-                                    <option value="" disabled>Wählen...</option>
-                                    {employees.map((emp: Employee) => (
-                                        <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</option>
-                                    ))}
-                                </select>
-                                <button className="inline-flex items-center gap-1.5 bg-white border border-dashed border-slate-300 text-slate-500 hover:text-blue-600 hover:border-blue-400 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
-                                    <UserPlus size={14} /> <span className="hidden sm:inline">Dazu</span>
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* TEIL 3: ACTIONS & PHOTOS */}
-                <div className="flex flex-col items-end justify-between gap-4 border-t lg:border-t-0 lg:border-l border-slate-100 pt-4 lg:pt-0 lg:pl-6 min-w-[180px]">
-                    <div className="flex -space-x-2 overflow-hidden">
-                        {job.proofs.map((proof: JobProof) => (
-                            <a 
-                                key={proof.id} 
-                                href={`${API_BASE_URL}/${proof.url}`} 
-                                target="_blank" 
-                                rel="noreferrer"
-                                className="w-10 h-10 rounded-lg border-2 border-white overflow-hidden shadow-sm hover:scale-110 hover:z-10 transition-transform relative bg-slate-100"
-                            >
-                                <img src={`${API_BASE_URL}/${proof.url}`} className="w-full h-full object-cover" />
-                            </a>
-                        ))}
-                    </div>
-
-                    <div className="flex items-center gap-2 w-full justify-end">
-                        {['SCHEDULED', 'IN_PROGRESS'].includes(job.status) ? (
-                            <>
-                                <button 
-                                    onClick={() => onOpenUpload(job.id)}
-                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                                    title="Foto hochladen"
-                                >
-                                    <Camera size={20} />
-                                </button>
-                                {isAdmin && (
-                                    <button 
-                                        onClick={() => onStatusChange(job.id, 'CANCELLED')}
-                                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                                        title="Stornieren"
-                                    >
-                                        <Trash2 size={20} />
-                                    </button>
-                                )}
-                                <button 
-                                    onClick={() => onOpenComplete(job.id)}
-                                    className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md shadow-green-200 hover:bg-green-700 hover:shadow-lg transition-all active:scale-95 flex items-center gap-2"
-                                >
-                                    <CheckCircle size={16} /> Fertig
-                                </button>
-                            </>
-                        ) : (
-                            <span className="text-xs font-medium text-slate-400 italic">Abgeschlossen</span>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
 }
 
 export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'OPEN' | 'DONE'>('OPEN');
+  const [viewMode, setViewMode] = useState<'GRID' | 'TABLE'>('GRID');
 
-  // --- MODAL STATE ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'COMPLETE' | 'UPLOAD'>('COMPLETE');
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -196,253 +47,299 @@ export default function JobsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const role = localStorage.getItem('role');
-  const isAdmin = role === 'ADMIN';
+  const isAdmin = localStorage.getItem('role') === 'ADMIN';
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     try {
-      const promises = [api.get('/jobs')];
-      if (isAdmin) promises.push(api.get('/employees'));
-
-      const [jobsRes, employeesRes] = await Promise.all(promises);
-
+      setLoading(true);
+      const [jobsRes, employeesRes] = await Promise.all([
+        api.get('/jobs'),
+        isAdmin ? api.get('/employees') : Promise.resolve({ data: [] })
+      ]);
+      
       const sortedJobs = jobsRes.data.sort((a: Job, b: Job) => 
         new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime()
       );
-
+      
       setJobs(sortedJobs);
       if (employeesRes) setEmployees(employeesRes.data);
-
     } catch (error) {
-      console.error(error);
-      toast.error("Daten konnten nicht geladen werden.");
-    } finally {
-      setLoading(false);
-    }
+      toast.error("Daten konnten nicht geladen werden");
+    } finally { setLoading(false); }
   };
 
-  // --- ACTIONS ---
-  const filteredJobs = jobs.filter(job => {
-      if (filterStatus === 'ALL') return true;
-      if (filterStatus === 'OPEN') return ['SCHEDULED', 'IN_PROGRESS'].includes(job.status);
-      if (filterStatus === 'DONE') return ['COMPLETED', 'CANCELLED'].includes(job.status);
-      return true;
-  });
-
-  const handleGenerateJobs = async () => { 
-      setIsGenerating(true);
-      try { 
-        const res = await api.post('/jobs/generate'); 
-        await fetchData(); 
-        toast.success(res.data.message || "Jobs generiert!"); 
-      } catch(e: any) { 
-        toast.error("Fehler beim Generieren."); 
-      } finally {
-        setIsGenerating(false);
-      }
+  const getAddressString = (job: Job) => {
+    if (job.address?.street) return `${job.address.street}, ${job.address.city}`;
+    if (job.customer?.addresses && job.customer.addresses.length > 0) {
+        const a = job.customer.addresses[0];
+        return `${a.street}, ${a.city}`;
+    }
+    return "Keine Adresse hinterlegt";
   };
 
   const handleStatusChange = async (id: string, s: string) => { 
-     if(!confirm("Status wirklich ändern?")) return;
-     try { 
-       await api.patch(`/jobs/${id}/status`, { status: s }); 
-       toast.success("Status aktualisiert");
-       fetchData(); 
-     } catch(e) { 
-       toast.error("Fehler beim Update"); 
-     }
+    try { 
+      await api.patch(`/jobs/${id}/status`, { status: s }); 
+      toast.success("Status aktualisiert");
+      fetchData(); 
+    } catch(e) { toast.error("Fehler beim Status-Update"); }
   };
 
   const handleAssignEmployee = async (jid: string, eid: string) => {
-     if(!eid) return;
-     const toastId = toast.loading("Zuweisung...");
-     try { 
-       await api.post(`/jobs/${jid}/assign`, { employeeId: eid }); 
-       toast.success("Zugewiesen", { id: toastId });
-       fetchData(); 
-     } catch(e: any) { 
-       toast.error("Fehler bei Zuweisung", { id: toastId }); 
-     }
+    if(!eid) return;
+    const toastId = toast.loading("Zuweisung...");
+    try { 
+      await api.post(`/jobs/${jid}/assign`, { employeeId: eid }); 
+      toast.success("Mitarbeiter zugewiesen", { id: toastId });
+      fetchData();
+    } catch(e: any) { 
+      toast.error(e.response?.data?.message || "Fehler", { id: toastId }); 
+    }
   };
 
   const handleUnassignEmployee = async (jid: string, eid: string) => {
-      if(!confirm("Mitarbeiter entfernen?")) return;
-      try {
-          await api.delete(`/jobs/${jid}/assign`, { data: { employeeId: eid } });
-          toast.success("Entfernt");
-          fetchData();
-      } catch (error) {
-          toast.error("Fehler beim Entfernen");
-      }
-  }
-
-  // --- MODAL HANDLERS ---
-  const openCompletionModal = (jobId: string) => {
-    setSelectedJobId(jobId);
-    setModalMode('COMPLETE'); 
-    setDurationInput(''); 
-    setSelectedFile(null);
-    setPreviewUrl(null);
-    setIsModalOpen(true);
-  };
-
-  const openUploadModal = (jobId: string) => {
-    setSelectedJobId(jobId);
-    setModalMode('UPLOAD'); 
-    setSelectedFile(null);
-    setPreviewUrl(null);
-    setIsModalOpen(true);
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
-    }
+    if(!confirm("Mitarbeiter entfernen?")) return;
+    try {
+      await api.delete(`/jobs/${jid}/assign`, { data: { employeeId: eid } });
+      toast.success("Entfernt");
+      fetchData();
+    } catch (error) { toast.error("Fehler"); }
   };
 
   const handleSubmit = async () => {
-    if (!selectedJobId) return;
-    
-    if (modalMode === 'COMPLETE' && !durationInput) return toast.error("Zeit fehlt!");
-    if (modalMode === 'UPLOAD' && !selectedFile) return toast.error("Foto fehlt!");
-
+    if (modalMode === 'COMPLETE' && !durationInput) return toast.error("Dauer angeben!");
     setIsSubmitting(true);
-
     try {
         if (selectedFile) {
-          const formData = new FormData();
-          formData.append('image', selectedFile);
-          await api.post(`/jobs/${selectedJobId}/proof`, formData, { headers: { 'Content-Type': 'multipart/form-data' }});
+          const fd = new FormData();
+          fd.append('image', selectedFile);
+          await api.post(`/jobs/${selectedJobId}/proof`, fd, { headers: { 'Content-Type': 'multipart/form-data' }});
         }
-
         if (modalMode === 'COMPLETE') {
-            await api.patch(`/jobs/${selectedJobId}`, {
-                status: 'COMPLETED',
-                actualDurationMinutes: Number(durationInput)
-            });
-            toast.success("Job erledigt!");
-        } else {
-            toast.success("Foto hochgeladen!");
+            await api.patch(`/jobs/${selectedJobId}`, { status: 'COMPLETED', actualDurationMinutes: Number(durationInput) });
         }
-        
         setIsModalOpen(false);
         fetchData(); 
-    } catch (error) {
-        toast.error("Fehler beim Speichern.");
-    } finally {
-        setIsSubmitting(false);
-    }
+        toast.success("Erfolgreich gespeichert!");
+    } catch (error) { toast.error("Fehler"); } 
+    finally { setIsSubmitting(false); }
   };
 
+  const filteredJobs = jobs.filter(job => {
+      if (filterStatus === 'ALL') return true;
+      if (filterStatus === 'OPEN') return ['SCHEDULED', 'IN_PROGRESS'].includes(job.status);
+      return ['COMPLETED', 'CANCELLED'].includes(job.status);
+  });
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
-      
-      {/* HEADER & CONTROLS */}
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800">{isAdmin ? 'Auftragsübersicht' : 'Meine Aufträge'}</h1>
-          <p className="text-slate-500 mt-1">{isAdmin ? 'Planung, Zuweisung & Kontrolle' : 'Deine anstehenden Einsätze'}</p>
+    <div className="page-container">
+      {/* HEADER SECTION */}
+      <div className="header-section">
+        <div className="text-left">
+          <h1 className="page-title">{isAdmin ? 'Einsatz-Zentrale' : 'Meine Aufträge'}</h1>
+          <p className="page-subtitle text-slate-500 font-medium">Live-Übersicht und Team-Steuerung der GlanzOps Aufträge.</p>
         </div>
         
-        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
-          <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1">
-              <button onClick={() => setFilterStatus('OPEN')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filterStatus === 'OPEN' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Offen</button>
-              <button onClick={() => setFilterStatus('DONE')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filterStatus === 'DONE' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Erledigt</button>
-              <button onClick={() => setFilterStatus('ALL')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filterStatus === 'ALL' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Alle</button>
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <ViewSwitcher viewMode={viewMode} onViewChange={setViewMode} />
+          
+          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+            {(['OPEN', 'DONE', 'ALL'] as const).map((s) => (
+              <button 
+                key={s}
+                onClick={() => setFilterStatus(s)}
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${filterStatus === s ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                {s === 'OPEN' ? 'Offen' : s === 'DONE' ? 'Fertig' : 'Alle'}
+              </button>
+            ))}
           </div>
 
-          <button onClick={fetchData} className="p-2.5 text-slate-600 hover:bg-slate-100 rounded-xl border border-slate-200 bg-white transition active:scale-95">
-            <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+          <button onClick={fetchData} className="btn-secondary !p-3">
+            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
           </button>
-          
-          {isAdmin && (
-            <button onClick={handleGenerateJobs} disabled={isGenerating} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all active:scale-95 ${isGenerating ? 'bg-slate-400 cursor-not-allowed text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}>
-              {isGenerating ? <Loader2 className="h-5 w-5 animate-spin" /> : <Play className="h-5 w-5" />}
-              {isGenerating ? 'Generiere...' : 'Jobs generieren'}
-            </button>
-          )}
         </div>
       </div>
 
-      {/* JOB LISTE */}
       {loading ? (
-        <div className="text-center py-20 text-slate-400 flex flex-col items-center gap-4"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>Lade Aufträge...</div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4">
+        <div className="py-40 flex flex-col items-center justify-center text-slate-400">
+          <Loader2 className="animate-spin mb-3 text-blue-600" size={32} />
+          <span className="font-bold text-xs uppercase tracking-widest italic">Synchronisiere Live-Daten...</span>
+        </div>
+      ) : filteredJobs.length === 0 ? (
+        <div className="py-20 text-center bg-white rounded-[2rem] border border-dashed border-slate-200">
+          <Filter className="h-10 w-10 text-slate-200 mx-auto mb-3" />
+          <p className="text-slate-500 font-bold uppercase text-xs tracking-widest">Keine Einsätze gefunden</p>
+        </div>
+      ) : viewMode === 'GRID' ? (
+        /* --- GRID VIEW (KARTEN) --- */
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-in fade-in duration-500">
           {filteredJobs.map((job) => (
-            <JobListItem 
-                key={job.id}
-                job={job}
-                isAdmin={isAdmin}
-                employees={employees}
-                onOpenUpload={openUploadModal}
-                onOpenComplete={openCompletionModal}
-                onStatusChange={handleStatusChange}
-                onAssign={handleAssignEmployee}
-                onUnassign={handleUnassignEmployee}
-            />
-          ))}
-          
-          {filteredJobs.length === 0 && (
-            <div className="text-center py-24 bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-200">
-              <div className="bg-white p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center shadow-sm"><Filter className="text-slate-300 h-8 w-8" /></div>
-              <h3 className="text-lg font-bold text-slate-800">Keine Aufträge gefunden</h3>
+            <div key={job.id} className="customer-card !p-0 overflow-hidden border-none shadow-lg bg-white">
+              {/* Status Stripe */}
+              <div className={`h-1.5 w-full ${job.status === 'COMPLETED' ? 'bg-emerald-500' : job.status === 'CANCELLED' ? 'bg-red-500' : 'bg-blue-500'}`}></div>
+              
+              <div className="p-6 space-y-4">
+                <div className="flex justify-between items-start">
+                  <div className="text-left overflow-hidden">
+                    <span className="text-[9px] font-black text-blue-600 uppercase tracking-[0.2em] bg-blue-50 px-2 py-1 rounded mb-2 inline-block">
+                      {job.service.name}
+                    </span>
+                    <h3 className="text-lg font-black text-slate-900 leading-tight truncate">
+                      {job.customer.companyName || `${job.customer.firstName} ${job.customer.lastName}`}
+                    </h3>
+                  </div>
+                  <span className={`status-badge shrink-0 ${job.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'}`}>
+                    {job.status}
+                  </span>
+                </div>
+
+                <div className="space-y-2 text-left text-sm font-medium text-slate-500">
+                  <div className="flex items-center gap-2"><Calendar size={14} className="text-blue-500" /> {format(new Date(job.scheduledDate), 'EEEE, dd. MMMM')}</div>
+                  <div className="flex items-center gap-2"><Clock size={14} className="text-slate-400" /> {format(new Date(job.scheduledDate), 'HH:mm')} Uhr</div>
+                  <div className="flex items-start gap-2 pt-1">
+                    <MapPin size={14} className="text-slate-400 shrink-0 mt-0.5" /> 
+                    <span className="font-bold text-slate-700 leading-snug">{getAddressString(job)}</span>
+                  </div>
+                </div>
+
+                {/* Team Sektion */}
+                <div className="pt-4 border-t border-slate-50 text-left">
+                  <label className="label-caps !text-[9px] mb-2">Team</label>
+                  <div className="flex flex-wrap gap-1.5 min-h-[32px]">
+                    {job.assignments.map(a => (
+                      <div key={a.employee.id} className="inline-flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded-lg text-[10px] font-black text-slate-600 border border-slate-200">
+                        {a.employee.firstName}
+                        {isAdmin && <X size={10} className="cursor-pointer hover:text-red-500" onClick={() => handleUnassignEmployee(job.id, a.employee.id)}/>}
+                      </div>
+                    ))}
+                    {isAdmin && (
+                      <div className="relative">
+                        <select 
+                          className="absolute inset-0 opacity-0 cursor-pointer z-20 w-full h-full" 
+                          onChange={(e) => handleAssignEmployee(job.id, e.target.value)} 
+                          value=""
+                        >
+                          <option value="">Wählen...</option>
+                          {employees.map(e => (
+                             <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>
+                          ))}
+                        </select>
+                        <div className="w-7 h-7 rounded-lg border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-400 hover:border-blue-400 hover:text-blue-500 transition-all">
+                          <Plus size={14} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="pt-4 flex gap-2">
+                  {['SCHEDULED', 'IN_PROGRESS'].includes(job.status) ? (
+                    <>
+                      <button onClick={() => { setSelectedJobId(job.id); setModalMode('UPLOAD'); setIsModalOpen(true); }} className="btn-secondary flex-1 !py-2.5 shadow-sm text-xs"><Camera size={14} /> Foto</button>
+                      <button onClick={() => { setSelectedJobId(job.id); setModalMode('COMPLETE'); setIsModalOpen(true); }} className="btn-primary flex-1 !py-2.5 shadow-blue-200 text-xs uppercase tracking-widest">Erledigt</button>
+                    </>
+                  ) : (
+                    <div className="w-full text-center py-3 bg-slate-50 rounded-xl text-[10px] font-black text-slate-300 uppercase tracking-widest border border-slate-100 italic">Abgeschlossen</div>
+                  )}
+                </div>
+              </div>
             </div>
-          )}
+          ))}
+        </div>
+      ) : (
+        /* --- TABLE VIEW (LISTE) --- */
+        <div className="table-container animate-in slide-in-from-bottom-4 duration-500 bg-white">
+          <table className="table-main">
+            <thead className="table-head">
+              <tr>
+                <th className="table-cell">Termin</th>
+                <th className="table-cell">Kunde & Service</th>
+                <th className="table-cell">Adresse</th>
+                <th className="table-cell">Team</th>
+                <th className="table-cell">Status</th>
+                <th className="table-cell text-right">Aktionen</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredJobs.map((job) => (
+                <tr key={job.id} className="table-row group">
+                  <td className="table-cell">
+                    <div className="font-black text-slate-900">{format(new Date(job.scheduledDate), 'dd.MM.yy')}</div>
+                    <div className="text-[10px] font-bold text-slate-400">{format(new Date(job.scheduledDate), 'HH:mm')} Uhr</div>
+                  </td>
+                  <td className="table-cell">
+                    <div className="font-black text-slate-800 leading-tight">{job.customer.companyName || job.customer.lastName}</div>
+                    <div className="text-[10px] text-blue-600 font-black uppercase tracking-tighter">{job.service.name}</div>
+                  </td>
+                  <td className="table-cell max-w-[200px] truncate text-slate-700 font-bold text-xs italic">
+                    {getAddressString(job)}
+                  </td>
+                  <td className="table-cell">
+                    <div className="flex -space-x-2">
+                      {job.assignments.map(a => (
+                        <div key={a.employee.id} className="w-7 h-7 rounded-full bg-blue-50 border-2 border-white flex items-center justify-center text-[9px] font-black text-blue-600 uppercase shadow-sm" title={a.employee.firstName}>
+                          {a.employee.firstName.charAt(0)}
+                        </div>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="table-cell">
+                    <span className={`status-badge ${job.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-600'}`}>{job.status}</span>
+                  </td>
+                  <td className="table-cell text-right">
+                    <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                      {isAdmin && <button onClick={() => handleStatusChange(job.id, 'CANCELLED')} className="btn-ghost-danger" title="Stornieren"><Trash2 size={16} /></button>}
+                      <button onClick={() => { setSelectedJobId(job.id); setModalMode('COMPLETE'); setIsModalOpen(true); }} className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all"><CheckCircle size={16} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* --- MODAL --- */}
+      {/* --- MODAL SYSTEM --- */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
-                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
-                    <div>
-                        <h3 className="text-xl font-bold text-slate-900">{modalMode === 'COMPLETE' ? 'Job abschließen' : 'Foto hochladen'}</h3>
-                        <p className="text-sm text-slate-500 mt-0.5">{modalMode === 'COMPLETE' ? 'Bitte Arbeitszeit erfassen.' : 'Dokumentation hinzufügen.'}</p>
-                    </div>
-                    <button onClick={() => setIsModalOpen(false)} className="bg-slate-100 hover:bg-slate-200 text-slate-500 p-2 rounded-full transition"><X size={20} /></button>
-                </div>
-
-                <div className="p-6 overflow-y-auto space-y-6">
-                    <div onClick={() => fileInputRef.current?.click()} className={`relative group cursor-pointer border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center transition-all min-h-[180px] ${previewUrl ? 'border-green-400 bg-green-50/50' : 'border-slate-300 hover:border-blue-500 hover:bg-blue-50/50'}`}>
-                        <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
-                        {previewUrl ? (
-                            <div className="relative w-full h-full flex items-center justify-center">
-                                <img src={previewUrl} alt="Vorschau" className="max-h-[200px] w-auto rounded-xl shadow-sm object-contain" />
-                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl text-white font-medium gap-2"><RefreshCw size={16}/> Ändern</div>
-                            </div>
-                        ) : (
-                            <div className="text-center">
-                                <div className="bg-white border border-slate-200 text-blue-600 p-4 rounded-full w-fit mx-auto mb-4 shadow-sm group-hover:scale-110 transition-transform"><Camera size={28} /></div>
-                                <p className="font-bold text-slate-800">Foto auswählen</p>
-                            </div>
-                        )}
-                    </div>
-
-                    {modalMode === 'COMPLETE' && (
-                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Benötigte Zeit</label>
-                            <div className="relative">
-                                <input type="number" placeholder="0" value={durationInput} onChange={(e) => setDurationInput(e.target.value)} className="w-full pl-4 pr-16 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-2xl font-bold text-slate-900" />
-                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium text-sm">Minuten</span>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                <div className="p-6 border-t border-slate-100 bg-slate-50/50">
-                    <button onClick={handleSubmit} disabled={isSubmitting} className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${isSubmitting ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200'}`}>
-                        {isSubmitting ? <><Loader2 className="animate-spin" /> Speichere...</> : modalMode === 'COMPLETE' ? <><CheckCircle size={20} /> Job abschließen</> : <><UploadCloud size={20} /> Hochladen</>}
-                    </button>
-                </div>
+        <div className="modal-overlay">
+          <div className="modal-content !max-w-md animate-in zoom-in-95">
+            <div className="modal-header">
+              <div className="text-left">
+                <h2 className="text-xl font-black text-slate-900">{modalMode === 'COMPLETE' ? 'Einsatz beenden' : 'Foto-Nachweis'}</h2>
+                <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mt-1 italic">Qualitätssicherung GlanzOps</p>
+              </div>
+              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors"><X /></button>
             </div>
+            <div className="modal-body space-y-6">
+               <div onClick={() => fileInputRef.current?.click()} className={`border-2 border-dashed rounded-[2rem] p-8 flex flex-col items-center justify-center cursor-pointer transition-all ${previewUrl ? 'border-emerald-500 bg-emerald-50/10' : 'border-slate-200 hover:border-blue-500 hover:bg-blue-50/10'}`}>
+                  <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={(e) => {
+                    if(e.target.files?.[0]) {
+                      setSelectedFile(e.target.files[0]);
+                      setPreviewUrl(URL.createObjectURL(e.target.files[0]));
+                    }
+                  }} />
+                  {previewUrl ? <img src={previewUrl} className="max-h-48 rounded-2xl shadow-lg" alt="Preview" /> : (
+                    <>
+                      <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4"><Camera size={24} /></div>
+                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest text-center leading-tight">Foto aufnehmen oder<br/>Hochladen</p>
+                    </>
+                  )}
+               </div>
+               {modalMode === 'COMPLETE' && (
+                 <div className="space-y-2 text-left mt-4">
+                    <label className="label-caps !ml-0 text-blue-600">Arbeitszeit (Minuten)</label>
+                    <input type="number" className="input-standard !text-2xl font-black text-center" placeholder="z.B. 120" value={durationInput} onChange={(e) => setDurationInput(e.target.value)} />
+                 </div>
+               )}
+               <button onClick={handleSubmit} disabled={isSubmitting} className="btn-primary w-full !py-4 shadow-xl shadow-blue-200 uppercase tracking-[0.2em] font-black">
+                 {isSubmitting ? <Loader2 className="animate-spin" /> : <>{modalMode === 'COMPLETE' ? 'Abschluss speichern' : 'Upload bestätigen'}</>}
+               </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

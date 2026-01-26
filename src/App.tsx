@@ -1,8 +1,12 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { HelmetProvider } from 'react-helmet-async';
+import './app.css';
 
-// --- LAYOUTS ---
+// --- CONTEXT ---
+import { useAuth } from './context/AuthContext';
+
+// --- LAYOUTS & GUARDS ---
 import DashboardLayout from './layouts/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -20,16 +24,18 @@ import Dashboard from './pages/Dashboard'; // Admin Dashboard
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import CustomerDashboard from './pages/CustomerDashboard';
 
-// --- OPERATIVE PAGES (Jobs, Kalender) ---
+// --- OPERATIVE PAGES ---
 import JobsPage from './pages/jobs/JobsPage';
 import CalendarPage from './pages/CalendarPage';
 import AbsencesPage from './pages/team/AbsencesPage';
 
-// --- VERWALTUNG (Kunden, Services, Verträge) ---
+// --- VERWALTUNG ---
 import CustomersPage from './pages/customers/CustomersPage';
 import CreateCustomerPage from './pages/customers/CreateCustomerPage';
+import EditCustomerPage from './pages/customers/EditCustomerPage';
 import ServicesPage from './pages/services/ServicesPage';
 import CreateServicePage from './pages/services/CreateServicePage';
+import EditServicePage from './pages/services/EditServicePage';
 import ContractsPage from './pages/contracts/ContractsPage';
 import CreateContractPage from './pages/contracts/CreateContractPage';
 
@@ -37,9 +43,9 @@ import CreateContractPage from './pages/contracts/CreateContractPage';
 import TeamPage from './pages/team/TeamPage';
 import CreateEmployeePage from './pages/team/CreateEmployeePage';
 import EditEmployeePage from './pages/team/EditEmployeePage';
-import PayrollPage from './pages/team/PayrollPage'; // Pfad angepasst falls nötig
+import PayrollPage from './pages/team/PayrollPage';
 
-// --- FINANZEN & VERTRIEB ---
+// --- FINANZEN & SALES ---
 import OffersPage from './pages/sales/OffersPage';
 import InvoicesPage from './pages/invoices/InvoicesPage';
 import ExpensesPage from './pages/finances/ExpensesPage';
@@ -48,178 +54,106 @@ import ReportsPage from './pages/ReportsPage';
 // --- LAGER & SONSTIGES ---
 import InventoryPage from './pages/inventory/InventoryPage';
 import SettingsPage from './pages/SettingsPage';
-import EditServicePage from './pages/services/EditServicePage';
 
-// --- HILFSKOMPONENTE: DASHBOARD WEICHE ---
+/**
+ * Hilfskomponente für die Dashboard-Weiche
+ * Leitet Benutzer basierend auf ihrer Rolle zum richtigen Startbildschirm
+ */
 const DashboardSwitcher = () => {
-  const role = localStorage.getItem('role');
-
-  if (role === 'ADMIN') {
-    return <Dashboard />;
-  } 
-  if (role === 'CUSTOMER') {
-    return <CustomerDashboard />;
-  }
-  // Fallback für Mitarbeiter
+  const { user } = useAuth();
+  if (user?.role === 'ADMIN' || user?.role === 'MANAGER') return <Dashboard />;
+  if (user?.role === 'CUSTOMER') return <CustomerDashboard />;
   return <EmployeeDashboard />;
 };
 
 function App() {
   return (
     <HelmetProvider>
-      <BrowserRouter>
-        {/* Toast Konfiguration (Benachrichtigungen) */}
-        <Toaster 
-          position="top-right" 
-          toastOptions={{
-            duration: 4000,
-            style: { background: '#1e293b', color: '#fff' },
-            success: { style: { background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' } },
-            error: { style: { background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' } },
-          }} 
-        />
+      {/* Premium Toast Styling passend zum Dark/Blue Theme */}
+      <Toaster 
+        position="top-right" 
+        toastOptions={{
+          duration: 4000,
+          style: { 
+            background: '#0f172a', 
+            color: '#fff',
+            borderRadius: '16px',
+            fontSize: '14px',
+            fontWeight: '600'
+          },
+          success: { 
+            style: { 
+              background: '#ecfdf5', 
+              color: '#065f46', 
+              border: '1px solid #10b981' 
+            } 
+          },
+          error: { 
+            style: { 
+              background: '#fef2f2', 
+              color: '#991b1b', 
+              border: '1px solid #ef4444' 
+            } 
+          },
+        }} 
+      />
 
-        <Routes>
-          {/* === 1. ÖFFENTLICHE SEITEN === */}
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/impressum" element={<ImpressumPage />} />
-          
-          {/* AUTH */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Routes>
+        {/* === 1. ÖFFENTLICHE SEITEN === */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/impressum" element={<ImpressumPage />} />
+        
+        {/* AUTH ROUTES */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-          {/* === 2. GESCHÜTZTER DASHBOARD BEREICH === */}
+        {/* === 2. GESCHÜTZTER DASHBOARD BEREICH === */}
+        <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE', 'CUSTOMER', 'MANAGER']} />}>
           <Route path="/dashboard" element={<DashboardLayout />}>
             
-            {/* Startseite (Weiche je nach Rolle) */}
+            {/* Dynamische Startseite */}
             <Route index element={<DashboardSwitcher />} />
 
-            {/* --- JOBS & KALENDER (Für Alle relevant) --- */}
-            <Route path="jobs" element={
-              <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
-                <JobsPage />
-              </ProtectedRoute>
-            } />
-            <Route path="calendar" element={
-              <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
-                <CalendarPage />
-              </ProtectedRoute>
-            } />
-            <Route path="absences" element={
-              <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
-                <AbsencesPage />
-              </ProtectedRoute>
-            } />
+            {/* --- OPERATIVES TEAM & BACKOFFICE (Admin & Mitarbeiter) --- */}
+            <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE', 'MANAGER']} />}>
+              <Route path="jobs" element={<JobsPage />} />
+              <Route path="calendar" element={<CalendarPage />} />
+              <Route path="absences" element={<AbsencesPage />} />
+              <Route path="customers" element={<CustomersPage />} />
+              <Route path="customers/new" element={<CreateCustomerPage />} />
+              <Route path="customers/edit/:id" element={<EditCustomerPage />} />
+              <Route path="inventory" element={<InventoryPage />} />
+            </Route>
 
-            {/* --- KUNDEN (Admin & Büro) --- */}
-            <Route path="customers" element={
-              <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
-                <CustomersPage />
-              </ProtectedRoute>
-            } />
-            <Route path="customers/new" element={
-              <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
-                <CreateCustomerPage />
-              </ProtectedRoute>
-            } />
-
-            {/* --- SERVICES (Admin) --- */}
-            <Route path="services" element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
-                <ServicesPage />
-              </ProtectedRoute>
-            } />
-            <Route path="services/new" element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
-                <CreateServicePage />
-              </ProtectedRoute>
-            } />
-            <Route path="services/:id" element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
-                <EditServicePage />
-              </ProtectedRoute>
-            } />
-            {/* --- VERTRÄGE (Admin) --- */}
-            <Route path="contracts" element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
-                <ContractsPage />
-              </ProtectedRoute>
-            } />
-            <Route path="contracts/new" element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
-                <CreateContractPage />
-              </ProtectedRoute>
-            } />
-
-            {/* --- TEAM & HR (Admin) --- */}
-            <Route path="team" element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
-                <TeamPage />
-              </ProtectedRoute>
-            } />
-            <Route path="team/new" element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
-                <CreateEmployeePage />
-              </ProtectedRoute>
-            } />
-            <Route path="team/:id" element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
-                <EditEmployeePage />
-              </ProtectedRoute>
-            } />
-            
-            {/* PAYROLL (Jetzt Top-Level unter Dashboard) */}
-            <Route path="payroll" element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
-                <PayrollPage />
-              </ProtectedRoute>
-            } />
-
-            {/* --- FINANZEN & SALES (Admin) --- */}
-            <Route path="offers" element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
-                <OffersPage />
-              </ProtectedRoute>
-            } />
-            <Route path="invoices" element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
-                <InvoicesPage />
-              </ProtectedRoute>
-            } />
-            <Route path="expenses" element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
-                <ExpensesPage />
-              </ProtectedRoute>
-            } />
-            <Route path="reports" element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
-                <ReportsPage />
-              </ProtectedRoute>
-            } />
-
-            {/* --- LAGER (Admin & Mitarbeiter) --- */}
-            <Route path="inventory" element={
-              <ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE']}>
-                <InventoryPage />
-              </ProtectedRoute>
-            } />
-
-            {/* --- EINSTELLUNGEN (Admin) --- */}
-            <Route path="settings" element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
-                <SettingsPage />
-              </ProtectedRoute>
-            } />
+            {/* --- EXKLUSIVE ADMIN BEREICHE (Unternehmenssteuerung) --- */}
+            <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']} />}>
+              <Route path="services" element={<ServicesPage />} />
+              <Route path="services/new" element={<CreateServicePage />} />
+              <Route path="services/:id" element={<EditServicePage />} />
+              
+              <Route path="contracts" element={<ContractsPage />} />
+              <Route path="contracts/new" element={<CreateContractPage />} />
+              
+              <Route path="team" element={<TeamPage />} />
+              <Route path="team/new" element={<CreateEmployeePage />} />
+              <Route path="team/:id" element={<EditEmployeePage />} />
+              
+              <Route path="payroll" element={<PayrollPage />} />
+              <Route path="offers" element={<OffersPage />} />
+              <Route path="invoices" element={<InvoicesPage />} />
+              <Route path="expenses" element={<ExpensesPage />} />
+              <Route path="reports" element={<ReportsPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+            </Route>
 
           </Route>
+        </Route>
 
-          {/* === 3. FALLBACK === */}
-          <Route path="*" element={<NotFoundPage />} />
-        
-        </Routes>
-      </BrowserRouter>
+        {/* === 3. FALLBACK === */}
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
     </HelmetProvider>
   );
 }

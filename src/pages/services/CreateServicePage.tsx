@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Save, 
@@ -11,391 +11,274 @@ import {
   Plus, 
   Trash2, 
   Sparkles, 
-  Copy 
+  Clock,
+  Layers,
+  CheckCircle2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../../lib/api';
 
-// --- KONSTANTEN ---
 const SERVICE_TEMPLATES = [
   {
-    label: "Büroreinigung (Standard)",
+    label: "Büroreinigung",
     data: {
       name: "Unterhaltsreinigung Büro",
-      description: "Regelmäßige Reinigung der Büroflächen, Sanitäranlagen und Küchenbereiche.",
+      description: "Regelmäßige Reinigung der Büroflächen, Sanitäranlagen und Teeküche.",
       priceNet: "35.00",
       unit: "hour",
-      checklist: [
-        "Mülleimer leeren & Beutel wechseln",
-        "Schreibtische frei abwischen",
-        "Böden saugen & nass wischen",
-        "Sanitäranlagen reinigen & auffüllen",
-        "Griffspuren an Türen entfernen",
-        "Geschirrspüler ein-/ausräumen"
-      ]
+      checklist: ["Müllentsorgung", "Oberflächen feucht abwischen", "Böden saugen/wischen", "Sanitärreinigung", "Teeküche reinigen"]
     }
   },
   {
-    label: "Glasreinigung (Fenster)",
+    label: "Glasreinigung",
     data: {
       name: "Glas- & Rahmenreinigung",
-      description: "Professionelle Reinigung der Glasflächen inkl. Rahmen und Falzen.",
+      description: "Reinigung der Glasflächen inklusive Rahmen und Fensterbänke.",
       priceNet: "4.50",
       unit: "sqm",
-      checklist: [
-        "Glasflächen einwaschen",
-        "Grobverschmutzungen entfernen",
-        "Abziehen ohne Schlieren",
-        "Rahmen & Falzen feucht reinigen",
-        "Fensterbänke abwischen"
-      ]
+      checklist: ["Glas einwaschen", "Abziehen", "Rahmen reinigen", "Fensterbänke wischen"]
     }
   },
   {
-    label: "Treppenhausreinigung",
+    label: "Treppenhaus",
     data: {
       name: "Treppenhausreinigung",
-      description: "Reinigung vom Dachgeschoss bis zum Keller inkl. Eingangsbereich.",
-      priceNet: "28.00",
-      unit: "flat",
-      checklist: [
-        "Stufen fegen & wischen",
-        "Handläufe & Geländer abwischen",
-        "Eingangstür Glas reinigen",
-        "Briefkästen & Klingelanlage abwischen",
-        "Spinnweben entfernen",
-        "Kellergänge fegen"
-      ]
-    }
-  },
-  {
-    label: "Endreinigung / Umzug",
-    data: {
-      name: "Grundreinigung (Umzug)",
-      description: "Intensive Reinigung der gesamten Wohnung zur Übergabe.",
+      description: "Komplette Reinigung des Treppenhauses vom Dachgeschoss bis Keller.",
       priceNet: "45.00",
-      unit: "hour",
-      checklist: [
-        "Alle Böden intensiv reinigen",
-        "Fenster komplett reinigen",
-        "Türen & Zargen abwaschen",
-        "Steckdosen & Lichtschalter reinigen",
-        "Küche innen & außen reinigen",
-        "Bad/WC entkalken & desinfizieren",
-        "Heizkörper reinigen"
-      ]
+      unit: "flat",
+      checklist: ["Fegen & Wischen", "Handläufe desinfizieren", "Eingangstür reinigen", "Spinnweben entfernen"]
     }
   }
 ];
 
-// --- HELPER COMPONENTS (AUSSERHALB) ---
-const FormInput = ({ label, name, value, onChange, type="text", required, placeholder, icon: Icon, step }: any) => (
-  <div>
-    <label className="block text-sm font-semibold text-slate-700 mb-1.5">{label} {required && '*'}</label>
-    <div className="relative">
-      {Icon && (
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-          <Icon size={18} />
-        </div>
-      )}
-      <input 
-        required={required} 
-        type={type}
-        step={step}
-        name={name} 
-        value={value} 
-        onChange={onChange} 
-        className={`w-full ${Icon ? 'pl-10' : 'pl-4'} pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium`} 
-        placeholder={placeholder}
-      />
-    </div>
-  </div>
-);
-
-const FormTextArea = ({ label, name, value, onChange, placeholder }: any) => (
-  <div>
-    <label className="block text-sm font-semibold text-slate-700 mb-1.5">{label}</label>
-    <textarea 
-        name={name} 
-        value={value} 
-        onChange={onChange} 
-        rows={2}
-        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none" 
-        placeholder={placeholder}
-    />
-  </div>
-);
-
-const FormSelect = ({ label, name, value, onChange, icon: Icon, options }: any) => (
-  <div>
-    <label className="block text-sm font-semibold text-slate-700 mb-1.5">{label}</label>
-    <div className="relative">
-        {Icon && (
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <Icon size={18} />
-            </div>
-        )}
-        <select 
-            name={name} 
-            value={value} 
-            onChange={onChange} 
-            className={`w-full ${Icon ? 'pl-10' : 'pl-4'} pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none cursor-pointer`}
-        >
-            {options.map((opt: any) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-        </select>
-    </div>
-  </div>
-);
-
 export default function CreateServicePage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    priceNet: '',
-    unit: 'hour'
-  });
-
+  const [formData, setFormData] = useState({ name: '', description: '', priceNet: '', unit: 'hour' });
   const [checklist, setChecklist] = useState<string[]>([]);
   const [newItem, setNewItem] = useState('');
 
-  const applyTemplate = (indexStr: string) => {
-    const index = parseInt(indexStr);
-    const template = SERVICE_TEMPLATES[index];
-    
-    if (template) {
-      setFormData({
-        name: template.data.name,
-        description: template.data.description,
-        priceNet: template.data.priceNet,
-        unit: template.data.unit
-      });
-      setChecklist(template.data.checklist);
-      toast.success(`Vorlage "${template.label}" übernommen!`, { icon: '✨' });
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const addChecklistItem = (e?: React.MouseEvent | React.KeyboardEvent) => {
-    if (e) e.preventDefault();
-    if (!newItem.trim()) return;
-    setChecklist([...checklist, newItem.trim()]);
-    setNewItem('');
-  };
-
-  const removeChecklistItem = (index: number) => {
-    setChecklist(checklist.filter((_, i) => i !== index));
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addChecklistItem();
-    }
+  const applyTemplate = (index: number) => {
+    const tmpl = SERVICE_TEMPLATES[index];
+    setFormData({ name: tmpl.data.name, description: tmpl.data.description, priceNet: tmpl.data.priceNet, unit: tmpl.data.unit });
+    setChecklist(tmpl.data.checklist);
+    toast.success(`Vorlage "${tmpl.label}" geladen!`, { icon: '✨' });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const toastId = toast.loading('Leistung wird angelegt...');
-    
+    const tid = toast.loading('Erstelle Leistung...');
     try {
-      const priceFloat = parseFloat(formData.priceNet.replace(',', '.'));
-      if (isNaN(priceFloat)) throw new Error("Bitte einen gültigen Preis eingeben.");
-
-      const payload = {
-        ...formData,
-        priceNet: priceFloat,
-        checklist: checklist 
-      };
-
-      await api.post('/services', payload);
-      
-      toast.success('Dienstleistung erstellt!', { id: toastId });
+      await api.post('/services', { ...formData, priceNet: parseFloat(String(formData.priceNet)), checklist });
+      toast.success('Dienstleistung erstellt!', { id: tid });
       navigate('/dashboard/services');
-    } catch (error: any) {
-      const msg = error.response?.data?.message || 'Fehler beim Speichern.';
-      toast.error(msg, { id: toastId });
-    } finally {
-      setLoading(false);
-    }
+    } catch { toast.error('Fehler beim Speichern', { id: tid }); }
+    finally { setLoading(false); }
   };
 
   return (
-    <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="page-container max-w-4xl mx-auto">
       
-      {/* Header */}
-      <div className="mb-8">
+      {/* HEADER & NAV */}
+      <div className="mb-6">
         <button 
-          onClick={() => navigate('/dashboard/services')}
-          className="text-sm text-slate-500 hover:text-blue-600 flex items-center gap-1 mb-1 transition-colors"
+          onClick={() => navigate('/dashboard/services')} 
+          className="text-[10px] text-slate-400 hover:text-blue-600 flex items-center gap-2 mb-4 transition-all font-black uppercase tracking-[0.2em] bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm"
         >
-          <ArrowLeft className="h-4 w-4" /> Zurück zur Liste
+          <ArrowLeft size={14} /> Zurück zum Katalog
         </button>
-        <h1 className="text-3xl font-bold text-slate-800">Neue Dienstleistung</h1>
+        <div className="header-section !bg-transparent !border-none !p-0 !shadow-none">
+          <div className="text-left">
+            <h1 className="page-title text-3xl font-black">Leistung konfigurieren</h1>
+            <p className="page-subtitle text-lg">Definieren Sie neue Services und standardisierte Aufgaben-Checklisten.</p>
+          </div>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         
-        {/* --- 0. SMART TEMPLATE SELECTION --- */}
-        <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600">
-                <Sparkles size={24} />
-            </div>
-            <div className="flex-1 w-full">
-                <label className="text-xs font-bold text-indigo-800 uppercase mb-1 block">Schnellstart: Vorlage wählen</label>
-                <div className="relative">
-                    <select 
-                        onChange={(e) => applyTemplate(e.target.value)}
-                        defaultValue=""
-                        className="w-full appearance-none bg-white border border-indigo-200 text-slate-700 py-2 pl-4 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-sm hover:border-indigo-300 transition-colors"
-                    >
-                        <option value="" disabled>-- Bitte wählen --</option>
-                        {SERVICE_TEMPLATES.map((tmpl, idx) => (
-                            <option key={idx} value={idx}>{tmpl.label}</option>
-                        ))}
-                    </select>
-                    <Copy size={16} className="absolute right-3 top-2.5 text-indigo-400 pointer-events-none" />
-                </div>
-            </div>
-        </div>
-
-        {/* CARD 1: BASIS DATEN */}
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
-            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
-                <Briefcase className="text-blue-500" size={20}/> Allgemeines
-            </h3>
-
-            <FormInput 
-                label="Bezeichnung" 
-                name="name" 
-                value={formData.name} 
-                onChange={handleChange} 
-                required 
-                placeholder="z.B. Unterhaltsreinigung Standard" 
-            />
-
-            <FormTextArea 
-                label="Beschreibung" 
-                name="description" 
-                value={formData.description} 
-                onChange={handleChange} 
-                placeholder="Was beinhaltet diese Leistung?" 
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormInput 
-                    label="Preis (Netto)" 
-                    name="priceNet" 
-                    type="number" 
-                    step="0.01" 
-                    value={formData.priceNet} 
-                    onChange={handleChange} 
-                    required 
-                    placeholder="0.00" 
-                    icon={Euro} 
-                />
-
-                <FormSelect 
-                    label="Abrechnung *" 
-                    name="unit" 
-                    value={formData.unit} 
-                    onChange={handleChange} 
-                    icon={Tag}
-                    options={[
-                        { value: 'hour', label: 'pro Stunde' },
-                        { value: 'sqm', label: 'pro m²' },
-                        { value: 'flat', label: 'Pauschal' }
-                    ]} 
-                />
-            </div>
-        </div>
-
-        {/* CARD 2: CHECKLISTE */}
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <ListTodo className="text-purple-500" size={20}/> Aufgaben-Checkliste
-                </h3>
-                {checklist.length > 0 && (
-                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full font-bold">
-                        {checklist.length} Schritte
-                    </span>
-                )}
+        {/* QUICKSTART TEMPLATES (MODERNIZED) */}
+        <div className="bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl shadow-blue-900/20 overflow-hidden relative group">
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
+            <Sparkles size={120} className="text-blue-400" />
+          </div>
+          
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
+            <div className="flex items-center gap-5 text-white text-left w-full md:w-auto">
+              <div className="bg-blue-600 p-3.5 rounded-2xl shadow-lg shadow-blue-600/20"><Sparkles size={28} /></div>
+              <div>
+                <h4 className="text-lg font-black uppercase tracking-widest leading-none mb-1">Schnellstart</h4>
+                <p className="text-slate-400 text-xs font-bold tracking-tight">Vordefinierte Branchen-Vorlagen</p>
+              </div>
             </div>
             
-            <div className="flex gap-2">
-                <input 
-                    value={newItem}
-                    onChange={e => setNewItem(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Neue Aufgabe hinzufügen..."
-                    className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all"
-                />
+            <div className="flex flex-wrap gap-3 w-full md:w-auto">
+              {SERVICE_TEMPLATES.map((tmpl, idx) => (
                 <button 
-                    type="button"
-                    onClick={addChecklistItem}
-                    disabled={!newItem.trim()}
-                    className="bg-slate-800 hover:bg-slate-900 text-white px-4 rounded-lg font-bold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  key={idx} 
+                  type="button" 
+                  onClick={() => applyTemplate(idx)} 
+                  className="px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-xs font-black uppercase tracking-widest hover:bg-blue-600 hover:border-blue-600 transition-all active:scale-95"
                 >
-                    <Plus size={24} />
+                  {tmpl.label}
                 </button>
+              ))}
             </div>
-
-            <ul className="space-y-2">
-                {checklist.map((item, index) => (
-                    <li key={index} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg shadow-sm group hover:border-purple-200 transition-colors">
-                        <span className="text-slate-700 flex items-center gap-3">
-                            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-purple-100 text-purple-600 text-xs font-bold">
-                                {index + 1}
-                            </span>
-                            {item}
-                        </span>
-                        <button 
-                            type="button" 
-                            onClick={() => removeChecklistItem(index)}
-                            className="text-slate-300 hover:text-red-500 p-1.5 rounded-md hover:bg-red-50 transition"
-                        >
-                            <Trash2 size={16} />
-                        </button>
-                    </li>
-                ))}
-                {checklist.length === 0 && (
-                    <div className="text-center py-8 border-2 border-dashed border-slate-100 rounded-xl bg-slate-50/50">
-                        <ListTodo className="mx-auto text-slate-300 mb-2" size={32} />
-                        <span className="text-slate-400 text-sm">Keine Aufgaben definiert. Wähle oben eine Vorlage!</span>
-                    </div>
-                )}
-            </ul>
+          </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="flex items-center justify-end gap-4 pt-4">
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard/services')}
-            className="px-6 py-3 rounded-xl text-slate-600 font-medium hover:bg-slate-100 transition-colors"
+        {/* INFO CARD */}
+        <div className="form-card space-y-10">
+          <div className="form-section-title">
+            <Layers size={16} className="text-blue-500" /> 1. Basis-Konfiguration
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="md:col-span-2 space-y-1.5 text-left">
+              <label className="label-caps">Bezeichnung der Dienstleistung *</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
+                  <Briefcase size={20} />
+                </div>
+                <input 
+                  required 
+                  className="input-standard pl-12 font-black text-lg" 
+                  value={formData.name} 
+                  onChange={e => setFormData({...formData, name: e.target.value})} 
+                  placeholder="z.B. Grundreinigung Büro" 
+                />
+              </div>
+            </div>
+
+            <div className="md:col-span-2 space-y-1.5 text-left">
+              <label className="label-caps">Kurzbeschreibung (Katalog-Vorschau)</label>
+              <textarea 
+                rows={2} 
+                className="input-standard resize-none min-h-[100px] font-medium" 
+                value={formData.description || ''} 
+                onChange={e => setFormData({...formData, description: e.target.value})} 
+                placeholder="Detaillierte Informationen zum Leistungsumfang für Ihre Kunden..." 
+              />
+            </div>
+
+            <div className="space-y-1.5 text-left">
+              <label className="label-caps">Standard Netto-Preis *</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
+                  <Euro size={20} />
+                </div>
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  required 
+                  className="input-standard pl-12 font-black" 
+                  value={formData.priceNet} 
+                  onChange={e => setFormData({...formData, priceNet: e.target.value})} 
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5 text-left">
+              <label className="label-caps">Kalkulationsbasis / Einheit</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
+                  <Tag size={20} />
+                </div>
+                <select 
+                  className="input-standard pl-12 appearance-none cursor-pointer" 
+                  value={formData.unit} 
+                  onChange={e => setFormData({...formData, unit: e.target.value})}
+                >
+                  <option value="hour">pro Arbeitsstunde (Std.)</option>
+                  <option value="sqm">pro Quadratmeter (m²)</option>
+                  <option value="flat">Festpreis / Pauschale</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* CHECKLIST CARD */}
+        <div className="form-card space-y-10">
+          <div className="form-section-title">
+            <ListTodo size={16} className="text-blue-500" /> 2. Operative Aufgaben-Checkliste
+          </div>
+          
+          <div className="space-y-6">
+            <div className="flex gap-4">
+              <div className="relative flex-1 group">
+                  <input 
+                    placeholder="Neue Aufgabe für das Team vor Ort..." 
+                    className="input-standard font-bold" 
+                    value={newItem} 
+                    onChange={e => setNewItem(e.target.value)} 
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), newItem.trim() && (setChecklist([...checklist, newItem.trim()]), setNewItem('')))} 
+                  />
+              </div>
+              <button 
+                type="button" 
+                onClick={() => newItem.trim() && (setChecklist([...checklist, newItem.trim()]), setNewItem(''))} 
+                className="btn-primary !px-6 shadow-xl shadow-blue-200"
+              >
+                <Plus size={22}/>
+              </button>
+            </div>
+
+            <div className="space-y-2.5">
+              {checklist.map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-[1.25rem] group hover:bg-blue-50 hover:border-blue-100 transition-all animate-in slide-in-from-left-4 duration-300">
+                  <div className="flex items-center gap-4">
+                    <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400 group-hover:text-blue-600 group-hover:border-blue-200 shadow-sm transition-all italic">
+                      #{idx + 1}
+                    </div>
+                    <span className="text-sm font-black text-slate-700 tracking-tight">{item}</span>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => setChecklist(checklist.filter((_, i) => i !== idx))} 
+                    className="p-2 text-slate-300 hover:text-red-500 hover:bg-white rounded-xl transition-all shadow-sm"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+              
+              {checklist.length === 0 && (
+                <div className="text-center py-12 bg-slate-50 rounded-[2.5rem] border border-dashed border-slate-200">
+                  <div className="stat-icon-wrapper bg-white text-slate-300 mx-auto mb-4 opacity-50"><ListTodo size={24} /></div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Keine operativen Aufgaben definiert</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ACTIONS */}
+        <div className="flex items-center justify-end gap-4 bg-slate-100/50 p-6 rounded-[2.5rem] border border-slate-100">
+          <button 
+            type="button" 
+            onClick={() => navigate('/dashboard/services')} 
+            className="btn-secondary !shadow-none border-transparent hover:bg-slate-200"
           >
             Abbrechen
           </button>
-          
           <button 
             type="submit" 
-            disabled={loading}
-            className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 flex items-center gap-2 disabled:opacity-70 active:scale-95"
+            disabled={loading} 
+            className="btn-primary min-w-[240px] shadow-xl shadow-blue-500/20 py-4 uppercase tracking-[0.2em] font-black text-[10px]"
           >
-            {loading ? <Loader2 className="animate-spin" /> : <Save size={20} />}
-            Leistung speichern
+            {loading ? (
+              <Loader2 className="animate-spin h-5 w-5" />
+            ) : (
+              <>
+                <Save size={18} /> 
+                Leistung im System speichern
+              </>
+            )}
           </button>
         </div>
-
       </form>
     </div>
   );

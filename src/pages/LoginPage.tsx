@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Lock, Mail, ArrowRight, AlertCircle, CheckCircle2, Building2, Loader2 } from 'lucide-react';
-import { login } from '../services/auth.service';
+import { Lock, Mail, ArrowRight, AlertCircle, Sparkles, Loader2, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { login as apiLogin } from '../services/auth.service';
+import { useAuth } from '../context/AuthContext'; 
 import { toast } from 'react-hot-toast';
 
 export default function LoginPage() {
@@ -11,6 +12,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   
   const navigate = useNavigate();
+  const { login: authContextLogin } = useAuth(); 
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,107 +20,93 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const response = await login(email, password);
-      // Personalisierte Begrüßung
-      toast.success(`Willkommen zurück, ${response.user.firstName || 'User'}!`);
-      
-      // Kurze Verzögerung für den "Erfolgseffekt"
-      setTimeout(() => navigate('/dashboard'), 500);
+      const response = await apiLogin(email, password);
+      authContextLogin(response); 
+      toast.success(`Willkommen zurück, ${response.user.firstName}!`);
+      navigate('/dashboard');
     } catch (err: any) {
-      console.error(err);
-      const msg = err.response?.data?.message || 'Zugangsdaten ungültig.';
+      const msg = err.response?.data?.message || 'Zugangsdaten ungültig oder Server offline.';
       setError(msg);
       toast.error(msg);
-      setPassword(''); // Passwort zurücksetzen
+      setPassword(''); 
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-white">
+    <div className="flex min-h-screen w-full bg-white font-sans overflow-hidden">
       
-      {/* --- LINKER BEREICH: FORMULAR --- */}
-      <div className="flex w-full flex-col justify-center px-4 sm:px-6 lg:w-1/2 lg:px-20 xl:px-24 animate-in fade-in slide-in-from-left-4 duration-700">
-        <div className="mx-auto w-full max-w-sm lg:w-96">
+      {/* LEFT SECTION: LOGIN FORM */}
+      <div className="flex w-full flex-col justify-center px-6 sm:px-12 lg:w-1/2 lg:px-20 xl:px-32 animate-in fade-in slide-in-from-left-6 duration-700">
+        <div className="mx-auto w-full max-w-sm">
           
-          {/* Logo / Brand Header */}
-          <div className="mb-10">
-            <div className="flex items-center gap-2 text-blue-600 mb-6">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                    <Building2 size={28} />
+          {/* Logo & Header */}
+          <div className="mb-12 text-left">
+            <div className="flex items-center gap-3 text-blue-600 mb-10 group cursor-default">
+                <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-xl shadow-blue-200 group-hover:rotate-12 transition-transform duration-500">
+                    <ShieldCheck size={28} />
                 </div>
-                <span className="text-2xl font-bold tracking-tight text-slate-900">CleanOps</span>
+                <div>
+                  <span className="text-2xl font-black tracking-tighter text-slate-900 block leading-none">GlanzOps</span>
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500">Enterprise</span>
+                </div>
             </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
-              Willkommen zurück
+            <h2 className="text-4xl font-black tracking-tight text-slate-900">
+              Anmelden
             </h2>
-            <p className="mt-2 text-sm text-slate-500">
-              Bitte melden Sie sich an, um auf das Dashboard zuzugreifen.
+            <p className="mt-4 text-slate-500 font-medium leading-relaxed">
+              Zentrale Verwaltungsebene. Bitte identifizieren Sie sich für den Systemzugriff.
             </p>
           </div>
 
-          {/* Error Message */}
           {error && (
-            <div className="mb-6 rounded-xl bg-red-50 p-4 text-sm text-red-600 border border-red-100 flex items-start animate-in fade-in slide-in-from-top-2">
-              <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
-              <span className="font-medium">{error}</span>
+            <div className="mb-8 rounded-[1.5rem] bg-red-50 p-5 text-sm text-red-600 border border-red-100 flex items-center animate-shake shadow-sm shadow-red-100">
+              <AlertCircle className="h-5 w-5 mr-3 shrink-0" />
+              <span className="font-bold">{error}</span>
             </div>
           )}
 
-          {/* Form */}
           <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label htmlFor="email" className="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">
-                Email Adresse
-              </label>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                  <Mail className="h-5 w-5 text-slate-400" aria-hidden="true" />
+            <div className="space-y-1.5 text-left">
+              <label className="label-caps !ml-0">System-Identität (E-Mail)</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                  <Mail size={18} />
                 </div>
                 <input
-                  id="email"
-                  name="email"
                   type="email"
-                  autoComplete="email"
                   required
                   disabled={loading}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder:text-slate-400 font-medium disabled:opacity-60"
-                  placeholder="name@firma.de"
+                  className="input-standard pl-12 py-4 font-bold"
+                  placeholder="personal@glanzops.de"
                 />
               </div>
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-1.5 ml-1">
-                <label htmlFor="password" className="block text-xs font-bold text-slate-500 uppercase">
-                  Passwort
-                </label>
-                <div className="text-sm">
-                  <Link 
-                    to="/forgot-password" 
-                    className="font-medium text-blue-600 hover:text-blue-500 transition-colors"
-                  >
-                    Vergessen?
-                  </Link>
-                </div>
+            <div className="space-y-1.5 text-left">
+              <div className="flex items-center justify-between">
+                <label className="label-caps !ml-0">Sicherheits-Key</label>
+                <Link 
+                  to="/forgot-password" 
+                  className="text-[9px] font-black text-blue-500 hover:text-blue-700 uppercase tracking-widest transition-colors bg-blue-50 px-2 py-1 rounded-md"
+                >
+                  Passwort vergessen?
+                </Link>
               </div>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                  <Lock className="h-5 w-5 text-slate-400" aria-hidden="true" />
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                  <Lock size={18} />
                 </div>
                 <input
-                  id="password"
-                  name="password"
                   type="password"
-                  autoComplete="current-password"
                   required
                   disabled={loading}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder:text-slate-400 font-medium disabled:opacity-60"
+                  className="input-standard pl-12 py-4 font-bold"
                   placeholder="••••••••"
                 />
               </div>
@@ -127,69 +115,67 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="flex w-full justify-center items-center rounded-xl bg-blue-600 px-3 py-3.5 text-sm font-bold leading-6 text-white shadow-lg shadow-blue-200 hover:bg-blue-700 hover:shadow-blue-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed group"
+              className="btn-primary w-full py-4.5 shadow-2xl shadow-blue-500/20 mt-4 group"
             >
               {loading ? (
-                <div className="flex items-center gap-2">
-                   <Loader2 className="animate-spin h-5 w-5" />
-                   <span>Anmeldung läuft...</span>
-                </div>
+                <Loader2 className="animate-spin h-5 w-5" />
               ) : (
-                <div className="flex items-center gap-2">
-                   <span>Einloggen</span>
-                   <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </div>
+                <>
+                  <span className="tracking-[0.2em] font-black text-[10px]">LOGIN BESTÄTIGEN</span>
+                  <ArrowRight size={18} className="group-hover:translate-x-1.5 transition-transform" />
+                </>
               )}
             </button>
           </form>
 
-          {/* Footer Note (Optional, z.B. für Impressum Link) */}
-          <div className="mt-10 text-center text-xs text-slate-400">
-             &copy; {new Date().getFullYear()} CleanOps Enterprise
+          <div className="mt-20 text-center border-t border-slate-50 pt-10">
+            <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.3em]">
+              &copy; {new Date().getFullYear()} GlanzOps &bull; Infrastructure Management
+            </p>
           </div>
-
         </div>
       </div>
 
-      {/* --- RECHTER BEREICH: VISUALS (Nur Desktop) --- */}
-      <div className="relative hidden w-0 flex-1 lg:block">
-        <div className="absolute inset-0 h-full w-full bg-slate-900 overflow-hidden">
-            
-            {/* Background Blobs (Pure CSS, keine externe Config nötig) */}
-            <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-blue-600 rounded-full opacity-20 blur-3xl"></div>
-            <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-purple-600 rounded-full opacity-20 blur-3xl"></div>
-            
-            {/* Content Overlay */}
-            <div className="relative z-10 flex flex-col justify-center h-full px-16 text-white">
-                <div className="max-w-xl">
-                    <div className="mb-8 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/10 text-white text-sm font-medium backdrop-blur-md">
-                        <CheckCircle2 size={16} className="text-green-400" />
-                        <span>Enterprise Solution v2.0</span>
-                    </div>
-                    
-                    <h2 className="text-5xl font-bold mb-6 leading-tight">
-                        Effizientes Management für <br/>
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">moderne Gebäudedienste.</span>
-                    </h2>
-                    
-                    <p className="text-slate-300 text-lg mb-10 leading-relaxed max-w-lg">
-                        Verwalten Sie Aufträge, Mitarbeiter, Rechnungen und Kunden an einem zentralen Ort. 
-                        Automatisierte Prozesse für mehr Zeit im Kerngeschäft.
-                    </p>
-                    
-                    <ul className="space-y-5 text-slate-200 font-medium">
-                        {['Automatische Rechnungsstellung', 'Digitale Zeiterfassung per App', 'Echtzeit Dashboard & Analysen'].map((item, i) => (
-                            <li key={i} className="flex items-center gap-4">
-                                <div className="h-2 w-2 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.8)]"></div>
-                                {item}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
+      {/* RIGHT SECTION: BRANDING & TECHNOLOGY */}
+      <div className="relative hidden w-0 flex-1 lg:block overflow-hidden">
+        <div className="absolute inset-0 h-full w-full bg-slate-950 bg-auth-gradient">
+          
+          {/* Dynamic Background Effects */}
+          <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-blue-600 rounded-full opacity-20 blur-[150px] animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-indigo-600 rounded-full opacity-10 blur-[180px]"></div>
+          
+          {/* Grid Pattern Overlay */}
+          <div className="absolute inset-0 opacity-[0.05] pointer-events-none bg-dot-pattern"></div>
+
+          <div className="relative z-10 flex flex-col justify-center h-full px-24 text-left text-white max-w-4xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] mb-8 w-fit">
+               System Status: Active
             </div>
+            <h2 className="text-6xl font-black leading-[1] mb-12 tracking-tighter">
+              Operations <br/>
+              <span className="text-blue-500">Perfected.</span>
+            </h2>
+            
+            <div className="space-y-10">
+              {[
+                { title: 'Zentralisierte Steuerung', desc: 'Maximale Kontrolle über alle Objekte und Teams in Echtzeit.' },
+                { title: 'Digitale Transparenz', desc: 'Lückenlose Dokumentation durch intelligente Live-Protokolle.' },
+                { title: 'Automatisierte Finanzen', desc: 'Effizientes Invoicing und Payroll-Management per Mausklick.' }
+              ].map((item, i) => (
+                <div key={i} className="flex items-start gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+                  <div className="mt-1 bg-white/5 p-3 rounded-2xl border border-white/10 backdrop-blur-md shadow-xl">
+                    <CheckCircle2 size={24} className="text-blue-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="font-black text-xl text-white uppercase tracking-tight">{item.title}</h4>
+                    <p className="text-slate-400 text-base font-medium leading-relaxed">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
-
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { Lock, ShieldCheck,  Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Lock, ShieldCheck, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import api from '../../lib/api';
 
 export default function ResetPasswordPage() {
@@ -53,21 +53,21 @@ export default function ResetPasswordPage() {
     }
   };
 
-  // --- FALL: KEIN TOKEN ---
+  // --- FALL: KEIN TOKEN (Fehler-Ansicht) ---
   if (!token) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-        <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border border-slate-100 text-center animate-in fade-in zoom-in duration-300">
-          <div className="mx-auto bg-red-50 w-16 h-16 rounded-full flex items-center justify-center mb-6">
-            <AlertCircle className="h-8 w-8 text-red-600" />
+        <div className="auth-card text-center">
+          <div className="mx-auto stat-icon-wrapper icon-critical w-16 h-16 rounded-full mb-6">
+            <AlertCircle className="h-8 w-8" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-3">Ungültiger Link</h2>
-          <p className="text-slate-500 mb-8 leading-relaxed">
+          <h2 className="text-xl font-bold text-slate-900 mb-3 font-sans">Ungültiger Link</h2>
+          <p className="page-subtitle mb-8 leading-relaxed">
             Der Link zum Zurücksetzen des Passworts ist ungültig oder abgelaufen.
           </p>
           <Link 
             to="/forgot-password" 
-            className="inline-flex items-center justify-center w-full py-3 px-4 rounded-xl shadow-lg shadow-blue-100 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all active:scale-95"
+            className="btn-primary w-full justify-center"
           >
             Neuen Link anfordern
           </Link>
@@ -78,53 +78,53 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-      <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl shadow-slate-200 border border-slate-100 animate-in fade-in zoom-in duration-500">
+      <div className="auth-card">
         
         {/* ICON HEADER */}
         <div className="flex justify-center mb-6">
-          <div className="bg-blue-50 p-4 rounded-2xl text-blue-600 shadow-sm border border-blue-100">
+          <div className="stat-icon-wrapper icon-info w-14 h-14 rounded-2xl border border-blue-100">
             <ShieldCheck size={32} />
           </div>
         </div>
 
-        <h2 className="text-3xl font-extrabold text-center mb-2 text-slate-800 tracking-tight">
+        <h2 className="text-2xl font-bold text-center mb-2 text-slate-800 tracking-tight">
           Neues Passwort
         </h2>
         
-        <p className="text-slate-500 text-center mb-8 leading-relaxed">
-          Wähle ein sicheres Passwort für deinen CleanOps Account.
+        <p className="page-subtitle text-center mb-8 leading-relaxed">
+          Wähle ein sicheres Passwort für deinen <strong>GlanzOps</strong> Account.
         </p>
 
         {/* FEEDBACK MESSAGES */}
         {status === 'SUCCESS' && (
-          <div className="mb-6 p-4 bg-emerald-50 text-emerald-700 text-sm rounded-xl border border-emerald-100 flex items-start gap-3 animate-in slide-in-from-top-2">
+          <div className="alert-success mb-6">
             <CheckCircle2 size={18} className="shrink-0 mt-0.5" />
-            <p className="font-medium">{message}</p>
+            <p className="font-semibold">{message}</p>
           </div>
         )}
 
         {status === 'ERROR' && (
-          <div className="mb-6 p-4 bg-red-50 text-red-700 text-sm rounded-xl border border-red-100 flex items-start gap-3 animate-in slide-in-from-top-2">
+          <div className="alert-error mb-6">
             <AlertCircle size={18} className="shrink-0 mt-0.5" />
-            <p className="font-medium">{message}</p>
+            <p className="font-semibold">{message}</p>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* NEUES PASSWORT */}
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">
+          <div className="form-group">
+            <label className="label-caps">
               Neues Passwort
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                 <Lock size={18} />
               </div>
               <input
                 type="password"
                 required
                 minLength={8}
-                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 font-medium text-slate-700"
+                className="input-standard pl-11"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -133,19 +133,19 @@ export default function ResetPasswordPage() {
           </div>
 
           {/* WIEDERHOLUNG */}
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">
+          <div className="form-group">
+            <label className="label-caps">
               Passwort bestätigen
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                 <ShieldCheck size={18} />
               </div>
               <input
                 type="password"
                 required
                 minLength={8}
-                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 font-medium text-slate-700"
+                className="input-standard pl-11"
                 placeholder="••••••••"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -156,7 +156,7 @@ export default function ResetPasswordPage() {
           <button
             type="submit"
             disabled={isLoading || status === 'SUCCESS'}
-            className="w-full flex justify-center items-center py-3.5 px-4 bg-slate-900 text-white rounded-xl font-bold shadow-lg hover:bg-slate-800 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed gap-2"
+            className="btn-primary w-full py-3 justify-center text-base"
           >
             {isLoading ? (
               <>
@@ -164,7 +164,7 @@ export default function ResetPasswordPage() {
                 <span>Wird gespeichert...</span>
               </>
             ) : (
-              'Passwort ändern'
+              'Passwort speichern'
             )}
           </button>
         </form>

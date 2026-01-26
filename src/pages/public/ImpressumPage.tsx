@@ -1,160 +1,204 @@
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { ArrowLeft, Shield } from 'lucide-react';
+import { ArrowLeft, Shield, Mail, Phone, MapPin, Building, User, Gavel, Scale } from 'lucide-react';
 
 export default function ImpressumPage() {
   // --------------------------------------------------------
-  // 📝 BITTE HIER DEINE ECHTEN DATEN EINTRAGEN
+  // GlanzOps - Stammdaten
   // --------------------------------------------------------
-  const COMPANY_NAME = "CleanOps Gebäudereinigung";
-  const CEO = "Max Mustermann"; // Dein Name
+  const COMPANY_NAME = "GlanzOps Gebäudereinigung";
+  const CEO = "Max Mustermann"; 
   const STREET = "Musterstraße 1";
-  const CITY = "12345 Berlin";
-  const EMAIL = "info@cleanops.de";
+  const ZIP = "12345";
+  const CITY = "Berlin";
+  const EMAIL = "info@glanzops.de";
   const PHONE = "030 / 123 456 78";
   
-  // Falls vorhanden (sonst leer lassen):
   const UST_ID = "DE123456789"; 
   const REGISTER_COURT = "Amtsgericht Berlin-Charlottenburg";
   const REGISTER_NUMBER = "HRB 12345";
   // --------------------------------------------------------
 
   return (
-    <div className="bg-slate-50 min-h-screen font-sans text-slate-700">
-      
-      {/* 1. SEO */}
+    <div className="page-container max-w-5xl mx-auto">
       <Helmet>
         <title>Impressum | {COMPANY_NAME}</title>
-        <meta name="robots" content="noindex" /> {/* Impressum muss nicht zwingend in Google ranken */}
+        <meta name="robots" content="noindex" />
       </Helmet>
 
-      {/* 2. NAVIGATION (Zurück) */}
-      <nav className="bg-white border-b border-slate-200">
-        <div className="max-w-4xl mx-auto px-6 h-16 flex items-center">
-          <Link to="/" className="flex items-center gap-2 text-slate-500 hover:text-blue-600 transition font-medium">
-            <ArrowLeft size={20} /> Zurück zur Startseite
-          </Link>
-        </div>
-      </nav>
-
-      {/* 3. CONTENT */}
-      <main className="max-w-4xl mx-auto px-6 py-12">
+      {/* HEADER & NAVIGATION */}
+      <div className="mb-6 flex flex-col gap-4">
+        <Link 
+          to="/" 
+          className="w-fit text-[10px] text-slate-400 hover:text-blue-600 flex items-center gap-2 transition-all font-black uppercase tracking-widest bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm"
+        >
+          <ArrowLeft size={14} /> Zurück zur Startseite
+        </Link>
         
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 md:p-12">
-          
-          <div className="flex items-center gap-3 mb-8 pb-8 border-b border-slate-100">
-            <div className="bg-slate-100 p-3 rounded-xl">
-              <Shield className="text-slate-600 h-8 w-8" />
+        <div className="header-section">
+          <div className="flex items-center gap-5">
+            <div className="stat-icon-wrapper icon-info !w-14 !h-14 rounded-2xl shadow-inner border border-blue-100 bg-blue-50 text-blue-600">
+              <Shield size={28} />
             </div>
-            <h1 className="text-3xl font-bold text-slate-900">Impressum</h1>
+            <div className="text-left">
+              <h1 className="page-title text-3xl">Impressum</h1>
+              <p className="page-subtitle text-lg">Rechtliche Anbieterkennzeichnung gemäß § 5 TMG</p>
+            </div>
           </div>
+        </div>
+      </div>
 
-          <div className="space-y-8">
+      {/* CONTENT AREA */}
+      <main className="bg-white rounded-[2.5rem] border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="p-8 md:p-16 space-y-16">
+          
+          {/* ANBIETERKENNZEICHNUNG */}
+          <section className="space-y-8">
+            <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                <Building size={20} className="text-blue-500" />
+                <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Unternehmensangaben</h2>
+            </div>
             
-            {/* ANGABEN */}
-            <section>
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Angaben gemäß § 5 TMG</h2>
-              <p>
-                <strong>{COMPANY_NAME}</strong><br />
-                {STREET}<br />
-                {CITY}
-              </p>
-            </section>
+            <div className="grid md:grid-cols-2 gap-12">
+                <div className="space-y-6">
+                    <div>
+                        <p className="label-caps !ml-0 !mb-3">Firmierung</p>
+                        <p className="font-black text-slate-900 text-2xl leading-tight">
+                            {COMPANY_NAME}
+                        </p>
+                    </div>
+                    <div className="space-y-3">
+                        <p className="label-caps !ml-0 !mb-3">Sitz der Gesellschaft</p>
+                        <div className="flex items-start gap-3 text-slate-600 font-bold">
+                            <MapPin size={18} className="text-slate-300 shrink-0 mt-1" />
+                            <div className="text-lg leading-relaxed">
+                                {STREET}<br />
+                                {ZIP} {CITY}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 space-y-4">
+                    <div>
+                        <p className="label-caps !ml-0 !mb-3 text-blue-600">Vertretungsberechtigt</p>
+                        <div className="flex items-center gap-3 text-slate-900 font-black text-xl">
+                            <User className="text-blue-500" size={22} /> {CEO}
+                        </div>
+                        <p className="text-xs font-bold text-slate-400 mt-2 uppercase tracking-widest">Geschäftsführer</p>
+                    </div>
+                </div>
+            </div>
+          </section>
 
-            {/* VERTRETUNG */}
-            <section>
-              <h2 className="text-lg font-bold text-slate-900 mb-2">Vertreten durch:</h2>
-              <p>{CEO}</p>
-            </section>
+          {/* KONTAKT & REGISTER */}
+          <section className="grid md:grid-cols-2 gap-12 pt-8 border-t border-slate-100">
+                <div className="space-y-8">
+                    <div className="flex items-center gap-3">
+                        <Mail size={20} className="text-blue-500" />
+                        <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">Kontaktmöglichkeiten</h2>
+                    </div>
+                    <div className="space-y-4">
+                        <div className="group flex items-center gap-4 p-4 rounded-2xl border border-transparent hover:border-blue-100 hover:bg-blue-50/50 transition-all">
+                            <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-blue-600 transition-colors">
+                                <Phone size={18} />
+                            </div>
+                            <span className="font-bold text-slate-700">{PHONE}</span>
+                        </div>
+                        <div className="group flex items-center gap-4 p-4 rounded-2xl border border-transparent hover:border-blue-100 hover:bg-blue-50/50 transition-all">
+                            <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-blue-600 transition-colors">
+                                <Mail size={18} />
+                            </div>
+                            <a href={`mailto:${EMAIL}`} className="font-black text-blue-600 hover:underline">{EMAIL}</a>
+                        </div>
+                    </div>
+                </div>
 
-            {/* KONTAKT */}
-            <section>
-              <h2 className="text-lg font-bold text-slate-900 mb-2">Kontakt</h2>
-              <p>
-                Telefon: {PHONE}<br />
-                E-Mail: <a href={`mailto:${EMAIL}`} className="text-blue-600 hover:underline">{EMAIL}</a>
-              </p>
-            </section>
+                <div className="space-y-8">
+                    <div className="flex items-center gap-3">
+                        <Scale size={20} className="text-blue-500" />
+                        <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">Register & Steuer</h2>
+                    </div>
+                    <div className="grid grid-cols-1 gap-6">
+                        {REGISTER_COURT && (
+                            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                                <p className="label-caps !ml-0 !mb-2">Handelsregister</p>
+                                <p className="text-sm text-slate-700 font-bold leading-relaxed">
+                                    {REGISTER_COURT}<br />
+                                    <span className="text-blue-500 font-black tracking-tighter">Reg-Nr:</span> {REGISTER_NUMBER}
+                                </p>
+                            </div>
+                        )}
+                        {UST_ID && (
+                            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                                <p className="label-caps !ml-0 !mb-2">Umsatzsteuer-ID</p>
+                                <p className="text-lg text-slate-900 font-black font-mono tracking-tighter">
+                                    {UST_ID}
+                                </p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">gemäß § 27 a Umsatzsteuergesetz</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+          </section>
 
-            {/* REGISTER */}
-            {(REGISTER_COURT || REGISTER_NUMBER) && (
-              <section>
-                <h2 className="text-lg font-bold text-slate-900 mb-2">Registereintrag</h2>
-                <p>
-                  Eintragung im Handelsregister.<br />
-                  Registergericht: {REGISTER_COURT}<br />
-                  Registernummer: {REGISTER_NUMBER}
-                </p>
-              </section>
-            )}
+          {/* DISCLAIMER SECTION */}
+          <section className="pt-12 border-t border-slate-100 space-y-10">
+            <div className="flex items-center gap-3">
+                <Gavel size={20} className="text-blue-500" />
+                <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Rechtliche Hinweise</h2>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-8">
+                <div className="space-y-3">
+                    <h3 className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em]">Inhalte</h3>
+                    <p className="text-sm text-slate-500 leading-relaxed font-medium">
+                        Als Diensteanbieter sind wir gemäß § 7 Abs.1 TMG für eigene Inhalte auf diesen Seiten verantwortlich. Nach §§ 8 bis 10 TMG sind wir jedoch nicht verpflichtet, fremde Informationen zu überwachen.
+                    </p>
+                </div>
+                <div className="space-y-3">
+                    <h3 className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em]">Verlinkungen</h3>
+                    <p className="text-sm text-slate-500 leading-relaxed font-medium">
+                        Unser Angebot enthält Links zu externen Websites Dritter. Auf deren Inhalte haben wir keinen Einfluss und übernehmen daher keine Gewähr. Für die Inhalte ist stets der jeweilige Anbieter verantwortlich.
+                    </p>
+                </div>
+                <div className="space-y-3">
+                    <h3 className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em]">Urheberrecht</h3>
+                    <p className="text-sm text-slate-500 leading-relaxed font-medium">
+                        Die Inhalte auf diesen Seiten unterliegen dem deutschen Urheberrecht. Vervielfältigung, Bearbeitung und Verwertung bedürfen der schriftlichen Zustimmung des Erstellers.
+                    </p>
+                </div>
+            </div>
+          </section>
 
-            {/* UMSATZSTEUER */}
-            {UST_ID && (
-              <section>
-                <h2 className="text-lg font-bold text-slate-900 mb-2">Umsatzsteuer-ID</h2>
-                <p>
-                  Umsatzsteuer-Identifikationsnummer gemäß § 27 a Umsatzsteuergesetz:<br />
-                  {UST_ID}
-                </p>
-              </section>
-            )}
-
-            {/* STREITSCHLICHTUNG */}
-            <section className="pt-8 border-t border-slate-100">
-              <h2 className="text-xl font-bold text-slate-900 mb-4">EU-Streitschlichtung</h2>
-              <p className="mb-4">
-                Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit: 
-                <a href="https://ec.europa.org/consumers/odr/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-1">
-                  https://ec.europa.org/consumers/odr/
-                </a>.<br />
-                Unsere E-Mail-Adresse finden Sie oben im Impressum.
-              </p>
-              
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Verbraucherstreitbeilegung / Universalschlichtungsstelle</h3>
-              <p>
-                Wir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.
-              </p>
-            </section>
-
-            {/* HAFTUNGSAUSSCHLUSS */}
-            <section className="pt-8 border-t border-slate-100">
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Haftungsausschluss (Disclaimer)</h2>
-              
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Haftung für Inhalte</h3>
-              <p className="mb-4 text-sm leading-relaxed">
-                Als Diensteanbieter sind wir gemäß § 7 Abs.1 TMG für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich. 
-                Nach §§ 8 bis 10 TMG sind wir als Diensteanbieter jedoch nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen 
-                oder nach Umständen zu forschen, die auf eine rechtswidrige Tätigkeit hinweisen. Verpflichtungen zur Entfernung oder Sperrung der Nutzung 
-                von Informationen nach den allgemeinen Gesetzen bleiben hiervon unberührt. Eine diesbezügliche Haftung ist jedoch erst ab dem Zeitpunkt 
-                der Kenntnis einer konkreten Rechtsverletzung möglich. Bei Bekanntwerden von entsprechenden Rechtsverletzungen werden wir diese Inhalte umgehend entfernen.
-              </p>
-
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Haftung für Links</h3>
-              <p className="mb-4 text-sm leading-relaxed">
-                Unser Angebot enthält Links zu externen Websites Dritter, auf deren Inhalte wir keinen Einfluss haben. Deshalb können wir für diese fremden Inhalte 
-                auch keine Gewähr übernehmen. Für die Inhalte der verlinkten Seiten ist stets der jeweilige Anbieter oder Betreiber der Seiten verantwortlich. 
-                Die verlinkten Seiten wurden zum Zeitpunkt der Verlinkung auf mögliche Rechtsverstöße überprüft. Rechtswidrige Inhalte waren zum Zeitpunkt der 
-                Verlinkung nicht erkennbar. Eine permanente inhaltliche Kontrolle der verlinkten Seiten ist jedoch ohne konkrete Anhaltspunkte einer Rechtsverletzung 
-                nicht zumutbar. Bei Bekanntwerden von Rechtsverletzungen werden wir derartige Links umgehend entfernen.
-              </p>
-
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Urheberrecht</h3>
-              <p className="text-sm leading-relaxed">
-                Die durch die Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten unterliegen dem deutschen Urheberrecht. Die Vervielfältigung, Bearbeitung, 
-                Verbreitung und jede Art der Verwertung außerhalb der Grenzen des Urheberrechtes bedürfen der schriftlichen Zustimmung des jeweiligen Autors bzw. Erstellers. 
-                Downloads und Kopien dieser Seite sind nur für den privaten, nicht kommerziellen Gebrauch gestattet. Soweit die Inhalte auf dieser Seite nicht vom Betreiber 
-                erstellt wurden, werden die Urheberrechte Dritter beachtet. Insbesondere werden Inhalte Dritter als solche gekennzeichnet. Sollten Sie trotzdem auf eine 
-                Urheberrechtsverletzung aufmerksam werden, bitten wir um einen entsprechenden Hinweis. Bei Bekanntwerden von Rechtsverletzungen werden wir derartige Inhalte umgehend entfernen.
-              </p>
-            </section>
-
+          {/* OS-PLATTFORM */}
+          <div className="bg-blue-600 rounded-[2rem] p-8 text-white shadow-xl shadow-blue-200 flex flex-col md:flex-row items-center gap-6">
+                <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0">
+                    <Scale size={32} />
+                </div>
+                <div className="text-center md:text-left flex-1">
+                    <h4 className="text-lg font-black tracking-tight mb-2 uppercase">Online-Streitbeilegung</h4>
+                    <p className="text-blue-100 text-sm leading-relaxed font-medium mb-4">
+                        Die EU-Kommission bietet eine Plattform zur Online-Streitbeilegung an. Wir sind zur Teilnahme an einem Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle nicht verpflichtet.
+                    </p>
+                    <a 
+                        href="https://ec.europa.org/consumers/odr/" 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="inline-block bg-white text-blue-600 px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-50 transition-colors shadow-lg shadow-black/10"
+                    >
+                        Plattform besuchen
+                    </a>
+                </div>
           </div>
+
         </div>
       </main>
 
-      {/* FOOTER */}
-      <footer className="bg-white border-t border-slate-200 py-8 text-center text-sm text-slate-500">
-        &copy; {new Date().getFullYear()} {COMPANY_NAME}. Alle Rechte vorbehalten.
+      <footer className="py-12 text-center">
+          <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.3em]">
+            &copy; {new Date().getFullYear()} {COMPANY_NAME} &bull; Alle Rechte vorbehalten
+          </p>
       </footer>
     </div>
   );

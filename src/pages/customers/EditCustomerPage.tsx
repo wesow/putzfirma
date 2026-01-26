@@ -1,16 +1,79 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Save, ArrowLeft, User, Building2, Mail, Phone, MapPin, Loader2, Send } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Save, ArrowLeft, User, Building2, Mail, Phone, MapPin, Loader2, Send, CheckCircle, ShieldCheck } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../../lib/api';
 
-export default function CreateCustomerPage() {
+export default function EditCustomerPage() {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [resending, setResending] = useState(false);
+  
+  const [customerState, setCustomerState] = useState<{
+    hasUser: boolean;
+    hasInvite: boolean;
+  }>({ hasUser: false, hasInvite: false });
+
   const [formData, setFormData] = useState({
-    firstName: '', lastName: '', companyName: '', email: '', phone: '', street: '', zipCode: '', city: ''
+    firstName: '',
+    lastName: '',
+    companyName: '',
+    email: '',
+    phone: '',
+    street: '',
+    zipCode: '',
+    city: ''
   });
-  const [sendInvite, setSendInvite] = useState(false);
+
+  useEffect(() => {
+    const fetchCustomerData = async () => {
+      try {
+        const res = await api.get(`/customers/${id}`);
+        const customer = res.data;
+        
+        const billingAddress = customer.addresses.find((a: any) => a.type === 'BILLING') || customer.addresses[0];
+
+        setCustomerState({
+          hasUser: !!customer.userId,
+          hasInvite: !!customer.invitation && !customer.invitation.isAccepted
+        });
+
+        setFormData({
+          firstName: customer.firstName || '',
+          lastName: customer.lastName || '',
+          companyName: customer.companyName || '',
+          email: customer.email || '',
+          phone: customer.phone || '',
+          street: billingAddress?.street || '',
+          zipCode: billingAddress?.zipCode || '',
+          city: billingAddress?.city || ''
+        });
+      } catch (error) {
+        console.error("Fehler beim Laden:", error);
+        toast.error("Kunde konnte nicht geladen werden.");
+        navigate('/dashboard/customers');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCustomerData();
+  }, [id, navigate]);
+
+  const handleResendInvite = async () => {
+    setResending(true);
+    const toastId = toast.loading('Einladung wird erneut versendet...');
+    try {
+      await api.post('/auth/invite', { email: formData.email, role: 'CUSTOMER' });
+      toast.success('Einladung erfolgreich erneut versendet!', { id: toastId });
+    } catch (error) {
+      toast.error('Fehler beim Versenden der Einladung.', { id: toastId });
+    } finally {
+      setResending(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -18,35 +81,42 @@ export default function CreateCustomerPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    const toastId = toast.loading('Kunde wird im System angelegt...');
+    setSaving(true);
+    const toastId = toast.loading('Änderungen werden gespeichert...');
 
     try {
-      const payload = {
+      await api.put(`/customers/${id}`, {
         firstName: formData.firstName,
         lastName: formData.lastName,
         companyName: formData.companyName || undefined,
-        email: formData.email,
         phone: formData.phone || undefined,
         address: {
           street: formData.street,
           zipCode: formData.zipCode,
           city: formData.city
-        },
-        sendInvite
-      };
-
-      await api.post('/customers', payload);
+        }
+      });
       
-      toast.success(sendInvite ? 'Kunde erstellt & Einladung versendet!' : 'Kunde erfolgreich angelegt!', { id: toastId });
+      toast.success('Kundendaten erfolgreich aktualisiert!', { id: toastId });
       navigate('/dashboard/customers');
     } catch (error: any) {
-      const errorMsg = error.response?.data?.message || 'Fehler beim Speichern.';
+      const errorMsg = error.response?.data?.message || 'Fehler beim Aktualisieren.';
       toast.error(errorMsg, { id: toastId });
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="page-container flex items-center justify-center py-40">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="animate-spin text-blue-600" size={40} />
+          <p className="font-black text-slate-400 uppercase tracking-[0.2em] text-[10px]">Synchronisiere Datenbank...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-container max-w-4xl mx-auto">
@@ -57,34 +127,70 @@ export default function CreateCustomerPage() {
           onClick={() => navigate('/dashboard/customers')} 
           className="text-[10px] text-slate-400 hover:text-blue-600 flex items-center gap-2 mb-4 transition-all font-black uppercase tracking-[0.2em] bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm"
         >
-          <ArrowLeft size={14} /> Zurück
+          <ArrowLeft size={14} /> Zurück zur Übersicht
         </button>
         <div className="header-section !bg-transparent !border-none !p-0 !shadow-none">
           <div className="text-left">
-            <h1 className="page-title text-3xl">Neuer Kundenstamm</h1>
-            <p className="page-subtitle text-lg">Erfassen Sie gewerbliche oder private Auftraggeber.</p>
+            <h1 className="page-title text-3xl">Kundenprofil bearbeiten</h1>
+            <p className="page-subtitle text-lg">Aktualisieren Sie Stammdaten für <span className="text-slate-900 font-bold">{formData.companyName || `${formData.firstName} ${formData.lastName}`}</span>.</p>
           </div>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         
+        {/* PORTAL STATUS BANNER (MODERN DESIGN) */}
+        <div className={`p-6 rounded-[2rem] border flex flex-col md:flex-row items-center justify-between gap-6 transition-all shadow-xl ${
+          customerState.hasUser 
+            ? 'bg-emerald-50 border-emerald-100 shadow-emerald-600/5' 
+            : 'bg-blue-50 border-blue-100 shadow-blue-600/5'
+        }`}>
+          <div className="flex items-center gap-5">
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner ${
+              customerState.hasUser ? 'bg-emerald-500 text-white' : 'bg-blue-500 text-white'
+            }`}>
+              {customerState.hasUser ? <ShieldCheck size={28} /> : <Send size={28} />}
+            </div>
+            <div className="text-left">
+              <h4 className={`text-lg font-black tracking-tight ${customerState.hasUser ? 'text-emerald-900' : 'text-blue-900'}`}>
+                {customerState.hasUser ? 'Account Aktiviert' : 'Portal Zugang Ausstehend'}
+              </h4>
+              <p className={`text-sm font-medium leading-relaxed ${customerState.hasUser ? 'text-emerald-700' : 'text-blue-700'} max-w-md`}>
+                {customerState.hasUser 
+                  ? 'Dieser Kunde hat seinen Zugang zum GlanzOps Self-Service-Portal bereits aktiviert.' 
+                  : 'Der Kunde hat noch keinen aktiven Zugang. Sie können die Einladung hier erneut versenden.'}
+              </p>
+            </div>
+          </div>
+          
+          {!customerState.hasUser && (
+            <button 
+              type="button"
+              onClick={handleResendInvite}
+              disabled={resending}
+              className="btn-primary !bg-blue-600 !border-blue-700 min-w-[200px]"
+            >
+              {resending ? <Loader2 className="animate-spin" size={18} /> : <><Send size={18} /> Einladung senden</>}
+            </button>
+          )}
+        </div>
+
         {/* STAMMDATEN CARD */}
         <div className="form-card space-y-8">
           <div className="form-section-title">
-            <User size={16} className="text-blue-500" /> 1. Persönliche Daten & Firma
+            <User size={16} className="text-blue-500" /> 1. Persönliche Stammdaten
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2 space-y-1.5">
-              <label className="label-caps">Unternehmen / Firmenname (Optional)</label>
+              <label className="label-caps">Unternehmen / Firmenname</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
                   <Building2 size={18} />
                 </div>
                 <input 
                   name="companyName" 
-                  placeholder="z.B. Glanz GmbH" 
+                  placeholder="Unternehmen eingeben..." 
                   className="input-standard pl-12" 
                   value={formData.companyName} 
                   onChange={handleChange} 
@@ -101,7 +207,6 @@ export default function CreateCustomerPage() {
                 <input 
                   name="firstName" 
                   required 
-                  placeholder="Max" 
                   className="input-standard pl-12 font-bold" 
                   value={formData.firstName} 
                   onChange={handleChange} 
@@ -118,7 +223,6 @@ export default function CreateCustomerPage() {
                 <input 
                   name="lastName" 
                   required 
-                  placeholder="Mustermann" 
                   className="input-standard pl-12 font-bold" 
                   value={formData.lastName} 
                   onChange={handleChange} 
@@ -126,34 +230,32 @@ export default function CreateCustomerPage() {
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="label-caps">E-Mail Adresse *</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+            <div className="space-y-1.5 opacity-60">
+              <label className="label-caps text-slate-400">E-Mail (Primärschlüssel - Schreibgeschützt)</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
                   <Mail size={18} />
                 </div>
                 <input 
                   name="email" 
                   type="email" 
-                  required 
-                  placeholder="kunde@beispiel.de" 
-                  className="input-standard pl-12" 
+                  disabled 
+                  className="input-standard pl-12 bg-slate-50 cursor-not-allowed border-dashed" 
                   value={formData.email} 
-                  onChange={handleChange} 
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="label-caps">Telefonnummer</label>
+              <label className="label-caps">Telefon / Mobil</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
                   <Phone size={18} />
                 </div>
                 <input 
                   name="phone" 
-                  placeholder="+49 123 456789" 
-                  className="input-standard pl-12" 
+                  placeholder="+49..." 
+                  className="input-standard pl-12 font-medium" 
                   value={formData.phone} 
                   onChange={handleChange} 
                 />
@@ -165,7 +267,7 @@ export default function CreateCustomerPage() {
         {/* ANSCHRIFT CARD */}
         <div className="form-card space-y-8">
           <div className="form-section-title">
-            <MapPin size={16} className="text-blue-500" /> 2. Rechnungs- & Leistungsadresse
+            <MapPin size={16} className="text-blue-500" /> 2. Adressinformationen
           </div>
 
           <div className="space-y-6">
@@ -178,7 +280,6 @@ export default function CreateCustomerPage() {
                 <input 
                   name="street" 
                   required 
-                  placeholder="Musterstraße 123" 
                   className="input-standard pl-12" 
                   value={formData.street} 
                   onChange={handleChange} 
@@ -192,8 +293,7 @@ export default function CreateCustomerPage() {
                 <input 
                   name="zipCode" 
                   required 
-                  placeholder="12345" 
-                  className="input-standard" 
+                  className="input-standard font-mono" 
                   value={formData.zipCode} 
                   onChange={handleChange} 
                 />
@@ -203,7 +303,6 @@ export default function CreateCustomerPage() {
                 <input 
                   name="city" 
                   required 
-                  placeholder="Berlin" 
                   className="input-standard" 
                   value={formData.city} 
                   onChange={handleChange} 
@@ -213,35 +312,7 @@ export default function CreateCustomerPage() {
           </div>
         </div>
 
-        {/* EINLADUNGS OPTION */}
-        <div 
-          onClick={() => setSendInvite(!sendInvite)}
-          className={`flex items-center justify-between p-6 rounded-[2rem] border transition-all cursor-pointer ${
-            sendInvite ? 'bg-blue-600 border-blue-700 shadow-xl shadow-blue-200' : 'bg-white border-slate-200 hover:border-blue-300 shadow-sm'
-          }`}
-        >
-          <div className="flex items-center gap-5">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${
-              sendInvite ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400'
-            }`}>
-              <Send size={24} />
-            </div>
-            <div className="text-left">
-              <h4 className={`text-base font-bold tracking-tight ${sendInvite ? 'text-white' : 'text-slate-900'}`}>Portal-Einladung versenden</h4>
-              <p className={`text-sm ${sendInvite ? 'text-blue-100' : 'text-slate-500'}`}>Kunde erhält Zugangsdaten für das Self-Service Portal.</p>
-            </div>
-          </div>
-          
-          <div className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
-            sendInvite ? 'bg-emerald-400' : 'bg-slate-200'
-          }`}>
-            <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-              sendInvite ? 'translate-x-6' : 'translate-x-1'
-            }`} />
-          </div>
-        </div>
-
-        {/* FOOTER ACTIONS */}
+        {/* ACTIONS */}
         <div className="flex items-center justify-end gap-4 bg-slate-100/50 p-6 rounded-[2rem] border border-slate-100">
           <button 
             type="button" 
@@ -252,17 +323,10 @@ export default function CreateCustomerPage() {
           </button>
           <button 
             type="submit" 
-            disabled={loading} 
-            className="btn-primary min-w-[240px] shadow-xl shadow-blue-500/20 py-4"
+            disabled={saving} 
+            className="btn-primary min-w-[240px] shadow-xl shadow-blue-500/20 py-4 uppercase tracking-widest font-black text-[10px]"
           >
-            {loading ? (
-              <Loader2 className="animate-spin h-5 w-5" />
-            ) : (
-              <>
-                <Save size={20} />
-                <span className="uppercase tracking-widest text-[10px] font-black">Kunde jetzt speichern</span>
-              </>
-            )}
+            {saving ? <Loader2 className="animate-spin" size={18} /> : <><Save size={18} /> Änderungen speichern</>}
           </button>
         </div>
       </form>

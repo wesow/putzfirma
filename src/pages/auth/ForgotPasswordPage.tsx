@@ -16,9 +16,7 @@ export default function ForgotPasswordPage() {
     setMessage('');
 
     try {
-      // Nutzt dein konsistentes api-Modul
       const res = await api.post('/auth/forgot-password', { email });
-      
       setStatus('SUCCESS');
       setMessage(res.data.message || 'Falls die E-Mail existiert, wurde ein Link gesendet.');
     } catch (error: any) {
@@ -31,52 +29,52 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-      <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl shadow-slate-200 border border-slate-100 animate-in fade-in zoom-in duration-500">
+      <div className="auth-card">
         
         {/* ICON HEADER */}
         <div className="flex justify-center mb-6">
-          <div className="bg-blue-50 p-4 rounded-2xl text-blue-600 shadow-sm border border-blue-100">
+          <div className="stat-icon-wrapper icon-info w-14 h-14 rounded-2xl border border-blue-100">
             <KeyRound size={32} />
           </div>
         </div>
 
-        <h2 className="text-3xl font-extrabold text-center mb-2 text-slate-800 tracking-tight">
+        <h2 className="text-2xl font-bold text-center mb-2 text-slate-800 tracking-tight">
           Passwort vergessen?
         </h2>
         
-        <p className="text-slate-500 text-center mb-8 leading-relaxed">
+        <p className="page-subtitle text-center mb-8 leading-relaxed">
           Keine Sorge! Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Zurücksetzen.
         </p>
 
         {/* FEEDBACK MESSAGES */}
         {status === 'SUCCESS' && (
-          <div className="mb-6 p-4 bg-emerald-50 text-emerald-700 text-sm rounded-xl border border-emerald-100 flex items-start gap-3 animate-in slide-in-from-top-2">
+          <div className="alert-success mb-6">
             <CheckCircle2 size={18} className="shrink-0 mt-0.5" />
-            <p className="font-medium">{message}</p>
+            <p className="font-semibold">{message}</p>
           </div>
         )}
 
         {status === 'ERROR' && (
-          <div className="mb-6 p-4 bg-red-50 text-red-700 text-sm rounded-xl border border-red-100 flex items-start gap-3 animate-in slide-in-from-top-2">
+          <div className="alert-error mb-6">
             <AlertCircle size={18} className="shrink-0 mt-0.5" />
-            <p className="font-medium">{message}</p>
+            <p className="font-semibold">{message}</p>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label htmlFor="email" className="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">
+          <div className="form-group">
+            <label htmlFor="email" className="label-caps">
               E-Mail Adresse
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                 <Mail size={18} />
               </div>
               <input
                 id="email"
                 type="email"
                 required
-                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 font-medium text-slate-700"
+                className="input-standard pl-11"
                 placeholder="name@firma.de"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -87,7 +85,7 @@ export default function ForgotPasswordPage() {
           <button
             type="submit"
             disabled={isLoading || status === 'SUCCESS'}
-            className="w-full flex justify-center items-center py-3.5 px-4 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed gap-2"
+            className="btn-primary w-full py-3 justify-center text-base"
           >
             {isLoading ? (
               <>
@@ -103,7 +101,7 @@ export default function ForgotPasswordPage() {
         <div className="mt-8 text-center border-t border-slate-100 pt-6">
           <Link 
             to="/login" 
-            className="inline-flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-500 transition-colors group"
+            className="inline-flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors group"
           >
             <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
             Zurück zum Login

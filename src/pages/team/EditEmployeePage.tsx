@@ -3,55 +3,85 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { 
   Save, 
   ArrowLeft, 
-  Trash2, 
   User, 
   Mail, 
   CreditCard, 
   Briefcase, 
-  Badge, 
-  Loader2,
+  Badge as BadgeIcon, 
+  Loader2, 
+  Send, 
+  CheckCircle, 
+  ShieldCheck 
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 import api from '../../lib/api';
 
 export default function EditEmployeePage() {
-  const navigate = useNavigate();
   const { id } = useParams();
-  
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [resending, setResending] = useState(false);
   
+  const [employeeState, setEmployeeState] = useState<{
+    hasUser: boolean;
+    hasInvite: boolean;
+  }>({ hasUser: false, hasInvite: false });
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    personnelNumber: '',
     email: '',
-    role: 'Reinigungskraft',
-    hourlyWage: '12.50'
+    personnelNumber: '',
+    role: 'EMPLOYEE',
+    position: '',
+    hourlyWage: ''
   });
 
   useEffect(() => {
-    const fetchEmployee = async () => {
+    const fetchEmployeeData = async () => {
       try {
         const res = await api.get(`/employees/${id}`);
+        const emp = res.data;
+        
+        setEmployeeState({
+          hasUser: !!emp.userId,
+          hasInvite: !!emp.invitation && !emp.invitation.isAccepted
+        });
+
         setFormData({
-            firstName: res.data.firstName || '',
-            lastName: res.data.lastName || '',
-            personnelNumber: res.data.personnelNumber || '',
-            email: res.data.email || '',
-            role: res.data.role || 'Reinigungskraft',
-            hourlyWage: res.data.hourlyWage ? String(res.data.hourlyWage) : '12.50'
+          firstName: emp.firstName || '',
+          lastName: emp.lastName || '',
+          email: emp.email || '',
+          personnelNumber: emp.personnelNumber || '',
+          role: emp.user?.role || 'EMPLOYEE',
+          position: emp.role || '',
+          hourlyWage: emp.hourlyWage ? String(emp.hourlyWage) : ''
         });
       } catch (error) {
-        toast.error("Mitarbeiter nicht gefunden!");
+        console.error("Fehler beim Laden:", error);
+        toast.error("Mitarbeiter konnte nicht geladen werden.");
         navigate('/dashboard/team');
       } finally {
         setLoading(false);
       }
     };
-    fetchEmployee();
+
+    fetchEmployeeData();
   }, [id, navigate]);
+
+  const handleResendInvite = async () => {
+    setResending(true);
+    const toastId = toast.loading('Einladung wird erneut versendet...');
+    try {
+      await api.post('/auth/invite', { email: formData.email, role: formData.role });
+      toast.success('Einladung erfolgreich erneut versendet!', { id: toastId });
+    } catch (error) {
+      toast.error('Fehler beim Versenden der Einladung.', { id: toastId });
+    } finally {
+      setResending(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -60,147 +90,245 @@ export default function EditEmployeePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    const toastId = toast.loading('Änderungen werden gespeichert...');
+
     try {
       await api.put(`/employees/${id}`, {
-          ...formData,
-          hourlyWage: Number(formData.hourlyWage)
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        personnelNumber: formData.personnelNumber,
+        role: formData.role,
+        position: formData.position,
+        hourlyWage: Number(formData.hourlyWage)
       });
-      toast.success('Änderungen gespeichert');
+      
+      toast.success('Mitarbeiter erfolgreich aktualisiert!', { id: toastId });
       navigate('/dashboard/team');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Fehler beim Speichern.');
+      toast.error(error.response?.data?.message || 'Fehler beim Aktualisieren.', { id: toastId });
     } finally {
-        setSaving(false);
+      setSaving(false);
     }
   };
 
-  const handleDelete = async () => {
-      if(!confirm("Mitarbeiter wirklich löschen? Dies kann nicht rückgängig gemacht werden!")) return;
-      
-      setDeleting(true);
-      const toastId = toast.loading("Lösche Mitarbeiter...");
-
-      try {
-          await api.delete(`/employees/${id}`);
-          toast.success("Mitarbeiter gelöscht", { id: toastId });
-          navigate('/dashboard/team');
-      } catch(err) {
-          toast.error("Löschen fehlgeschlagen (evtl. noch aktive Jobs?)", { id: toastId });
-          setDeleting(false);
-      }
+  if (loading) {
+    return (
+      <div className="page-container flex items-center justify-center py-40">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="animate-spin text-blue-600" size={40} />
+          <p className="font-black text-slate-400 uppercase tracking-[0.2em] text-[10px]">Lade Personalakte...</p>
+        </div>
+      </div>
+    );
   }
 
-  if (loading) return <div className="p-20 text-center text-slate-400 flex flex-col items-center"><Loader2 className="animate-spin mb-2"/> Lade Daten...</div>;
-
   return (
-    <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="page-container max-w-4xl mx-auto">
       
-      {/* HEADER */}
-      <div className="mb-8 flex justify-between items-start">
-        <div>
-            <button 
-            onClick={() => navigate('/dashboard/team')}
-            className="text-sm text-slate-500 hover:text-blue-600 flex items-center gap-1 mb-1 transition-colors"
-            >
-            <ArrowLeft className="h-4 w-4" /> Zurück zur Übersicht
-            </button>
-            <h1 className="text-3xl font-bold text-slate-800">Mitarbeiter bearbeiten</h1>
-        </div>
-        
+      {/* HEADER & NAVIGATION */}
+      <div className="mb-6">
         <button 
-            onClick={handleDelete} 
-            disabled={deleting}
-            className="group flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 hover:border-red-200 transition-all disabled:opacity-50"
-            title="Mitarbeiter löschen"
+          onClick={() => navigate('/dashboard/team')} 
+          className="text-[10px] text-slate-400 hover:text-blue-600 flex items-center gap-2 mb-4 transition-all font-black uppercase tracking-[0.2em] bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm"
         >
-            {deleting ? <Loader2 size={18} className="animate-spin"/> : <Trash2 size={18} />}
-            <span className="text-sm font-bold hidden sm:inline">Löschen</span>
+          <ArrowLeft size={14} /> Zurück zur Teamverwaltung
         </button>
+        <div className="header-section !bg-transparent !border-none !p-0 !shadow-none">
+          <div className="text-left">
+            <h1 className="page-title text-3xl font-black">Personalakte bearbeiten</h1>
+            <p className="page-subtitle text-lg">Aktualisieren Sie die Daten von <span className="text-slate-900 font-bold">{formData.firstName} {formData.lastName}</span>.</p>
+          </div>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         
-        {/* Sektion 1: Persönliche Daten */}
-        <div>
-            <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2 border-b border-slate-100 pb-2">
-                <User className="text-indigo-500 w-5 h-5" /> Persönliche Daten
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Vorname *</label>
-                    <input required name="firstName" value={formData.firstName} onChange={handleChange} 
-                        className="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition" />
-                </div>
-                <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Nachname *</label>
-                    <input required name="lastName" value={formData.lastName} onChange={handleChange} 
-                        className="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition" />
-                </div>
-                <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Dienst-Email *</label>
-                    <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                            <Mail size={18} />
-                        </div>
-                        <input 
-                            required type="email" name="email" value={formData.email} onChange={handleChange} 
-                            className="w-full pl-10 p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition" 
-                        />
-                    </div>
-                </div>
+        {/* ACCOUNT STATUS BANNER */}
+        <div className={`p-6 rounded-[2rem] border flex flex-col md:flex-row items-center justify-between gap-6 transition-all shadow-xl ${
+          employeeState.hasUser 
+            ? 'bg-emerald-50 border-emerald-100 shadow-emerald-600/5' 
+            : 'bg-blue-50 border-blue-100 shadow-blue-600/5'
+        }`}>
+          <div className="flex items-center gap-5">
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner ${
+              employeeState.hasUser ? 'bg-emerald-500 text-white' : 'bg-blue-500 text-white'
+            }`}>
+              {employeeState.hasUser ? <ShieldCheck size={28} /> : <Send size={28} />}
             </div>
-        </div>
-
-        {/* Sektion 2: Vertragsdaten */}
-        <div>
-            <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2 border-b border-slate-100 pb-2">
-                <Briefcase className="text-indigo-500 w-5 h-5" /> Vertragsdaten
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Personalnummer</label>
-                    <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                            <Badge size={18} />
-                        </div>
-                        <input required name="personnelNumber" value={formData.personnelNumber} onChange={handleChange} 
-                            className="w-full pl-10 p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition font-mono" />
-                    </div>
-                </div>
-                <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Stundenlohn (€)</label>
-                    <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                            <CreditCard size={18} />
-                        </div>
-                        <input type="number" step="0.01" name="hourlyWage" value={formData.hourlyWage} onChange={handleChange} 
-                            className="w-full pl-10 p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition" />
-                    </div>
-                </div>
-                <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Position / Rolle</label>
-                    <select name="role" value={formData.role} onChange={handleChange} 
-                        className="w-full p-2.5 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition cursor-pointer appearance-none">
-                        <option value="Reinigungskraft">Reinigungskraft</option>
-                        <option value="Vorarbeiter">Vorarbeiter</option>
-                        <option value="Büro">Büro / Verwaltung</option>
-                        <option value="Manager">Manager</option>
-                    </select>
-                </div>
+            <div className="text-left">
+              <h4 className={`text-lg font-black tracking-tight ${employeeState.hasUser ? 'text-emerald-900' : 'text-blue-900'}`}>
+                {employeeState.hasUser ? 'System-Zugriff Aktiv' : 'Einladung Ausstehend'}
+              </h4>
+              <p className={`text-sm font-medium leading-relaxed ${employeeState.hasUser ? 'text-emerald-700' : 'text-blue-700'} max-w-md`}>
+                {employeeState.hasUser 
+                  ? 'Dieser Mitarbeiter nutzt bereits einen aktiven GlanzOps Account für das Team-Portal.' 
+                  : 'Der Mitarbeiter wurde eingeladen, hat seinen Account aber noch nicht vollständig aktiviert.'}
+              </p>
             </div>
-        </div>
-
-        {/* Action Bar */}
-        <div className="pt-4 border-t border-slate-100 flex justify-end">
+          </div>
+          
+          {!employeeState.hasUser && (
             <button 
-                type="submit" 
-                disabled={saving} 
-                className="w-full md:w-auto px-8 bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 active:scale-95 transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              type="button"
+              onClick={handleResendInvite}
+              disabled={resending}
+              className="btn-primary !bg-blue-600 !border-blue-700 min-w-[200px] shadow-lg shadow-blue-500/20"
             >
-                {saving ? <Loader2 className="animate-spin" /> : <><Save size={20} /> Änderungen speichern</>}
+              {resending ? <Loader2 className="animate-spin" size={18} /> : <><Send size={18} /> Einladung senden</>}
             </button>
+          )}
         </div>
 
+        {/* PERSÖNLICHE DATEN CARD */}
+        <div className="form-card space-y-8">
+          <div className="form-section-title">
+            <User size={16} className="text-blue-500" /> 1. Persönliche Informationen
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-1.5 text-left">
+              <label className="label-caps">Vorname *</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                  <User size={18} />
+                </div>
+                <input 
+                  name="firstName" 
+                  required 
+                  className="input-standard pl-12 font-black" 
+                  value={formData.firstName} 
+                  onChange={handleChange} 
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5 text-left">
+              <label className="label-caps">Nachname *</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                  <User size={18} />
+                </div>
+                <input 
+                  name="lastName" 
+                  required 
+                  className="input-standard pl-12 font-black" 
+                  value={formData.lastName} 
+                  onChange={handleChange} 
+                />
+              </div>
+            </div>
+
+            <div className="md:col-span-2 space-y-1.5 text-left opacity-60">
+              <label className="label-caps text-slate-400">Dienst-Email (Primärschlüssel - Schreibgeschützt)</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                  <Mail size={18} />
+                </div>
+                <input 
+                  name="email" 
+                  type="email" 
+                  disabled 
+                  className="input-standard pl-12 bg-slate-50 cursor-not-allowed border-dashed" 
+                  value={formData.email} 
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* SYSTEM & VERTRAG CARD */}
+        <div className="form-card space-y-8">
+          <div className="form-section-title">
+            <ShieldCheck size={16} className="text-blue-500" /> 2. Rolle & Vertragsdetails
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="md:col-span-2 space-y-1.5 text-left">
+              <label className="label-caps">System-Berechtigung</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                  <ShieldCheck size={18} />
+                </div>
+                <select 
+                  name="role" 
+                  value={formData.role} 
+                  onChange={handleChange}
+                  className="input-standard pl-12 appearance-none cursor-pointer font-bold"
+                >
+                  <option value="EMPLOYEE">Standard-Mitarbeiter (Team-App)</option>
+                  <option value="ADMIN">Administrator (Vollzugriff Dashboard)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5 text-left">
+              <label className="label-caps">Funktion / Berufsbezeichnung</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                  <Briefcase size={18} />
+                </div>
+                <input 
+                  name="position" 
+                  className="input-standard pl-12 font-bold" 
+                  value={formData.position} 
+                  onChange={handleChange} 
+                  placeholder="z.B. Objektleitung" 
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5 text-left">
+              <label className="label-caps">Personalnummer (PNR) *</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                  <BadgeIcon size={18} />
+                </div>
+                <input 
+                  name="personnelNumber" 
+                  required 
+                  className="input-standard pl-12 font-mono font-black text-blue-600" 
+                  value={formData.personnelNumber} 
+                  onChange={handleChange} 
+                />
+              </div>
+            </div>
+
+            <div className="md:col-span-2 space-y-1.5 text-left">
+              <label className="label-caps text-emerald-600">Stundenlohn (€)</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
+                  <CreditCard size={18} />
+                </div>
+                <input 
+                  name="hourlyWage" 
+                  type="number" 
+                  step="0.01"
+                  className="input-standard pl-12 font-black text-emerald-700" 
+                  value={formData.hourlyWage} 
+                  onChange={handleChange} 
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ACTIONS */}
+        <div className="flex items-center justify-end gap-4 bg-slate-100/50 p-6 rounded-[2rem] border border-slate-100">
+          <button 
+            type="button" 
+            onClick={() => navigate('/dashboard/team')} 
+            className="btn-secondary !shadow-none border-transparent hover:bg-slate-200"
+          >
+            Abbrechen
+          </button>
+          <button 
+            type="submit" 
+            disabled={saving} 
+            className="btn-primary min-w-[240px] shadow-xl shadow-blue-500/20 py-4 uppercase tracking-widest font-black text-[10px]"
+          >
+            {saving ? <Loader2 className="animate-spin" size={18} /> : <><Save size={18} /> Änderungen speichern</>}
+          </button>
+        </div>
       </form>
     </div>
   );

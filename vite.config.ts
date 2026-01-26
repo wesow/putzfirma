@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { VitePWA } from 'vite-plugin-pwa'; // <--- Importieren
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   plugins: [
@@ -9,12 +9,12 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'CleanOps Mitarbeiter App',
-        short_name: 'CleanOps',
-        description: 'Einsatzplanung für Gebäudereinigung',
-        theme_color: '#ffffff',
+        name: 'GlanzOps Enterprise',
+        short_name: 'GlanzOps',
+        description: 'Einsatzplanung & ERP für Gebäudereinigung',
+        theme_color: '#2563eb', // Dein primäres Blau
         background_color: '#ffffff',
-        display: 'standalone', // Sorgt dafür, dass die URL-Leiste verschwindet (App-Feeling)
+        display: 'standalone',
         orientation: 'portrait',
         icons: [
           {

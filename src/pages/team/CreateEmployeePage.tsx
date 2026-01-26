@@ -1,66 +1,34 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, ArrowLeft, User, Mail, CreditCard, Briefcase, Badge, Loader2 } from 'lucide-react';
+import { 
+  Save, 
+  ArrowLeft, 
+  User, 
+  Mail, 
+  CreditCard, 
+  Briefcase, 
+  Badge as BadgeIcon, 
+  Loader2, 
+  ShieldCheck, 
+  Send,
+  UserPlus
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
-
-// --- HELPER COMPONENTS (AUSSERHALB) ---
-// Optional: Du könntest diese Helper in eine separate Datei (z.B. components/Form.tsx) auslagern
-const FormInput = ({ label, icon: Icon, name, type = "text", value, onChange, placeholder, required = false, step }: any) => (
-  <div>
-    <label className="block text-sm font-semibold text-slate-700 mb-1.5">{label} {required && '*'}</label>
-    <div className="relative">
-      {Icon && (
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-          <Icon size={18} />
-        </div>
-      )}
-      <input
-        type={type}
-        name={name}
-        value={value}
-        onChange={onChange}
-        required={required}
-        step={step}
-        placeholder={placeholder}
-        className={`w-full ${Icon ? 'pl-10' : 'pl-4'} pr-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all`}
-      />
-    </div>
-  </div>
-);
-
-const FormSelect = ({ label, name, value, onChange, options }: any) => (
-  <div>
-    <label className="block text-sm font-semibold text-slate-700 mb-1.5">{label}</label>
-    <div className="relative">
-        <select 
-            name={name} 
-            value={value} 
-            onChange={onChange} 
-            className="w-full pl-4 pr-10 py-2.5 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
-        >
-            {options.map((opt: any) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-        </select>
-        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-500">
-            <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-        </div>
-    </div>
-  </div>
-);
 
 export default function CreateEmployeePage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [sendInvite, setSendInvite] = useState(true);
   
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     personnelNumber: '',
-    role: 'Reinigungskraft',
-    hourlyWage: '12.50'
+    role: 'EMPLOYEE',
+    position: 'Reinigungskraft',
+    hourlyWage: '15.00'
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -70,89 +38,232 @@ export default function CreateEmployeePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    const toastId = toast.loading('Mitarbeiter wird im System angelegt...');
     
     try {
-      await api.post('/employees', {
-          ...formData,
-          hourlyWage: Number(formData.hourlyWage)
-      });
+      await api.post('/employees', { ...formData, sendInvite });
       
-      toast.success('Mitarbeiter angelegt!');
+      toast.success(sendInvite ? 'Mitarbeiter erstellt & Einladung versendet!' : 'Mitarbeiter erfolgreich angelegt!', { id: toastId });
       navigate('/dashboard/team');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Fehler beim Speichern.');
+      const msg = error.response?.data?.message || 'Fehler beim Speichern.';
+      toast.error(msg, { id: toastId });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="page-container max-w-4xl mx-auto">
       
-      {/* HEADER */}
-      <div className="mb-8">
+      {/* HEADER SECTION */}
+      <div className="mb-6">
         <button 
-          onClick={() => navigate('/dashboard/team')}
-          className="text-sm text-slate-500 hover:text-indigo-600 flex items-center gap-1 mb-2 transition-colors"
+          onClick={() => navigate('/dashboard/team')} 
+          className="text-[10px] text-slate-400 hover:text-blue-600 flex items-center gap-2 mb-4 transition-all font-black uppercase tracking-[0.2em] bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm"
         >
-          <ArrowLeft className="h-4 w-4" /> Zurück zur Übersicht
+          <ArrowLeft size={14} /> Zurück zur Übersicht
         </button>
-        <h1 className="text-3xl font-bold text-slate-800">Mitarbeiter anlegen</h1>
+        <div className="header-section !bg-transparent !border-none !p-0 !shadow-none">
+          <div className="text-left">
+            <h1 className="page-title text-3xl font-black">Neues Teammitglied</h1>
+            <p className="page-subtitle text-lg">Erfassen Sie Personaldaten und konfigurieren Sie den Systemzugriff.</p>
+          </div>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         
-        {/* Sektion 1: Persönliche Daten */}
-        <div>
-            <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2 border-b border-slate-100 pb-2">
-                <User className="text-indigo-500 w-5 h-5" /> Persönliche Daten
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormInput label="Vorname" name="firstName" value={formData.firstName} onChange={handleChange} required placeholder="Max" />
-                <FormInput label="Nachname" name="lastName" value={formData.lastName} onChange={handleChange} required placeholder="Mustermann" />
-                <div className="md:col-span-2">
-                    <FormInput label="Dienst-Email" icon={Mail} type="email" name="email" value={formData.email} onChange={handleChange} required placeholder="mitarbeiter@firma.de" />
+        {/* BASISDATEN CARD */}
+        <div className="form-card space-y-8">
+          <div className="form-section-title">
+            <User size={16} className="text-blue-500" /> 1. Persönliche Informationen
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-1.5 text-left">
+              <label className="label-caps">Vorname *</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                  <User size={18} />
                 </div>
+                <input 
+                  name="firstName" 
+                  required 
+                  placeholder="Max"
+                  className="input-standard pl-12 font-black" 
+                  value={formData.firstName} 
+                  onChange={handleChange} 
+                />
+              </div>
             </div>
-        </div>
 
-        {/* Sektion 2: Vertragsdaten */}
-        <div>
-            <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2 border-b border-slate-100 pb-2">
-                <Briefcase className="text-indigo-500 w-5 h-5" /> Vertragsdaten
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormInput label="Personalnummer" icon={Badge} name="personnelNumber" value={formData.personnelNumber} onChange={handleChange} required placeholder="P-001" />
-                <FormInput label="Stundenlohn (€)" icon={CreditCard} type="number" step="0.01" name="hourlyWage" value={formData.hourlyWage} onChange={handleChange} />
-                
-                <div className="md:col-span-2">
-                    <FormSelect 
-                        label="Position / Rolle" 
-                        name="role" 
-                        value={formData.role} 
-                        onChange={handleChange} 
-                        options={[
-                            { value: 'Reinigungskraft', label: 'Reinigungskraft' },
-                            { value: 'Vorarbeiter', label: 'Vorarbeiter' },
-                            { value: 'Büro', label: 'Büro / Verwaltung' },
-                            { value: 'Manager', label: 'Manager' }
-                        ]} 
-                    />
+            <div className="space-y-1.5 text-left">
+              <label className="label-caps">Nachname *</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                  <User size={18} />
                 </div>
+                <input 
+                  name="lastName" 
+                  required 
+                  placeholder="Mustermann"
+                  className="input-standard pl-12 font-black" 
+                  value={formData.lastName} 
+                  onChange={handleChange} 
+                />
+              </div>
             </div>
+
+            <div className="md:col-span-2 space-y-1.5 text-left">
+              <label className="label-caps">E-Mail Adresse (Dienstlich) *</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                  <Mail size={18} />
+                </div>
+                <input 
+                  name="email" 
+                  type="email" 
+                  required 
+                  className="input-standard pl-12" 
+                  value={formData.email} 
+                  onChange={handleChange} 
+                  placeholder="m.mustermann@glanzops.de"
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Action Bar */}
-        <div className="pt-4 border-t border-slate-100 flex justify-end">
-            <button 
-                type="submit" 
-                disabled={loading}
-                className="w-full md:w-auto px-8 bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 active:scale-95 transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-                {loading ? <Loader2 className="animate-spin" /> : <><Save size={20} /> Mitarbeiter anlegen</>}
-            </button>
+        {/* BERECHTIGUNGEN CARD */}
+        <div className="form-card space-y-8">
+          <div className="form-section-title">
+            <ShieldCheck size={16} className="text-blue-500" /> 2. Systemrolle & Konditionen
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="md:col-span-2 space-y-1.5 text-left">
+              <label className="label-caps">Berechtigungsstufe</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                  <ShieldCheck size={18} />
+                </div>
+                <select 
+                  name="role" 
+                  value={formData.role} 
+                  onChange={handleChange} 
+                  className="input-standard pl-12 appearance-none cursor-pointer font-bold"
+                >
+                  <option value="EMPLOYEE">Standard-Mitarbeiter (Team-App)</option>
+                  <option value="ADMIN">Administrator (Vollzugriff Dashboard)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5 text-left">
+              <label className="label-caps">Interne Position</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                  <Briefcase size={18} />
+                </div>
+                <input 
+                  name="position" 
+                  className="input-standard pl-12 font-bold" 
+                  value={formData.position} 
+                  onChange={handleChange} 
+                  placeholder="z.B. Vorarbeiter"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5 text-left">
+              <label className="label-caps">Personalnummer (PNR) *</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                  <BadgeIcon size={18} />
+                </div>
+                <input 
+                  name="personnelNumber" 
+                  required 
+                  className="input-standard pl-12 font-mono font-black text-blue-600" 
+                  value={formData.personnelNumber} 
+                  onChange={handleChange} 
+                  placeholder="P-001"
+                />
+              </div>
+            </div>
+
+            <div className="md:col-span-2 space-y-1.5 text-left">
+              <label className="label-caps text-emerald-600">Vereinbarter Stundenlohn (€)</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
+                  <CreditCard size={18} />
+                </div>
+                <input 
+                  type="number" 
+                  name="hourlyWage" 
+                  step="0.01" 
+                  className="input-standard pl-12 font-black text-emerald-700 text-lg" 
+                  value={formData.hourlyWage} 
+                  onChange={handleChange} 
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
+        {/* EINLADUNGS OPTION */}
+        <div 
+          onClick={() => setSendInvite(!sendInvite)}
+          className={`flex items-center justify-between p-6 rounded-[2rem] border transition-all cursor-pointer ${
+            sendInvite ? 'bg-blue-600 border-blue-700 shadow-xl shadow-blue-200' : 'bg-white border-slate-200 hover:border-blue-300 shadow-sm'
+          }`}
+        >
+          <div className="flex items-center gap-5 text-left">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${
+              sendInvite ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400'
+            }`}>
+              <Send size={24} />
+            </div>
+            <div>
+              <h4 className={`text-base font-black tracking-tight ${sendInvite ? 'text-white' : 'text-slate-900'}`}>System-Einladung versenden</h4>
+              <p className={`text-sm font-medium ${sendInvite ? 'text-blue-100' : 'text-slate-500'}`}>Link zur Passwort-Vergabe wird automatisch generiert.</p>
+            </div>
+          </div>
+          
+          <div className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+            sendInvite ? 'bg-emerald-400' : 'bg-slate-200'
+          }`}>
+            <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+              sendInvite ? 'translate-x-6' : 'translate-x-1'
+            }`} />
+          </div>
+        </div>
+
+        {/* ACTIONS */}
+        <div className="flex items-center justify-end gap-4 bg-slate-100/50 p-6 rounded-[2rem] border border-slate-100">
+          <button 
+            type="button" 
+            onClick={() => navigate('/dashboard/team')} 
+            className="btn-secondary !shadow-none border-transparent hover:bg-slate-200"
+          >
+            Abbrechen
+          </button>
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="btn-primary min-w-[240px] shadow-xl shadow-blue-500/20 py-4 uppercase tracking-widest font-black text-[10px]"
+          >
+            {loading ? (
+              <Loader2 className="animate-spin h-5 w-5" />
+            ) : (
+              <>
+                <UserPlus size={18} />
+                Mitarbeiter jetzt anlegen
+              </>
+            )}
+          </button>
+        </div>
       </form>
     </div>
   );

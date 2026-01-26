@@ -7,12 +7,14 @@ import {
   PieChart, 
   TrendingUp, 
   Loader2, 
-  ChevronDown 
+  ChevronDown,
+  History,
+  Archive,
+  Search
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
 
-// Typen
 interface PayrollReport {
   id: string;
   title: string;
@@ -22,54 +24,57 @@ interface PayrollReport {
   year: number;
 }
 
-// --- WICHTIG: Diese Komponente muss AUSSERHALB stehen! ---
 const ReportList = ({ title, icon: Icon, type, colorClass, bgClass, reports, onDownload, downloadingId }: any) => {
-    // Wir filtern hier basierend auf den übergebenen Daten
     const filtered = reports.filter((r: any) => r.type === type);
     
     return (
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
-          <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-xl ${bgClass} ${colorClass}`}>
-                      <Icon size={20} />
+      <div className="table-container shadow-xl shadow-slate-200/50 flex flex-col h-full animate-in fade-in duration-700">
+          <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-white">
+              <div className="flex items-center gap-4 text-left">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner border border-white ${bgClass} ${colorClass}`}>
+                      <Icon size={24} />
                   </div>
                   <div>
-                      <h3 className="font-bold text-slate-800">{title}</h3>
-                      <p className="text-xs text-slate-500">{filtered.length} Berichte verfügbar</p>
+                      <h3 className="font-black text-slate-800 uppercase tracking-widest text-[11px] leading-none mb-1.5">{title}</h3>
+                      <span className="status-badge bg-slate-50 text-slate-400 border-slate-100 !rounded-md font-black text-[9px]">
+                        {filtered.length} DOKUMENTE IM ARCHIV
+                      </span>
                   </div>
               </div>
           </div>
           
-          <div className="flex-1 overflow-y-auto max-h-[500px]">
+          <div className="flex-1 overflow-y-auto max-h-[480px] custom-scrollbar bg-slate-50/30">
               {filtered.length === 0 ? (
-                  <div className="p-10 text-center text-slate-400 flex flex-col items-center">
-                      <FileText size={32} className="mb-2 opacity-20" />
-                      <p className="text-sm">Keine Berichte gefunden.</p>
+                  <div className="py-24 text-center text-slate-300 flex flex-col items-center">
+                      <Archive size={48} className="mb-4 opacity-10" />
+                      <p className="font-black uppercase tracking-widest text-[10px]">Sektor leer</p>
                   </div>
               ) : (
-                  <div className="divide-y divide-slate-50">
+                  <div className="divide-y divide-slate-100">
                       {filtered.map((report: any) => (
-                          <div key={report.id} className="p-4 hover:bg-slate-50 transition flex items-center justify-between group">
-                              <div className="flex items-center gap-4">
-                                  <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-white group-hover:shadow-sm transition">
-                                      <FileText size={18} />
+                          <div key={report.id} className="group flex items-center justify-between p-5 bg-white hover:bg-blue-50 transition-all cursor-default relative overflow-hidden">
+                              <div className="flex items-center gap-5 text-left relative z-10">
+                                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-white group-hover:text-blue-600 group-hover:shadow-md transition-all">
+                                      <FileText size={20} />
                                   </div>
                                   <div>
-                                      <p className="text-sm font-bold text-slate-700">{report.title}</p>
-                                      <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
-                                          <Calendar size={10} />
+                                      <p className="text-sm font-black text-slate-700 group-hover:text-blue-700 transition-colors leading-tight">
+                                        {report.title}
+                                      </p>
+                                      <div className="flex items-center gap-2 mt-1.5 text-[10px] text-slate-400 font-black uppercase tracking-wider">
+                                          <Calendar size={12} className="text-slate-300" />
                                           {new Date(report.date).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}
                                       </div>
                                   </div>
                               </div>
+                              
                               <button 
                                   onClick={() => onDownload(report)}
                                   disabled={!!downloadingId}
-                                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                                  title="PDF Herunterladen"
+                                  className="p-3 bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-lg rounded-xl transition-all opacity-0 group-hover:opacity-100 z-20"
+                                  title="Export PDF"
                               >
-                                  {downloadingId === report.id ? <Loader2 size={20} className="animate-spin text-blue-600"/> : <Download size={20} />}
+                                  {downloadingId === report.id ? <Loader2 size={18} className="animate-spin text-blue-600"/> : <Download size={18} />}
                               </button>
                           </div>
                       ))}
@@ -84,19 +89,15 @@ export default function ReportsPage() {
   const [reports, setReports] = useState<PayrollReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
 
-  // 1. Daten generieren
   useEffect(() => {
     fetchAvailableReports();
   }, [filterYear]);
 
   const fetchAvailableReports = async () => {
     setLoading(true);
-    
-    // Kurze künstliche Verzögerung
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise(r => setTimeout(r, 400));
 
     const generatedReports: PayrollReport[] = [];
     const today = new Date();
@@ -116,7 +117,7 @@ export default function ReportsPage() {
 
         generatedReports.push({
             id: `finance-${month + 1}-${filterYear}`,
-            title: `BWA / Umsatz ${d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}`,
+            title: `Finanzbericht / BWA ${d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}`,
             type: 'FINANCE',
             date: d.toISOString(),
             month: month + 1,
@@ -125,23 +126,20 @@ export default function ReportsPage() {
     }
 
     generatedReports.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
     setReports(generatedReports);
     setLoading(false);
   };
 
-  // 2. Download Logik
   const handleDownload = async (report: PayrollReport) => {
     setDownloadingId(report.id);
-    const toastId = toast.loading("PDF wird erstellt...");
+    const toastId = toast.loading("Dokument wird generiert...");
     
     try {
-      let endpoint = '';
-      if (report.type === 'HR') endpoint = `/reports/payroll/pdf?month=${report.month}&year=${report.year}`;
-      else if (report.type === 'FINANCE') endpoint = `/reports/finance/pdf?month=${report.month}&year=${report.year}`;
+      let endpoint = report.type === 'HR' 
+        ? `/reports/payroll/pdf?month=${report.month}&year=${report.year}`
+        : `/reports/finance/pdf?month=${report.month}&year=${report.year}`;
 
       const response = await api.get(endpoint, { responseType: 'blob' });
-      
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -149,117 +147,114 @@ export default function ReportsPage() {
       link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
-      
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      toast.success("Download gestartet!", { id: toastId });
+      toast.success("Download gestartet", { id: toastId });
     } catch (error) {
-      console.error(error);
-      toast.error("Datei konnte nicht geladen werden.", { id: toastId });
+      toast.error("Export-Fehler.", { id: toastId });
     } finally {
       setDownloadingId(null);
     }
   };
 
-  const hrCount = reports.filter(r => r.type === 'HR').length;
-  const financeCount = reports.filter(r => r.type === 'FINANCE').length;
-
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+    <div className="page-container">
       
-      {/* HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-3">
-            <BarChart3 className="text-blue-600" /> Berichte & Archiv
-          </h1>
-          <p className="text-slate-500 mt-1">Hier finden Sie alle monatlichen Auswertungen zum Download.</p>
+      {/* HEADER SECTION */}
+      <div className="header-section">
+        <div className="text-left">
+          <h1 className="page-title leading-none">Berichts-Archiv</h1>
+          <p className="page-subtitle text-slate-500 mt-2 font-medium">Zentraler Zugriff auf alle monatlichen System-Exporte und BWAs.</p>
         </div>
         
-        {/* JAHR FILTER */}
-        <div className="relative group">
-            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-500">
-                <ChevronDown size={16} />
+        {/* YEAR FILTER UNIT */}
+        <div className="flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
+            <div className="flex items-center gap-2 px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              <Search size={14} /> Zeitraum
             </div>
-            <select 
-                value={filterYear}
-                onChange={(e) => setFilterYear(Number(e.target.value))}
-                className="appearance-none bg-white border border-slate-300 text-slate-700 font-bold py-2.5 pl-4 pr-10 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-400 transition cursor-pointer"
-            >
-                {[2023, 2024, 2025, 2026].map(y => (
-                    <option key={y} value={y}>{y}</option>
-                ))}
-            </select>
+            <div className="relative">
+                <select 
+                    value={filterYear}
+                    onChange={(e) => setFilterYear(Number(e.target.value))}
+                    className="appearance-none bg-white border border-slate-200 text-slate-900 font-black text-xs py-2 pl-4 pr-10 rounded-xl shadow-sm focus:ring-4 focus:ring-blue-500/10 outline-none cursor-pointer transition-all"
+                >
+                    {[2024, 2025, 2026].map(y => (
+                        <option key={y} value={y}>{y} GESAMT</option>
+                    ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-600 pointer-events-none stroke-[3]" />
+            </div>
         </div>
       </div>
 
       {loading ? (
-          <div className="p-20 text-center text-slate-400 flex flex-col items-center">
-              <Loader2 className="animate-spin mb-3" size={32} />
-              Lade Archiv...
+          <div className="py-40 flex flex-col items-center justify-center text-slate-400">
+              <Loader2 className="animate-spin text-blue-600 mb-4" size={44} />
+              <span className="font-black text-[10px] uppercase tracking-[0.2em] italic">Archiv-Daten werden indexiert...</span>
           </div>
       ) : (
           <>
-            {/* KPI KARTEN */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg shadow-indigo-200">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-indigo-100 text-sm font-medium uppercase tracking-wide">Personal-Berichte</p>
-                            <h3 className="text-3xl font-bold mt-1">{hrCount}</h3>
-                        </div>
-                        <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
-                            <TrendingUp size={24} className="text-white" />
+            {/* KPI STATS */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="stat-card border-l-4 border-l-purple-500 !bg-purple-50/30">
+                    <div className="stat-icon-wrapper bg-purple-50 text-purple-600 shadow-sm">
+                        <TrendingUp size={22} />
+                    </div>
+                    <div className="text-left">
+                        <div className="label-caps !mb-0 text-purple-600">Personalberichte</div>
+                        <div className="text-2xl font-black text-slate-900 tracking-tighter">
+                          {reports.filter(r => r.type === 'HR').length} <span className="text-lg text-slate-400 uppercase font-bold ml-1">Files</span>
                         </div>
                     </div>
-                    <p className="text-xs text-indigo-200 mt-4">Lohnabrechnungen & Stundennachweise</p>
                 </div>
 
-                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-slate-500 text-sm font-bold uppercase tracking-wide">Finanz-Berichte</p>
-                            <h3 className="text-3xl font-bold text-slate-800 mt-1">{financeCount}</h3>
-                        </div>
-                        <div className="bg-green-50 p-2 rounded-lg">
-                            <PieChart size={24} className="text-green-600" />
+                <div className="stat-card border-l-4 border-l-emerald-500 !bg-emerald-50/30">
+                    <div className="stat-icon-wrapper bg-emerald-50 text-emerald-600 shadow-sm">
+                        <PieChart size={22} />
+                    </div>
+                    <div className="text-left">
+                        <div className="label-caps !mb-0 text-emerald-600">Finanzauswertungen</div>
+                        <div className="text-2xl font-black text-slate-900 tracking-tighter">
+                          {reports.filter(r => r.type === 'FINANCE').length} <span className="text-lg text-slate-400 uppercase font-bold ml-1">BWAs</span>
                         </div>
                     </div>
-                    <p className="text-xs text-slate-400 mt-4">Umsatzanalysen & BWA-Exporte</p>
                 </div>
             </div>
 
-            {/* LISTEN GRID */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                
-                {/* 1. Finanzen */}
+            {/* LISTS GRID */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start animate-in fade-in duration-700 delay-200">
                 <ReportList 
-                    title="Finanzen & Umsatz" 
-                    icon={PieChart} 
-                    type="FINANCE"
-                    colorClass="text-green-600"
-                    bgClass="bg-green-100"
-                    reports={reports} // Daten müssen übergeben werden
-                    onDownload={handleDownload}
-                    downloadingId={downloadingId}
-                />
-
-                {/* 2. Personal */}
-                <ReportList 
-                    title="Personal & Lohn" 
-                    icon={TrendingUp} 
+                    title="Personalabrechnung" 
+                    icon={History} 
                     type="HR"
                     colorClass="text-purple-600"
-                    bgClass="bg-purple-100"
-                    reports={reports} // Daten müssen übergeben werden
+                    bgClass="bg-purple-50"
+                    reports={reports}
                     onDownload={handleDownload}
                     downloadingId={downloadingId}
                 />
 
+                <ReportList 
+                    title="Finanz-Analysen" 
+                    icon={PieChart} 
+                    type="FINANCE"
+                    colorClass="text-emerald-600"
+                    bgClass="bg-emerald-50"
+                    reports={reports}
+                    onDownload={handleDownload}
+                    downloadingId={downloadingId}
+                />
             </div>
           </>
       )}
+      
+      {/* SYSTEM ARCHIVE FOOTER */}
+      <div className="mt-12 text-center py-8 border-t border-slate-100">
+          <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">
+            GlanzOps Enterprise &bull; Archivierungssystem v2.0
+          </p>
+      </div>
     </div>
   );
 }

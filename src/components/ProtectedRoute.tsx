@@ -1,21 +1,31 @@
-import { Navigate } from 'react-router-dom';
-import type { ReactNode } from 'react';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
-  children: ReactNode;
-  allowedRoles: string[]; // Welche Rollen dürfen rein? z.B. ['ADMIN', 'EMPLOYEE']
+  allowedRoles: string[];
+  children?: React.ReactNode;
 }
 
-export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  // Wir holen die aktuelle Rolle aus dem Speicher
-  const role = localStorage.getItem('role') || 'CUSTOMER';
+export default function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) {
+  const { user, loading } = useAuth();
+  const location = useLocation();
 
-  // Ist die Rolle in der Liste der erlaubten Rollen?
-  if (!allowedRoles.includes(role)) {
-    // Falls NEIN: Zurück zum Dashboard werfen
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="animate-spin text-blue-600" size={40} />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (!allowedRoles.includes(user.role)) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  // Falls JA: Seite anzeigen
-  return <>{children}</>;
-} 
+  return children ? <>{children}</> : <Outlet />;
+}

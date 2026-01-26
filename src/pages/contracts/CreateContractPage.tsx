@@ -8,7 +8,8 @@ import {
   Calendar, 
   Repeat, 
   Loader2, 
-  AlertCircle
+  AlertCircle,
+  Clock
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../../lib/api';
@@ -19,7 +20,7 @@ interface Customer {
   firstName: string;
   lastName: string;
   companyName: string | null;
-  addresses: { id: string }[];
+  addresses: { id: string; street: string; city: string }[];
 }
 
 interface Service {
@@ -29,24 +30,24 @@ interface Service {
   unit: string;
 }
 
-// --- HILFSKOMPONENTE (AUSSERHALB DEFINIERT GEGEN FOKUS-BUG) ---
+// --- HILFSKOMPONENTE FÜR SELECTS (Optimiert für GlanzOps Design) ---
 const SelectField = ({ label, icon: Icon, value, onChange, options, placeholder, required = true }: any) => (
-  <div>
-    <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">{label} {required && '*'}</label>
-    <div className="relative">
-      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+  <div className="space-y-1.5">
+    <label className="label-caps">{label} {required && '*'}</label>
+    <div className="relative group">
+      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
         <Icon size={18} />
       </div>
       <select
         required={required}
         value={value}
         onChange={onChange}
-        className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all appearance-none cursor-pointer text-slate-700 font-medium"
+        className="input-standard pl-12 appearance-none cursor-pointer pr-10"
       >
         <option value="">{placeholder}</option>
         {options}
       </select>
-      <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">
+      <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-300">
         <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
           <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
         </svg>
@@ -92,7 +93,7 @@ export default function CreateContractPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const toastId = toast.loading('Vertrag wird erstellt...');
+    const toastId = toast.loading('Vertrag wird im System aktiviert...');
     
     try {
       const selectedCustomer = customers.find(c => c.id === formData.customerId);
@@ -110,7 +111,7 @@ export default function CreateContractPage() {
         interval: formData.interval
       });
 
-      toast.success('Vertrag erfolgreich angelegt!', { id: toastId });
+      toast.success('Dauerauftrag erfolgreich gestartet!', { id: toastId });
       navigate('/dashboard/contracts');
 
     } catch (error: any) {
@@ -123,112 +124,138 @@ export default function CreateContractPage() {
 
   if (dataLoading) {
       return (
-        <div className="p-20 flex flex-col items-center justify-center text-slate-400">
-            <Loader2 className="animate-spin mb-2" size={32}/> 
-            <p className="font-medium">Lade Formular...</p>
+        <div className="page-container flex items-center justify-center py-40">
+            <div className="flex flex-col items-center gap-4">
+                <div className="relative">
+                  <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
+                </div>
+                <p className="font-black text-slate-400 uppercase tracking-[0.2em] text-[10px]">Konfiguriere Interface...</p>
+            </div>
         </div>
       );
   }
 
   return (
-    <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="page-container max-w-4xl mx-auto">
       
-      {/* Header */}
-      <div className="mb-8">
+      {/* Header & Navigation */}
+      <div className="mb-6 flex flex-col gap-4">
         <button 
           onClick={() => navigate('/dashboard/contracts')}
-          className="text-sm text-slate-500 hover:text-blue-600 flex items-center gap-1 mb-2 transition-colors font-medium"
+          className="w-fit text-[10px] text-slate-400 hover:text-blue-600 flex items-center gap-2 transition-all font-black uppercase tracking-widest bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm"
         >
-          <ArrowLeft className="h-4 w-4" /> Zurück zur Übersicht
+          <ArrowLeft size={14} /> Zurück zur Übersicht
         </button>
-        <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Neuen Vertrag anlegen</h1>
-        <p className="text-slate-500 mt-1">Definieren Sie wiederkehrende Leistungen für Ihre Kunden.</p>
+        
+        <div className="header-section !bg-transparent !border-none !p-0 !shadow-none">
+            <div className="text-left">
+                <h1 className="page-title text-3xl">Service-Vertrag erstellen</h1>
+                <p className="page-subtitle text-lg">Definieren Sie wiederkehrende Reinigungszyklen.</p>
+            </div>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         
-        {/* Info Box */}
-        <div className="bg-blue-50/80 p-5 rounded-2xl flex items-start gap-4 border border-blue-100 shadow-sm">
-            <div className="bg-blue-100 p-2 rounded-xl text-blue-600">
-                <AlertCircle size={20} />
+        {/* Info Banner */}
+        <div className="bg-blue-600 rounded-[2rem] p-6 text-white shadow-xl shadow-blue-200 relative overflow-hidden group">
+            <div className="absolute right-[-20px] top-[-20px] opacity-10 group-hover:scale-110 transition-transform duration-700">
+                <Repeat size={120} />
             </div>
-            <p className="text-sm text-blue-800 leading-relaxed">
-                Ein Vertrag erstellt <strong>automatisch</strong> wiederkehrende Jobs im System. 
-                Die Planung erfolgt basierend auf dem gewählten Startdatum und dem Intervall.
-            </p>
-        </div>
-
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-8">
-            {/* Sektion 1: Auswahl */}
-            <div className="grid md:grid-cols-2 gap-6">
-                <SelectField 
-                    label="Kunde" 
-                    icon={User} 
-                    value={formData.customerId}
-                    onChange={(e: any) => setFormData({...formData, customerId: e.target.value})}
-                    placeholder="-- Kunde wählen --"
-                    options={customers.map(c => (
-                        <option key={c.id} value={c.id}>
-                            {c.companyName || `${c.lastName}, ${c.firstName}`}
-                        </option>
-                    ))}
-                />
-
-                <SelectField 
-                    label="Dienstleistung" 
-                    icon={FileText} 
-                    value={formData.serviceId}
-                    onChange={(e: any) => setFormData({...formData, serviceId: e.target.value})}
-                    placeholder="-- Service wählen --"
-                    options={services.map(s => (
-                        <option key={s.id} value={s.id}>
-                            {s.name} ({s.priceNet.toFixed(2)} €)
-                        </option>
-                    ))}
-                />
-            </div>
-
-            {/* Sektion 2: Planung */}
-            <div className="grid md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Startdatum *</label>
-                    <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                            <Calendar size={18} />
-                        </div>
-                        <input 
-                            required
-                            type="date"
-                            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all cursor-pointer text-slate-700 font-medium"
-                            value={formData.startDate}
-                            onChange={e => setFormData({...formData, startDate: e.target.value})}
-                        />
-                    </div>
+            <div className="flex items-start gap-4 relative z-10">
+                <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-md">
+                    <AlertCircle size={24} />
                 </div>
-
-                <SelectField 
-                    label="Reinigungs-Intervall" 
-                    icon={Repeat} 
-                    value={formData.interval}
-                    onChange={(e: any) => setFormData({...formData, interval: e.target.value})}
-                    placeholder=""
-                    options={
-                        <>
-                            <option value="WEEKLY">Wöchentlich</option>
-                            <option value="BIWEEKLY">Alle 2 Wochen</option>
-                            <option value="MONTHLY">Monatlich</option>
-                        </>
-                    }
-                />
+                <div>
+                    <h4 className="font-bold text-lg mb-1">Automatisierung aktiv</h4>
+                    <p className="text-blue-100 text-sm leading-relaxed max-w-md">
+                        Basierend auf diesem Vertrag generiert das System <strong>automatisch Aufträge</strong> im gewählten Intervall. Die erste Planung startet am gewählten Startdatum.
+                    </p>
+                </div>
             </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center justify-end gap-4 pt-4 border-t border-slate-100">
+        <div className="form-card space-y-12">
+            {/* Sektion 1: Partner & Leistung */}
+            <div className="space-y-8">
+                <div className="form-section-title">
+                    <User size={16} className="text-blue-500" /> 1. Vertragspartner & Dienstleistung
+                </div>
+                <div className="grid md:grid-cols-2 gap-8">
+                    <SelectField 
+                        label="Kunde / Unternehmen" 
+                        icon={User} 
+                        value={formData.customerId}
+                        onChange={(e: any) => setFormData({...formData, customerId: e.target.value})}
+                        placeholder="Vertragspartner wählen"
+                        options={customers.map(c => (
+                            <option key={c.id} value={c.id}>
+                                {c.companyName || `${c.lastName}, ${c.firstName}`}
+                            </option>
+                        ))}
+                    />
+
+                    <SelectField 
+                        label="Gewünschte Leistung" 
+                        icon={FileText} 
+                        value={formData.serviceId}
+                        onChange={(e: any) => setFormData({...formData, serviceId: e.target.value})}
+                        placeholder="Leistungskatalog öffnen"
+                        options={services.map(s => (
+                            <option key={s.id} value={s.id}>
+                                {s.name} — {Number(s.priceNet || 0).toFixed(2)} € (netto)
+                            </option>
+                        ))}
+                    />
+                </div>
+            </div>
+
+            {/* Sektion 2: Zeitliche Planung */}
+            <div className="space-y-8">
+                <div className="form-section-title">
+                    <Calendar size={16} className="text-blue-500" /> 2. Zyklus & Terminierung
+                </div>
+                <div className="grid md:grid-cols-2 gap-8">
+                    <div className="space-y-1.5">
+                        <label className="label-caps">Vertragsbeginn (Erste Ausführung) *</label>
+                        <div className="relative group">
+                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                                <Calendar size={18} />
+                            </div>
+                            <input 
+                                required
+                                type="date"
+                                className="input-standard pl-12"
+                                value={formData.startDate}
+                                onChange={e => setFormData({...formData, startDate: e.target.value})}
+                            />
+                        </div>
+                    </div>
+
+                    <SelectField 
+                        label="Wiederholungs-Intervall" 
+                        icon={Repeat} 
+                        value={formData.interval}
+                        onChange={(e: any) => setFormData({...formData, interval: e.target.value})}
+                        placeholder=""
+                        options={
+                            <>
+                                <option value="WEEKLY">Wöchentliche Reinigung</option>
+                                <option value="BIWEEKLY">Zweiwöchentlicher Rhythmus</option>
+                                <option value="MONTHLY">Monatliche Grundreinigung</option>
+                            </>
+                        }
+                    />
+                </div>
+            </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex items-center justify-end gap-4 bg-slate-100/50 p-6 rounded-[2rem] border border-slate-100">
           <button
             type="button"
             onClick={() => navigate('/dashboard/contracts')}
-            className="px-6 py-3 rounded-xl text-slate-600 font-bold hover:bg-slate-100 transition-all flex items-center gap-2"
+            className="btn-secondary !shadow-none border-transparent hover:bg-slate-200"
           >
             Abbrechen
           </button>
@@ -236,17 +263,17 @@ export default function CreateContractPage() {
           <button 
             type="submit" 
             disabled={loading}
-            className="px-10 py-3.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 hover:shadow-blue-300 active:scale-95 flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+            className="btn-primary min-w-[240px] shadow-xl shadow-blue-500/20 py-4"
           >
             {loading ? (
                 <>
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    Erstelle Vertrag...
+                    <span className="uppercase tracking-widest text-[10px]">Wird aktiviert...</span>
                 </>
             ) : (
                 <>
-                    <Save className="h-5 w-5" />
-                    Vertrag speichern
+                    <Save size={20} />
+                    <span className="uppercase tracking-widest text-[10px]">Vertrag jetzt aktivieren</span>
                 </>
             )}
           </button>

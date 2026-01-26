@@ -1,63 +1,84 @@
-import { useState } from 'react';
-import { useSearchParams, Link, useNavigate } from 'react-router-dom';
+import { AlertCircle, ArrowRight, CheckCircle, Loader2, Lock, User, Sparkles, ShieldCheck } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import api from '../lib/api'; 
 import { registerWithInvite } from '../services/auth.service';
-import { UserPlus, ArrowRight, CheckCircle, Lock, User, Mail, Loader2 } from 'lucide-react';
+
+const InputField = ({ label, icon: Icon, name, type = "text", placeholder, register, validation, errors }: any) => (
+  <div className="space-y-1.5 text-left">
+    <label className="label-caps !ml-0">{label}</label>
+    <div className="relative group">
+      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+        <Icon size={18} />
+      </div>
+      <input
+        type={type}
+        {...register(name, validation)}
+        autoComplete={type === "password" ? "new-password" : "off"} 
+        className={`input-standard pl-12 py-3.5 font-bold ${
+          errors[name] ? 'border-red-300 focus:ring-red-200' : ''
+        }`}
+        placeholder={placeholder}
+      />
+    </div>
+    {errors[name] && (
+      <span className="text-[10px] font-black text-red-500 uppercase tracking-widest mt-1 block">
+        {errors[name].message}
+      </span>
+    )}
+  </div>
+);
 
 export default function RegisterPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const token = searchParams.get('token'); 
+  const token = searchParams.get('token');
+  
+  const [isVerifying, setIsVerifying] = useState(true);
+  const [isValid, setIsValid] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [inviteData, setInviteData] = useState<any>(null);
 
   const { register, handleSubmit, formState: { errors }, watch } = useForm();
   const password = watch('password');
 
-  // --- FALL 1: KEIN TOKEN (Zugriff verweigert) ---
-  if (!token) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-        <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl text-center animate-in fade-in zoom-in duration-300 border border-slate-100">
-          <div className="mx-auto bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mb-6">
-            <Mail className="h-8 w-8 text-blue-600" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-3">Keine Einladung gefunden</h2>
-          <p className="text-slate-600 mb-8 leading-relaxed text-sm">
-            Die Registrierung ist nur über einen gültigen Einladungslink möglich. <br/>
-            Bitte wende dich an deinen Administrator.
-          </p>
-          <Link 
-            to="/login" 
-            className="inline-flex items-center justify-center w-full py-3 px-4 rounded-xl shadow-lg shadow-slate-200 text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 transition-all active:scale-95"
-          >
-            Zurück zum Login <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    const verifyToken = async () => {
+      if (!token) {
+        setIsVerifying(false);
+        return;
+      }
+      try {
+        const response = await api.get(`/auth/invitations/${token}`); 
+        setInviteData(response.data);
+        setIsValid(true);
+      } catch (error: any) {
+        setIsValid(false);
+      } finally {
+        setIsVerifying(false);
+      }
+    };
+    verifyToken();
+  }, [token]);
 
-  // --- FALL 2: TOKEN VORHANDEN (Formular) ---
   const onSubmit = async (data: any) => {
     setIsLoading(true);
-    const toastId = toast.loading("Erstelle Account...");
+    const toastId = toast.loading("Account wird im System konfiguriert...");
     
     try {
       await registerWithInvite({
-        token: token,
+        token: token!,
         password: data.password,
         firstName: data.firstName,
         lastName: data.lastName
       });
 
-      toast.success('Willkommen! Du wirst eingeloggt...', { id: toastId });
-      
-      // Kurze Verzögerung für UX
+      toast.success('Konto erfolgreich aktiviert!', { id: toastId });
       setTimeout(() => navigate('/login'), 1500);
       
     } catch (error: any) {
-      console.error(error);
       const msg = error.response?.data?.message || 'Registrierung fehlgeschlagen.';
       toast.error(msg, { id: toastId });
     } finally {
@@ -65,81 +86,137 @@ export default function RegisterPage() {
     }
   };
 
-  // Helper für Input-Felder (Optional, hier inline ok da keine State-Probleme bei react-hook-form)
-  const InputField = ({ label, icon: Icon, name, type = "text", placeholder, validation = {} }: any) => (
-      <div>
-        <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">{label}</label>
-        <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <Icon size={18} />
-            </div>
-            <input
-                type={type}
-                {...register(name, validation)}
-                className={`block w-full pl-10 pr-4 py-2.5 bg-slate-50 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400 font-medium text-slate-700 ${errors[name] ? 'border-red-300 focus:ring-red-200' : 'border-slate-200'}`}
-                placeholder={placeholder}
-            />
-        </div>
-        {errors[name] && <span className="text-xs text-red-500 mt-1 ml-1 font-medium block">{errors[name]?.message as string}</span>}
+  if (isVerifying) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 bg-dot-pattern">
+        <Loader2 className="animate-spin text-blue-600 mb-4" size={44} />
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Validierung läuft...</p>
       </div>
-  );
+    );
+  }
 
+  // FEHLER-ZUSTAND: UNGÜLTIGER TOKEN
+  if (!token || !isValid) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-6 font-sans bg-dot-pattern">
+        <div className="max-w-md w-full bg-white p-12 rounded-[3rem] shadow-2xl shadow-slate-200 border border-white text-center animate-in fade-in zoom-in duration-500">
+          <div className="mx-auto bg-red-50 w-24 h-24 rounded-[2rem] flex items-center justify-center mb-8 shadow-inner border border-red-100">
+            <AlertCircle className="h-10 w-10 text-red-500" />
+          </div>
+          <h2 className="text-2xl font-black text-slate-900 mb-4 uppercase tracking-tight">Sicherheits-Fehler</h2>
+          <p className="text-slate-500 mb-10 leading-relaxed font-medium">
+            Dieser Aktivierungslink ist ungültig, abgelaufen oder wurde bereits verarbeitet.
+          </p>
+          <Link 
+            to="/login" 
+            className="btn-primary w-full !py-5 justify-center shadow-xl shadow-blue-500/20 uppercase tracking-[0.2em] font-black text-[10px]"
+          >
+            Zur Anmeldung <ArrowRight size={18} />
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // REGISTRIERUNGS-FORMULAR
   return (
-    <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-slate-50">
+    <div className="min-h-screen flex flex-col justify-center py-16 px-6 bg-slate-50 font-sans bg-dot-pattern overflow-hidden">
       
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="inline-flex justify-center mb-6 bg-blue-600 p-3 rounded-2xl shadow-lg shadow-blue-200">
-            <UserPlus className="h-8 w-8 text-white" />
+      <div className="sm:mx-auto sm:w-full sm:max-w-lg text-center">
+        <div className="inline-flex justify-center mb-10 bg-blue-600 p-4 rounded-[2rem] shadow-2xl shadow-blue-600/30 animate-bounce-slow">
+          <ShieldCheck className="h-10 w-10 text-white" />
         </div>
-        <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Einladung annehmen</h2>
-        <p className="mt-2 text-sm text-slate-500">Willkommen bei CleanOps! Vervollständige dein Profil.</p>
+        <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase mb-2">Identität verifizieren</h2>
+        <p className="text-slate-500 font-medium text-lg">
+          Willkommen bei GlanzOps. Erstellen Sie Ihr Profil für <br/>
+          <span className="text-blue-600 font-black decoration-blue-200 underline underline-offset-4">{inviteData?.email}</span>
+        </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-6 shadow-xl rounded-2xl border border-slate-100 sm:px-10">
-          <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
+      <div className="mt-12 sm:mx-auto sm:w-full sm:max-w-lg">
+        <div className="bg-white py-12 px-10 shadow-2xl shadow-slate-200 rounded-[3rem] border border-white animate-in slide-in-from-bottom-10 duration-700 relative">
+          
+          {/* Decorative Corner */}
+          <div className="absolute top-0 right-0 p-8 opacity-5">
+            <Sparkles size={80} className="text-blue-600" />
+          </div>
+
+          <form className="space-y-8 relative z-10" onSubmit={handleSubmit(onSubmit)}>
             
-            <div className="grid grid-cols-2 gap-4">
-                <InputField label="Vorname" icon={User} name="firstName" placeholder="Max" validation={{ required: 'Pflichtfeld' }} />
-                <InputField label="Nachname" icon={User} name="lastName" placeholder="Mustermann" validation={{ required: 'Pflichtfeld' }} />
+            <div className="grid grid-cols-2 gap-6">
+              <InputField 
+                label="Vorname" 
+                icon={User} 
+                name="firstName" 
+                placeholder="z.B. Max" 
+                register={register} 
+                errors={errors} 
+                validation={{ required: 'Erforderlich' }} 
+              />
+              <InputField 
+                label="Nachname" 
+                icon={User} 
+                name="lastName" 
+                placeholder="Mustermann" 
+                register={register} 
+                errors={errors} 
+                validation={{ required: 'Erforderlich' }} 
+              />
             </div>
 
             <InputField 
-                label="Neues Passwort" 
-                icon={Lock} 
-                name="password" 
-                type="password" 
-                placeholder="••••••••" 
-                validation={{ required: 'Pflichtfeld', minLength: { value: 8, message: 'Mind. 8 Zeichen' } }} 
+              label="System-Passwort festlegen" 
+              icon={Lock} 
+              name="password" 
+              type="password" 
+              placeholder="••••••••" 
+              register={register} 
+              errors={errors} 
+              validation={{ 
+                required: 'Bitte wählen Sie ein Passwort', 
+                minLength: { value: 8, message: 'Mindestens 8 Zeichen' } 
+              }} 
             />
 
             <InputField 
-                label="Bestätigen" 
-                icon={CheckCircle} 
-                name="confirmPassword" 
-                type="password" 
-                placeholder="••••••••" 
-                validation={{ validate: (val: string) => val === password || 'Passwörter stimmen nicht überein' }} 
+              label="Passwort bestätigen" 
+              icon={CheckCircle} 
+              name="confirmPassword" 
+              type="password" 
+              placeholder="••••••••" 
+              register={register} 
+              errors={errors} 
+              validation={{ 
+                validate: (val: string) => val === password || 'Passwörter nicht identisch' 
+              }} 
             />
 
-            <div className="pt-2">
-                <button
+            <div className="pt-4">
+              <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-blue-100 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
-                >
-                {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Account erstellen'}
-                </button>
+                className="btn-primary w-full !py-5 justify-center shadow-2xl shadow-blue-600/30 uppercase tracking-[0.2em] font-black text-[11px]"
+              >
+                {isLoading ? (
+                  <Loader2 className="animate-spin h-6 w-6" />
+                ) : (
+                  <>Konto jetzt aktivieren</>
+                )}
+              </button>
             </div>
           </form>
+          
+          <div className="mt-12 text-center border-t border-slate-50 pt-8">
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">
+              GlanzOps Security &bull; Encrypted Session
+            </p>
+          </div>
         </div>
-        
-        <div className="mt-6 text-center">
-          <p className="text-sm text-slate-500">
-            Bereits registriert?{' '}
-            <Link to="/login" className="font-bold text-blue-600 hover:text-blue-500 hover:underline">Zum Login</Link>
-          </p>
-        </div>
+
+        {/* Support Link */}
+        <p className="mt-8 text-center text-xs text-slate-400 font-bold uppercase tracking-widest">
+            Probleme beim Login? <Link to="/support" className="text-blue-500 hover:text-blue-600 ml-1">Support kontaktieren</Link>
+        </p>
       </div>
     </div>
   );

@@ -1,10 +1,8 @@
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { 
-  CheckCircle2, 
   ArrowRight, 
   Star, 
-  ShieldCheck, 
   Clock, 
   Smartphone, 
   MapPin, 
@@ -12,410 +10,335 @@ import {
   Mail,
   Menu,
   X,
-  PlayCircle
+  PlayCircle,
+  Building2,
+  Sparkles,
+  Zap,
+  Shield,
+  Camera,
+  CheckCircle2
 } from 'lucide-react';
 import { useState } from 'react';
 
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
-  // WICHTIG: Ersetze diese Platzhalter durch deine echten Daten für SEO!
   const CITY = "Berlin"; 
   const PHONE = "030 / 123 456 78";
-  const EMAIL = "angebot@cleanops.de";
+  const EMAIL = "angebot@glanzops.de";
 
   return (
-    <div className="bg-white min-h-screen font-sans text-slate-800 selection:bg-blue-100 selection:text-blue-900">
+    <div className="bg-white min-h-screen font-sans text-slate-900 selection:bg-blue-600 selection:text-white">
       
-      {/* --- 1. SEO CONFIGURATION --- */}
       <Helmet>
-        <title>Gebäudereinigung {CITY} | Professionell & Digital | CleanOps</title>
-        <meta 
-          name="description" 
-          content={`Zuverlässige Reinigung für Büros, Praxen und Gebäude in ${CITY}. Transparente Preise, digitale Protokolle und 100% geprüfte Mitarbeiter. Jetzt Angebot anfordern!`} 
-        />
-        <meta name="keywords" content={`Gebäudereinigung ${CITY}, Büroreinigung, Putzfirma, Praxisreinigung, Unterhaltsreinigung`} />
+        <title>GlanzOps | Professionelle Gebäudereinigung & Digitales Management</title>
+        <meta name="description" content={`Die modernste Gebäudereinigung in ${CITY}. Echtzeit-Tracking, Fotobeweise und transparente Abrechnung.`} />
       </Helmet>
 
-      {/* --- 2. NAVIGATION (Sticky & Modern) --- */}
-      <nav className="fixed w-full z-50 transition-all duration-300 bg-white/80 backdrop-blur-lg border-b border-slate-200/60">
+      {/* --- NAVIGATION --- */}
+      <nav className="fixed w-full z-[100] transition-all duration-300 bg-white/70 backdrop-blur-xl border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           
-          {/* Logo */}
-          <div className="flex items-center gap-2 group cursor-pointer">
-            <div className="bg-blue-600 text-white p-1.5 rounded-lg group-hover:scale-105 transition-transform">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          <div className="flex items-center gap-2.5 group cursor-pointer">
+            <div className="bg-blue-600 text-white p-2 rounded-xl group-hover:rotate-12 transition-transform duration-300 shadow-lg shadow-blue-200">
+                <Sparkles size={20} fill="currentColor" />
             </div>
-            <span className="font-extrabold text-xl text-slate-900 tracking-tight">CleanOps</span>
+            <span className="font-black text-xl text-slate-900 tracking-tighter">GlanzOps</span>
           </div>
           
-          {/* Desktop Links */}
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
-            <a href="#leistungen" className="hover:text-blue-600 transition hover:-translate-y-0.5">Leistungen</a>
-            <a href="#vorteile" className="hover:text-blue-600 transition hover:-translate-y-0.5">Warum wir?</a>
-            <a href="#kontakt" className="hover:text-blue-600 transition hover:-translate-y-0.5">Kontakt</a>
+          <div className="hidden md:flex items-center gap-10 text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">
+            <a href="#leistungen" className="hover:text-blue-600 transition-colors">Leistungen</a>
+            <a href="#vorteile" className="hover:text-blue-600 transition-colors">Technologie</a>
+            <a href="#kontakt" className="hover:text-blue-600 transition-colors">Kontakt</a>
           </div>
 
-          {/* CTA Buttons */}
-          <div className="hidden md:flex items-center gap-4">
-            <Link to="/login" className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition">
+          <div className="hidden md:flex items-center gap-6">
+            <Link to="/login" className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition">
               Kunden-Login
             </Link>
-            <Link to="/register" className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-blue-600 transition-all shadow-lg hover:shadow-blue-500/25 active:scale-95">
+            <Link to="/register" className="btn-primary !px-6 !py-3 !text-[11px] uppercase tracking-widest shadow-xl shadow-blue-200">
               Angebot anfordern
             </Link>
           </div>
 
-          {/* Mobile Menu Button */}
           <div className="md:hidden">
-              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-slate-600">
+              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-slate-900">
                   {mobileMenuOpen ? <X /> : <Menu />}
               </button>
           </div>
         </div>
 
-        {/* Mobile Menu Dropdown */}
+        {/* Mobile Menu */}
         {mobileMenuOpen && (
-            <div className="md:hidden absolute top-20 left-0 w-full bg-white border-b border-slate-100 p-6 flex flex-col gap-4 shadow-xl animate-in slide-in-from-top-5">
-                <a href="#leistungen" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium text-slate-800">Leistungen</a>
-                <a href="#vorteile" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium text-slate-800">Warum wir?</a>
-                <a href="#kontakt" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium text-slate-800">Kontakt</a>
-                <hr className="border-slate-100 my-2"/>
-                <Link to="/login" className="text-lg font-medium text-blue-600">Login</Link>
+            <div className="md:hidden absolute top-20 left-0 w-full bg-white border-b border-slate-100 p-8 flex flex-col gap-6 shadow-2xl animate-in slide-in-from-top-5">
+                <a href="#leistungen" onClick={() => setMobileMenuOpen(false)} className="text-xl font-black uppercase tracking-tight">Leistungen</a>
+                <a href="#vorteile" onClick={() => setMobileMenuOpen(false)} className="text-xl font-black uppercase tracking-tight">Technologie</a>
+                <a href="#kontakt" onClick={() => setMobileMenuOpen(false)} className="text-xl font-black uppercase tracking-tight">Kontakt</a>
+                <hr className="border-slate-100"/>
+                <Link to="/login" className="text-lg font-black text-blue-600 uppercase tracking-widest">Kundenportal</Link>
             </div>
         )}
       </nav>
 
-      {/* --- 3. HERO SECTION (High Impact) --- */}
-      <header className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden bg-gradient-to-b from-slate-50 to-white">
-        
-        {/* Dekorative Blobs */}
-        <div className="absolute top-0 right-0 -z-10 w-[800px] h-[800px] bg-blue-100/40 rounded-full blur-3xl opacity-60 translate-x-1/3 -translate-y-1/4"></div>
-        <div className="absolute bottom-0 left-0 -z-10 w-[600px] h-[600px] bg-indigo-50/60 rounded-full blur-3xl opacity-60 -translate-x-1/3 translate-y-1/4"></div>
+      {/* --- HERO SECTION --- */}
+      <header className="relative pt-32 pb-20 lg:pt-56 lg:pb-48 overflow-hidden bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50 via-white to-white">
+        {/* Dekorative Elemente */}
+        <div className="absolute top-0 right-0 -translate-y-1/4 translate-x-1/4 w-[600px] h-[600px] bg-blue-100/40 rounded-full blur-[120px] -z-10"></div>
+        <div className="absolute bottom-0 left-0 translate-y-1/4 -translate-x-1/4 w-[400px] h-[400px] bg-indigo-50/50 rounded-full blur-[100px] -z-10"></div>
 
-        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
-          
-          {/* Text Content */}
-          <div className="animate-in slide-in-from-left duration-700 fade-in fill-mode-both">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-blue-100 text-blue-700 rounded-full text-xs font-bold uppercase tracking-wide mb-8 shadow-sm">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-              </span>
-              Verfügbar in {CITY} & Umgebung
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex flex-col items-center text-center max-w-5xl mx-auto">
+            
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600/5 border border-blue-600/10 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-12 animate-in fade-in zoom-in duration-1000">
+              <Zap size={14} fill="currentColor" /> Intelligence Reinigungs-Management
             </div>
             
-            <h1 className="text-5xl lg:text-7xl font-extrabold text-slate-900 leading-[1.1] mb-6 tracking-tight">
-              Reinigung auf <br/>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
-                Autopilot.
+            <h1 className="text-6xl lg:text-[105px] font-black text-slate-900 leading-[0.9] mb-10 tracking-[-0.04em] animate-in slide-in-from-bottom-8 duration-700">
+              Sauberkeit perfekt <br/>
+              <span className="text-blue-600 relative inline-block">
+                organisiert.
+                <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 358 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 9C118.5 3 239.5 3 355 9" stroke="#2563EB" strokeWidth="5" strokeLinecap="round"/>
+                </svg>
               </span>
             </h1>
             
-            <p className="text-xl text-slate-500 mb-10 leading-relaxed max-w-lg">
-              Die erste Gebäudereinigung mit echtem digitalen Dashboard. 
-              Verfolgen Sie Reinigungen live, sehen Sie Fotobeweise und zahlen Sie nur für Leistung.
+            <p className="text-lg lg:text-2xl text-slate-500 mb-14 leading-relaxed max-w-3xl font-medium animate-in fade-in duration-1000 delay-200">
+              GlanzOps vereint Premium-Gebäudereinigung mit einer intelligenten Software-Plattform. 
+              Erleben Sie volle Transparenz durch Echtzeit-Status und Fotodokumentation.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4">
-               <a href="#kontakt" className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-bold text-lg hover:bg-blue-700 transition flex items-center justify-center gap-2 shadow-xl shadow-blue-500/20 hover:shadow-2xl hover:shadow-blue-500/30 hover:-translate-y-1">
-                 Angebot anfordern <ArrowRight size={20}/>
+            <div className="flex flex-col sm:flex-row gap-5 w-full sm:w-auto animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-300">
+               <a href="#kontakt" className="btn-primary !px-12 !py-5 !text-xs uppercase tracking-[0.2em] shadow-2xl shadow-blue-600/30 hover:-translate-y-1 transition-all">
+                 Angebot anfordern <ArrowRight size={18} className="ml-1" />
                </a>
-               <Link to="/demo" className="px-8 py-4 bg-white text-slate-700 border border-slate-200 rounded-2xl font-bold text-lg hover:bg-slate-50 hover:border-slate-300 transition flex items-center justify-center gap-2">
-                 <PlayCircle size={20} className="text-slate-400"/> Wie es funktioniert
+               <Link to="/login" className="btn-secondary !px-12 !py-5 !text-xs uppercase tracking-[0.2em] bg-white border-slate-200 hover:border-blue-600 hover:text-blue-600 transition-all shadow-xl shadow-slate-200/50">
+                 <PlayCircle size={18} className="text-blue-600 mr-1"/> Dashboard Demo
                </Link>
             </div>
-            
-            <div className="mt-12 flex items-center gap-4 text-sm font-medium text-slate-500">
-                <div className="flex -space-x-3">
-                    {[1,2,3,4].map(i => (
-                        <div key={i} className="w-10 h-10 rounded-full border-2 border-white bg-slate-200 overflow-hidden">
-                            <img src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="User" />
-                        </div>
-                    ))}
-                </div>
-                <div>
-                    <div className="flex text-yellow-400 gap-0.5">
-                        {[1,2,3,4,5].map(i => <Star key={i} size={14} fill="currentColor" />)}
+
+            {/* Trust Badges */}
+            <div className="mt-24 flex flex-col items-center gap-6 animate-in fade-in duration-1000 delay-500">
+                <div className="flex -space-x-4">
+                  {[1,2,3,4,5].map(i => (
+                    <div key={i} className="w-14 h-14 rounded-2xl border-4 border-white bg-slate-100 overflow-hidden shadow-xl transform hover:-translate-y-2 transition-transform duration-300 cursor-pointer">
+                        <img src={`https://i.pravatar.cc/150?u=${i+45}`} alt="User" className="w-full h-full object-cover" />
                     </div>
-                    <span>Vertraut von 200+ Unternehmen</span>
+                  ))}
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                    <div className="flex text-amber-400 gap-1">
+                        {[1,2,3,4,5].map(i => <Star key={i} size={18} fill="currentColor" />)}
+                    </div>
+                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Exzellenz in über 200 Objekten</span>
                 </div>
             </div>
-          </div>
-          
-          {/* Hero Image / Visual */}
-          <div className="relative lg:h-[700px] flex items-center justify-center animate-in slide-in-from-right duration-1000 fade-in fill-mode-both delay-200">
-             
-             {/* Main Image Container with Tilt Effect */}
-             <div className="relative w-full max-w-lg perspective-1000">
-                <div className="relative transform rotate-y-6 rotate-x-6 hover:rotate-0 transition-transform duration-700 ease-out">
-                    <img 
-                        src="https://images.unsplash.com/photo-1581578731117-104f2a41272c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
-                        alt="Professionelle Reinigungskraft" 
-                        className="rounded-[2.5rem] shadow-2xl object-cover h-[550px] w-full z-10 relative border-8 border-white"
-                    />
-                    
-                    {/* Floating Card: Status */}
-                    <div className="absolute top-12 -right-12 z-20 bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-white/50 animate-bounce-slow">
-                        <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center text-green-600">
-                                <ShieldCheck size={20} />
-                            </div>
-                            <div>
-                                <div className="text-xs text-slate-500 font-semibold uppercase">Status</div>
-                                <div className="text-sm font-bold text-slate-900">Mitarbeiter geprüft</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Floating Card: App Preview */}
-                    <div className="absolute bottom-12 -left-12 z-30 bg-white p-5 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 max-w-[280px]">
-                       <div className="flex justify-between items-center mb-4 border-b border-slate-50 pb-3">
-                           <span className="text-xs font-bold text-slate-400 uppercase">Live Update</span>
-                           <span className="flex h-2 w-2 bg-green-500 rounded-full"></span>
-                       </div>
-                       <div className="flex gap-3 mb-3">
-                          <div className="h-12 w-12 bg-slate-100 rounded-lg shrink-0 overflow-hidden">
-                              <img src="https://images.unsplash.com/photo-1556910103-1c02745a30bf?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="Proof" className="h-full w-full object-cover"/>
-                          </div>
-                          <div>
-                              <div className="text-sm font-bold text-slate-900">Küche gereinigt</div>
-                              <div className="text-xs text-slate-500">Vor 2 Min • Foto hochgeladen</div>
-                          </div>
-                       </div>
-                       <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                           <div className="bg-blue-600 w-3/4 h-full rounded-full"></div>
-                       </div>
-                    </div>
-
-                </div>
-             </div>
-
-             {/* Background Pattern */}
-             <div className="absolute -z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[140%] opacity-[0.03]" style={{backgroundImage: 'radial-gradient(#444 1px, transparent 1px)', backgroundSize: '24px 24px'}}></div>
           </div>
         </div>
       </header>
 
-      {/* --- 4. LEISTUNGEN (Grid) --- */}
-      <section id="leistungen" className="py-24 bg-white relative">
+      {/* --- LEISTUNGEN --- */}
+      <section id="leistungen" className="py-32 bg-slate-50/50 relative">
         <div className="max-w-7xl mx-auto px-6">
-           <div className="text-center max-w-3xl mx-auto mb-20">
-              <span className="text-blue-600 font-bold tracking-wider uppercase text-sm">Unsere Services</span>
-              <h2 className="text-3xl lg:text-5xl font-bold text-slate-900 mt-3 mb-6">Sauberkeit für jeden Bedarf</h2>
-              <p className="text-slate-500 text-lg">Keine Standardlösungen. Wir analysieren Ihren Bedarf und erstellen ein individuelles Reinigungskonzept.</p>
-           </div>
+            <div className="flex flex-col md:flex-row justify-between items-end gap-10 mb-24">
+               <div className="max-w-2xl text-left">
+                  <span className="text-blue-600 font-black tracking-[0.3em] uppercase text-[10px] bg-blue-50 px-3 py-1 rounded-lg">Portfolio</span>
+                  <h2 className="text-5xl lg:text-7xl font-black text-slate-900 mt-6 leading-[1.1] tracking-tighter">Das Full-Service <br/> Versprechen.</h2>
+               </div>
+               <p className="text-slate-500 text-lg font-medium max-w-sm mb-4 leading-relaxed italic border-l-2 border-blue-600 pl-6">
+                 „Wir reinigen nicht nur – wir managen Ihre Infrastruktur mit digitaler Präzision.“
+               </p>
+            </div>
 
-           <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-3 gap-8">
               <ServiceCard 
                 title="Büroreinigung" 
-                desc="Produktive Arbeitsatmosphäre durch saubere Schreibtische, keimfreie Küchen und gepflegte Meetingräume."
-                image="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80"
-                tags={['Täglich', 'Wöchentlich', 'Abends']}
+                desc="Garantierte Sauberkeit für Höchstleistungen. Strukturierte Abläufe für moderne Arbeitswelten."
+                icon={<Building2 size={28} />}
+                tags={['PREMIUM', 'OFFICE']}
               />
               <ServiceCard 
                 title="Praxisreinigung" 
-                desc="Höchste Hygiene-Standards für Ärzte. Wir arbeiten nach strengen Desinfektionsplänen für Ihre Sicherheit."
-                image="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=80"
-                tags={['Desinfektion', 'Zertifiziert', 'Sensibel']}
+                desc="Maximale Desinfektionssicherheit nach höchsten klinischen Standards. Vollständig protokolliert."
+                icon={<Shield size={28} />}
+                tags={['HYGIENE+', 'SAFE']}
               />
               <ServiceCard 
-                title="Glas- & Fassade" 
-                desc="Der erste Eindruck zählt. Streifenfreie Fenster und repräsentative Fassaden für Ihr Gebäude."
-                image="https://images.unsplash.com/photo-1527689368864-3a821dbccc34?auto=format&fit=crop&w=800&q=80"
-                tags={['Steiger', 'Osmose', 'Sicher']}
+                title="Industriereinigung" 
+                desc="Speziallösungen für komplexe Anforderungen. Von der Halle bis zur Fassadenglasung."
+                icon={<Sparkles size={28} />}
+                tags={['HIGH-TECH', 'GRUND']}
               />
-           </div>
+            </div>
         </div>
       </section>
 
-      {/* --- 5. USP SECTION (Dark Mode Contrast) --- */}
-      <section id="vorteile" className="py-24 bg-slate-900 text-white overflow-hidden relative">
-        {/* Background Gradients */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
-            <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[120px]"></div>
-            <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px]"></div>
-        </div>
+      {/* --- TECH USP (DASHBOARD PREVIEW) --- */}
+      <section id="vorteile" className="py-40 bg-white overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-24 items-center">
+            
+            {/* Dashboard Mockup Layout */}
+            <div className="relative group">
+              <div className="absolute -inset-4 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-[3rem] blur-2xl opacity-10 group-hover:opacity-20 transition-opacity"></div>
+              
+              <div className="bg-slate-900 rounded-[2.5rem] p-8 shadow-3xl border border-slate-800 relative overflow-hidden">
+                  {/* Status Bar */}
+                  <div className="flex justify-between items-center mb-10 border-b border-white/5 pb-6">
+                      <div className="text-left">
+                          <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Live Monitor</p>
+                          <h3 className="text-2xl font-black text-white tracking-tight">Echtzeit Analyse</h3>
+                      </div>
+                      <div className="bg-emerald-500/10 text-emerald-500 px-3 py-1.5 rounded-xl text-[10px] font-black border border-emerald-500/20 flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                        ACTIVE SESSION
+                      </div>
+                  </div>
 
-        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-20 items-center relative z-10">
-           <div>
-              <div className="inline-block px-4 py-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-300 text-xs font-bold uppercase tracking-wider mb-6">
-                CleanOps Technologie
+                  <div className="space-y-6">
+                      <div className="bg-white/5 rounded-2xl p-6 border border-white/10 hover:bg-white/10 transition-colors">
+                          <div className="flex items-center gap-5 mb-8">
+                              <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-xl shadow-blue-600/40">
+                                  <Clock size={28} />
+                              </div>
+                              <div className="text-left">
+                                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Letzter Einsatz</p>
+                                  <p className="text-xl font-black text-white mt-1">Heute, 08:15 — 11:30</p>
+                              </div>
+                          </div>
+                          
+                          <div className="space-y-4">
+                              <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                  <span>Fortschritt</span>
+                                  <span className="text-blue-400">100% Abgeschlossen</span>
+                              </div>
+                              <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                                  <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-500 w-full shadow-[0_0_15px_rgba(37,99,235,0.5)]"></div>
+                              </div>
+                          </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 text-left">
+                          <div className="bg-white/5 rounded-2xl p-5 border border-white/10">
+                              <p className="text-[9px] text-slate-500 font-black uppercase mb-1">Qualitäts-Score</p>
+                              <p className="text-2xl font-black text-white tracking-tighter">99.8%</p>
+                          </div>
+                          <div className="bg-white/5 rounded-2xl p-5 border border-white/10">
+                              <p className="text-[9px] text-slate-500 font-black uppercase mb-1">Belege / Fotos</p>
+                              <p className="text-2xl font-black text-white tracking-tighter">18 Stk.</p>
+                          </div>
+                      </div>
+                  </div>
               </div>
-              <h2 className="text-4xl lg:text-5xl font-bold mb-6 leading-tight">
-                 Das Ende der <br/>
-                 <span className="text-blue-400">Blackbox Reinigung.</span>
-              </h2>
-              <p className="text-slate-400 text-lg mb-10 leading-relaxed">
-                 Andere Firmen schicken eine Rechnung und Sie hoffen, dass geputzt wurde. 
-                 Bei uns sehen Sie es. Unsere App trackt Zeiten, Aufgaben und Qualität in Echtzeit.
+            </div>
+
+            <div className="text-left">
+              <span className="text-blue-600 font-black tracking-[0.3em] uppercase text-[10px] bg-blue-50 px-3 py-1 rounded-lg">Innovation</span>
+              <h2 className="text-5xl lg:text-7xl font-black text-slate-900 mt-8 mb-10 leading-[1.1] tracking-tighter">Kein blindes <br/> Vertrauen mehr.</h2>
+              <p className="text-xl text-slate-500 mb-12 font-medium leading-relaxed">
+                Herkömmliche Reinigungsfirmen sind oft eine "Blackbox". Wir geben Ihnen den Schlüssel. 
+                Über Ihr persönliches GlanzOps-Dashboard sehen Sie sekundengenau, wer, wann und wie bei Ihnen gereinigt hat.
               </p>
 
-              <div className="space-y-8">
-                 <FeatureRow 
-                   icon={<Smartphone />} 
-                   title="Digitale Check-ins" 
-                   text="Mitarbeiter scannen sich per GPS & QR-Code ein. Sie wissen genau, wann wir da waren."
-                 />
-                 <FeatureRow 
-                   icon={<ShieldCheck />} 
-                   title="Foto-Dokumentation" 
-                   text="Nachher-Fotos von kritischen Bereichen (z.B. Küche) direkt in Ihrem Dashboard."
-                 />
-                 <FeatureRow 
-                   icon={<Clock />} 
-                   title="Smarte Abrechnung" 
-                   text="Automatisierte Rechnungen basierend auf echten Daten. Keine Pauschalen für Fehlzeiten."
-                 />
-              </div>
-           </div>
-           
-           {/* Abstract App Visualization */}
-           <div className="relative">
-              <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-[2.5rem] p-8 shadow-2xl relative">
-                  {/* Mockup Header */}
-                  <div className="flex justify-between items-center mb-8">
-                      <div>
-                          <div className="text-slate-400 text-xs font-bold uppercase tracking-wider">Dashboard</div>
-                          <div className="text-2xl font-bold">Übersicht</div>
+              <div className="grid sm:grid-cols-2 gap-10">
+                  <div className="space-y-4 group">
+                      <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                          <Camera size={28} />
                       </div>
-                      <div className="h-10 w-10 bg-slate-700 rounded-full flex items-center justify-center">
-                          <span className="font-bold text-sm">CO</span>
-                      </div>
+                      <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight">Bildbeweise</h4>
+                      <p className="text-slate-500 text-sm leading-relaxed font-medium">Jeder kritische Bereich wird nach Abschluss fotografiert und direkt in Ihr Portal hochgeladen.</p>
                   </div>
-
-                  {/* Mockup Content */}
-                  <div className="space-y-4">
-                      {/* Stat Cards */}
-                      <div className="grid grid-cols-2 gap-4">
-                          <div className="bg-blue-600 p-5 rounded-2xl">
-                              <div className="text-blue-200 text-xs font-bold mb-1">Offene Jobs</div>
-                              <div className="text-3xl font-bold">2</div>
-                          </div>
-                          <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700">
-                              <div className="text-slate-400 text-xs font-bold mb-1">Diesen Monat</div>
-                              <div className="text-3xl font-bold">98%</div>
-                          </div>
+                  <div className="space-y-4 group">
+                      <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                          <Smartphone size={28} />
                       </div>
-
-                      {/* Activity List */}
-                      <div className="bg-slate-800 rounded-2xl p-2 border border-slate-700">
-                          <div className="p-3 hover:bg-slate-700 rounded-xl flex items-center gap-4 transition-colors cursor-pointer">
-                              <div className="h-10 w-10 bg-green-500/20 rounded-full flex items-center justify-center text-green-400">
-                                  <CheckCircle2 size={20}/>
-                              </div>
-                              <div className="flex-1">
-                                  <div className="font-bold text-sm text-white">Reinigung abgeschlossen</div>
-                                  <div className="text-xs text-slate-400">Hauptfiliale • Vor 10 min</div>
-                              </div>
-                          </div>
-                          <div className="p-3 hover:bg-slate-700 rounded-xl flex items-center gap-4 transition-colors cursor-pointer">
-                              <div className="h-10 w-10 bg-blue-500/20 rounded-full flex items-center justify-center text-blue-400">
-                                  <Mail size={20}/>
-                              </div>
-                              <div className="flex-1">
-                                  <div className="font-bold text-sm text-white">Rechnung erstellt</div>
-                                  <div className="text-xs text-slate-400">#RE-2024-102 • Automatik</div>
-                              </div>
-                          </div>
-                      </div>
-                  </div>
-                  
-                  {/* Floating Elements */}
-                  <div className="absolute -right-8 top-1/2 -translate-y-1/2 bg-white text-slate-900 p-4 rounded-xl shadow-xl animate-pulse">
-                      <div className="flex items-center gap-2">
-                          <div className="h-3 w-3 bg-green-500 rounded-full"></div>
-                          <span className="font-bold text-sm">System Live</span>
-                      </div>
+                      <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight">QR-Live Scan</h4>
+                      <p className="text-slate-500 text-sm leading-relaxed font-medium">Unsere Mitarbeiter scannen digitale Raumbücher vor Ort. Sie wissen sofort, wenn wir fertig sind.</p>
                   </div>
               </div>
-           </div>
+            </div>
         </div>
       </section>
 
-      {/* --- 6. KONTAKT SECTION --- */}
-      <section id="kontakt" className="py-24 bg-white">
-        <div className="max-w-4xl mx-auto px-6">
-           <div className="bg-blue-600 rounded-[3rem] p-10 lg:p-16 text-center text-white shadow-2xl shadow-blue-900/20 relative overflow-hidden">
-              {/* Decorative Circles */}
-              <div className="absolute top-0 left-0 w-64 h-64 bg-white opacity-5 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
-              <div className="absolute bottom-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full translate-x-1/2 translate-y-1/2"></div>
+      {/* --- CONTACT CTA --- */}
+      <section id="kontakt" className="py-24 bg-white relative">
+        <div className="max-w-6xl mx-auto px-6">
+           <div className="bg-slate-950 rounded-[4rem] p-12 lg:p-24 text-center text-white relative overflow-hidden shadow-3xl shadow-blue-900/20">
+              {/* Background Glow */}
+              <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-600 rounded-full blur-[150px] opacity-20 animate-pulse"></div>
               
-              <div className="relative z-10">
-                  <h2 className="text-3xl lg:text-5xl font-bold mb-6">Sauberkeit startet hier.</h2>
-                  <p className="text-blue-100 text-lg mb-10 max-w-2xl mx-auto leading-relaxed">
-                    Fordern Sie jetzt Ihr unverbindliches Angebot an. <br className="hidden md:block"/>
-                    Wir besichtigen Ihr Objekt kostenlos und erstellen einen Plan.
+              <div className="relative z-10 flex flex-col items-center">
+                  <div className="w-20 h-20 bg-blue-600 rounded-[2rem] flex items-center justify-center mb-10 shadow-2xl shadow-blue-600/50">
+                      <Mail size={36} strokeWidth={2.5} />
+                  </div>
+                  <h2 className="text-5xl lg:text-7xl font-black mb-10 tracking-tighter leading-[1.1]">Bereit für das <br/> GlanzOps Upgrade?</h2>
+                  <p className="text-slate-400 text-lg lg:text-2xl mb-16 max-w-2xl mx-auto font-medium leading-relaxed">
+                    Wir erstellen Ihnen innerhalb von <span className="text-white font-black underline decoration-blue-600 underline-offset-8">24 Stunden</span> ein maßgeschneidertes, digitales Reinigungskonzept.
                   </p>
                   
-                  <div className="flex flex-col sm:flex-row justify-center gap-4">
-                      <Link to="/register" className="px-8 py-4 bg-white text-blue-600 rounded-xl font-bold text-lg hover:bg-blue-50 transition shadow-lg flex items-center justify-center gap-2">
-                         Angebot anfordern <ArrowRight size={20}/>
+                  <div className="flex flex-col sm:flex-row gap-6 w-full justify-center">
+                      <Link to="/register" className="px-12 py-6 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-blue-500 transition-all shadow-2xl shadow-blue-600/40 active:scale-95">
+                          Kostenloses Angebot anfordern
                       </Link>
-                      <a href={`tel:${PHONE}`} className="px-8 py-4 bg-blue-700 text-white rounded-xl font-bold text-lg hover:bg-blue-800 transition flex items-center justify-center gap-2 border border-blue-500">
-                         <Phone size={20}/> {PHONE}
+                      <a href={`tel:${PHONE}`} className="px-12 py-6 bg-white/5 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-white/10 transition-all flex items-center justify-center gap-3 border border-white/10 backdrop-blur-md">
+                         <Phone size={18}/> {PHONE}
                       </a>
-                  </div>
-                  
-                  <div className="mt-8 text-sm text-blue-200 font-medium">
-                     Antwort garantiert innerhalb von 24 Stunden.
                   </div>
               </div>
            </div>
         </div>
       </section>
 
-      {/* --- 7. FOOTER --- */}
-      <footer className="bg-slate-50 border-t border-slate-200 pt-16 pb-8">
-        <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-12 mb-12">
+      {/* --- FOOTER --- */}
+      <footer className="bg-slate-50 pt-32 pb-16">
+        <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-20 mb-24 text-left">
            <div className="col-span-1 md:col-span-2">
-             <div className="font-extrabold text-2xl text-slate-900 mb-4 tracking-tight flex items-center gap-2">
-                 <div className="bg-blue-600 w-2 h-6 rounded-full"></div>
-                 CleanOps
-             </div>
-             <p className="text-slate-500 text-sm leading-relaxed max-w-xs mb-6">
-               Wir revolutionieren die Gebäudereinigung durch Technologie und Transparenz. 
-               Ihr zuverlässiger Partner in {CITY} und Umgebung.
+             <div className="flex items-center gap-3 mb-10">
+                <div className="bg-blue-600 text-white p-2.5 rounded-xl">
+                    <Sparkles size={22} fill="currentColor" />
+                </div>
+                <span className="font-black text-2xl text-slate-900 tracking-tighter">GlanzOps</span>
+              </div>
+             <p className="text-slate-500 font-bold text-lg leading-relaxed max-w-md mb-12">
+               Wir definieren Gebäudereinigung für das digitale Zeitalter neu. Transparent, präzise und kompromisslos sauber.
              </p>
              <div className="flex gap-4">
-                 {/* Social Icons Placeholder */}
-                 <div className="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-600 transition cursor-pointer">IG</div>
-                 <div className="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-600 transition cursor-pointer">LI</div>
+                 {['LI', 'IG', 'TW'].map(social => (
+                   <div key={social} className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400 hover:border-blue-600 hover:text-blue-600 transition-all cursor-pointer shadow-sm">
+                     {social}
+                   </div>
+                 ))}
              </div>
            </div>
            
-           <div>
-             <h4 className="font-bold text-slate-900 mb-4">Rechtliches</h4>
-             <ul className="space-y-3 text-sm text-slate-500">
-               <li><Link to="/impressum" className="hover:text-blue-600 transition">Impressum</Link></li>
-               <li><Link to="/datenschutz" className="hover:text-blue-600 transition">Datenschutz</Link></li>
-               <li><Link to="/agb" className="hover:text-blue-600 transition">AGB</Link></li>
+           <div className="space-y-10">
+             <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Rechtliches</h4>
+             <ul className="space-y-6 text-sm font-black text-slate-700 uppercase tracking-widest">
+               <li><Link to="/impressum" className="hover:text-blue-600 transition-colors">Impressum</Link></li>
+               <li><Link to="/datenschutz" className="hover:text-blue-600 transition-colors">Datenschutz</Link></li>
+               <li><Link to="/agb" className="hover:text-blue-600 transition-colors">AGB</Link></li>
              </ul>
            </div>
            
-           <div>
-             <h4 className="font-bold text-slate-900 mb-4">Kontakt</h4>
-             <ul className="space-y-3 text-sm text-slate-500">
-                <li className="flex items-start gap-3">
-                    <MapPin size={18} className="shrink-0 text-blue-600"/>
-                    <span>Musterstraße 1 <br/> {CITY}</span>
-                </li>
-                <li className="flex items-center gap-3">
-                    <Phone size={18} className="shrink-0 text-blue-600"/>
-                    <a href={`tel:${PHONE}`} className="hover:text-blue-600 transition">{PHONE}</a>
-                </li>
-                <li className="flex items-center gap-3">
-                    <Mail size={18} className="shrink-0 text-blue-600"/>
-                    <a href={`mailto:${EMAIL}`} className="hover:text-blue-600 transition">{EMAIL}</a>
-                </li>
-             </ul>
+           <div className="space-y-10">
+             <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Zentrale</h4>
+             <div className="space-y-8 text-sm font-black text-slate-700 leading-relaxed uppercase tracking-widest">
+                <div className="flex gap-5">
+                    <MapPin size={24} className="text-blue-600 shrink-0"/>
+                    <span>Musterstraße 1 <br/> {CITY}, Deutschland</span>
+                </div>
+                <div className="flex gap-5">
+                    <Mail size={24} className="text-blue-600 shrink-0"/>
+                    <a href={`mailto:${EMAIL}`} className="hover:text-blue-600 transition-colors truncate">{EMAIL}</a>
+                </div>
+             </div>
            </div>
         </div>
         
-        <div className="max-w-7xl mx-auto px-6 pt-8 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-400">
-           <span>&copy; {new Date().getFullYear()} CleanOps Gebäudereinigung GmbH.</span>
-           <div className="flex gap-4">
-               <span>Made with ❤️ in {CITY}</span>
+        <div className="max-w-7xl mx-auto px-6 pt-12 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-8 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
+           <span>&copy; {new Date().getFullYear()} GlanzOps Gebäudereinigung GmbH</span>
+           <div className="flex gap-6">
+              <span className="flex items-center gap-2"><CheckCircle2 size={12} className="text-emerald-500" /> Meisterbetrieb</span>
+              <span className="flex items-center gap-2"><CheckCircle2 size={12} className="text-emerald-500" /> CO2 Neutral</span>
            </div>
         </div>
       </footer>
@@ -423,43 +346,21 @@ export default function LandingPage() {
   );
 }
 
-// --- SUB-COMPONENTS ---
-
-function ServiceCard({title, desc, image, tags}: any) {
+function ServiceCard({title, desc, icon, tags}: any) {
   return (
-    <div className="group rounded-3xl overflow-hidden bg-white border border-slate-100 shadow-sm hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
-       <div className="h-56 overflow-hidden relative">
-          <div className="absolute inset-0 bg-slate-900/10 group-hover:bg-slate-900/0 transition-colors z-10"></div>
-          <img src={image} alt={title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"/>
-          
-          <div className="absolute bottom-4 left-4 z-20 flex gap-2">
-             {tags && tags.map((tag: string, i: number) => (
-                 <span key={i} className="text-[10px] font-bold uppercase tracking-wider bg-white/90 backdrop-blur text-slate-800 px-2 py-1 rounded-md shadow-sm">
-                    {tag}
-                 </span>
-             ))}
-          </div>
-       </div>
-       <div className="p-8">
-          <h3 className="font-bold text-2xl text-slate-900 mb-3 group-hover:text-blue-600 transition-colors">{title}</h3>
-          <p className="text-slate-500 text-sm leading-relaxed mb-6">{desc}</p>
-          <div className="font-bold text-sm text-blue-600 flex items-center gap-2">
-             Mehr erfahren <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform"/>
-          </div>
-       </div>
-    </div>
-  )
-}
-
-function FeatureRow({icon, title, text}: any) {
-  return (
-    <div className="flex gap-5 items-start">
-       <div className="mt-1 bg-slate-800 p-4 rounded-2xl text-blue-400 border border-slate-700 shrink-0">
+    <div className="group bg-white p-12 rounded-[3.5rem] border border-slate-100 shadow-sm hover:shadow-3xl hover:shadow-blue-600/5 transition-all duration-700 hover:-translate-y-4 text-left">
+       <div className="w-16 h-16 rounded-[1.75rem] bg-slate-50 text-blue-600 flex items-center justify-center mb-10 border border-slate-100 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-xl group-hover:shadow-blue-600/40 transition-all duration-500">
           {icon}
        </div>
-       <div>
-          <h4 className="font-bold text-white text-lg mb-2">{title}</h4>
-          <p className="text-slate-400 text-sm leading-relaxed">{text}</p>
+       <div className="flex gap-2 mb-6">
+           {tags.map((tag: string) => (
+             <span key={tag} className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-600/60 bg-blue-600/5 px-2.5 py-1 rounded-lg">{tag}</span>
+           ))}
+       </div>
+       <h3 className="text-3xl font-black text-slate-900 mb-6 tracking-tight">{title}</h3>
+       <p className="text-slate-500 text-lg leading-relaxed font-medium mb-10">{desc}</p>
+       <div className="flex items-center gap-3 text-xs font-black uppercase tracking-[0.2em] text-blue-600 group-hover:gap-5 transition-all">
+         Entdecken <ArrowRight size={18} />
        </div>
     </div>
   )
