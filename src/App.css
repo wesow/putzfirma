@@ -3,8 +3,10 @@
 @tailwind utilities;
 
 @layer base {
+  /* Globaler Standard: Inter Schriftart */
   body {
-    @apply bg-slate-50 text-slate-900 antialiased font-sans m-0 p-0 overflow-x-hidden;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    @apply bg-slate-50 text-slate-900 antialiased m-0 p-0 overflow-x-hidden;
   }
 }
 
@@ -103,8 +105,8 @@
   /* --- FORMS & INPUTS --- */
   .input-standard {
     @apply w-full bg-white border border-slate-200 rounded-xl py-3 px-4 
-           focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 outline-none 
-           font-medium text-sm transition-all shadow-sm text-slate-900 placeholder:text-slate-400;
+            focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 outline-none 
+            font-medium text-sm transition-all shadow-sm text-slate-900 placeholder:text-slate-400;
   }
 
   .label-caps {
@@ -231,10 +233,54 @@
 }
 
 /* --- CALENDAR OVERRIDES --- */
-.rbc-calendar { @apply font-sans border-none !important; }
+.rbc-calendar { font-family: 'Inter', sans-serif !important; @apply border-none !important; }
 .rbc-header { @apply py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-none !important; }
 .rbc-month-view, .rbc-time-view { @apply border-none !important; }
 .rbc-day-bg { @apply border-slate-100 transition-colors !important; }
 .rbc-today { @apply bg-blue-50/40 !important; }
 .rbc-event { @apply p-0 border-none shadow-sm transition-all !important; }
 .rbc-off-range-bg { @apply bg-slate-50/30 !important; }
+
+/* Scrollbar styling für den Kalender-Inhalt */
+.rbc-time-content::-webkit-scrollbar {
+  width: 6px;
+}
+.rbc-time-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.rbc-time-content::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 10px;
+}
+
+/* Label Styling (06:00, 07:00...) */
+.rbc-time-slot {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: #94a3b8 !important;
+}
+
+/* --- CALENDAR COMPRESSION (06:00 - 22:00 Fix) --- */
+
+/* Verringert die Höhe jeder Stunde drastisch */
+.rbc-timeslot-group {
+    min-height: 38px !important; 
+}
+
+/* Verhindert internes Scrollen, damit alles ins Fenster passt */
+.rbc-time-content {
+    overflow-y: hidden !important;
+}
+
+/* Trennlinien */
+.rbc-time-gutter .rbc-timeslot-group {
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+/* Uhrzeit-Labels links */
+.rbc-label {
+    padding: 0 8px !important;
+    font-size: 10px !important;
+    font-weight: 900 !important;
+    color: #94a3b8 !important;
+}

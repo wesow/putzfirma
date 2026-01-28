@@ -38,6 +38,9 @@ export default function JobsPage() {
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'OPEN' | 'DONE'>('OPEN');
   const [viewMode, setViewMode] = useState<'GRID' | 'TABLE'>('GRID');
 
+  // State für den manuellen Generator Button
+  const [isGenerating, setIsGenerating] = useState(false);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'COMPLETE' | 'UPLOAD'>('COMPLETE');
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -70,6 +73,25 @@ export default function JobsPage() {
     } finally { setLoading(false); }
   };
 
+  // --- NEU: Manueller Cron Trigger ---
+  const handleManualGeneration = async () => {
+    if (!confirm("Möchtest du die automatische Job-Erstellung aus den Verträgen jetzt manuell starten?")) return;
+    
+    setIsGenerating(true);
+    const toastId = toast.loading("Generiere Jobs...");
+    
+    try {
+        const res = await api.post('/debug/trigger-cron');
+        toast.success(res.data.message || "Jobs erfolgreich generiert!", { id: toastId });
+        fetchData(); // Liste sofort neu laden
+    } catch (error) {
+        toast.error("Fehler bei der Generierung", { id: toastId });
+    } finally {
+        setIsGenerating(false);
+    }
+  };
+  // ----------------------------------
+
   const getAddressString = (job: Job) => {
     if (job.address?.street) return `${job.address.street}, ${job.address.city}`;
     if (job.customer?.addresses && job.customer.addresses.length > 0) {
@@ -100,7 +122,7 @@ export default function JobsPage() {
   };
 
   const handleUnassignEmployee = async (jid: string, eid: string) => {
-    if(!confirm("Mitarbeiter entfernen?")) return;
+    if(!confirm("Mitarbeiter von diesem Job entfernen?")) return;
     try {
       await api.delete(`/jobs/${jid}/assign`, { data: { employeeId: eid } });
       toast.success("Entfernt");
@@ -157,6 +179,18 @@ export default function JobsPage() {
             ))}
           </div>
 
+          {/* NEU: Generieren Button (Nur für Admins) */}
+          {isAdmin && (
+             <button 
+                onClick={handleManualGeneration} 
+                disabled={isGenerating}
+                className="btn-secondary !p-3 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border-indigo-200"
+                title="Jobs aus Verträgen generieren"
+             >
+                {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <Play size={18} fill="currentColor" />}
+             </button>
+          )}
+
           <button onClick={fetchData} className="btn-secondary !p-3">
             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -172,6 +206,11 @@ export default function JobsPage() {
         <div className="py-20 text-center bg-white rounded-[2rem] border border-dashed border-slate-200">
           <Filter className="h-10 w-10 text-slate-200 mx-auto mb-3" />
           <p className="text-slate-500 font-bold uppercase text-xs tracking-widest">Keine Einsätze gefunden</p>
+          {isAdmin && (
+             <button onClick={handleManualGeneration} className="mt-4 text-blue-600 text-xs font-bold hover:underline">
+                Jobs jetzt generieren?
+             </button>
+          )}
         </div>
       ) : viewMode === 'GRID' ? (
         /* --- GRID VIEW (KARTEN) --- */
@@ -205,7 +244,7 @@ export default function JobsPage() {
                   </div>
                 </div>
 
-                {/* Team Sektion */}
+                {/* Team Sektion Grid */}
                 <div className="pt-4 border-t border-slate-50 text-left">
                   <label className="label-caps !text-[9px] mb-2">Team</label>
                   <div className="flex flex-wrap gap-1.5 min-h-[32px]">
@@ -251,7 +290,7 @@ export default function JobsPage() {
           ))}
         </div>
       ) : (
-        /* --- TABLE VIEW (LISTE) --- */
+        /* --- TABLE VIEW (LISTE) - UPDATED --- */
         <div className="table-container animate-in slide-in-from-bottom-4 duration-500 bg-white">
           <table className="table-main">
             <thead className="table-head">
@@ -278,15 +317,43 @@ export default function JobsPage() {
                   <td className="table-cell max-w-[200px] truncate text-slate-700 font-bold text-xs italic">
                     {getAddressString(job)}
                   </td>
+                  
+                  {/* --- UPDATED TEAM CELL IN TABLE --- */}
                   <td className="table-cell">
-                    <div className="flex -space-x-2">
-                      {job.assignments.map(a => (
-                        <div key={a.employee.id} className="w-7 h-7 rounded-full bg-blue-50 border-2 border-white flex items-center justify-center text-[9px] font-black text-blue-600 uppercase shadow-sm" title={a.employee.firstName}>
-                          {a.employee.firstName.charAt(0)}
+                    <div className="flex items-center gap-1">
+                      {/* Avatare / Mitarbeiter */}
+                      <div className="flex -space-x-2 hover:space-x-1 transition-all duration-300">
+                        {job.assignments.map(a => (
+                          <div 
+                            key={a.employee.id} 
+                            onClick={() => isAdmin && handleUnassignEmployee(job.id, a.employee.id)}
+                            className={`w-7 h-7 rounded-full bg-blue-50 border-2 border-white flex items-center justify-center text-[9px] font-black text-blue-600 uppercase shadow-sm ${isAdmin ? 'cursor-pointer hover:bg-red-50 hover:text-red-600 hover:border-red-100' : ''}`}
+                            title={isAdmin ? "Klicken zum Entfernen" : a.employee.firstName}
+                          >
+                            {a.employee.firstName.charAt(0)}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Add Button (Nur Admin) */}
+                      {isAdmin && (
+                        <div className="relative w-6 h-6 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-all cursor-pointer">
+                            <select 
+                                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" 
+                                onChange={(e) => handleAssignEmployee(job.id, e.target.value)} 
+                                value=""
+                            >
+                                <option value="">+</option>
+                                {employees.map(e => (
+                                    <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>
+                                ))}
+                            </select>
+                            <Plus size={12} />
                         </div>
-                      ))}
+                      )}
                     </div>
                   </td>
+                  
                   <td className="table-cell">
                     <span className={`status-badge ${job.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-600'}`}>{job.status}</span>
                   </td>
@@ -331,8 +398,8 @@ export default function JobsPage() {
                </div>
                {modalMode === 'COMPLETE' && (
                  <div className="space-y-2 text-left mt-4">
-                    <label className="label-caps !ml-0 text-blue-600">Arbeitszeit (Minuten)</label>
-                    <input type="number" className="input-standard !text-2xl font-black text-center" placeholder="z.B. 120" value={durationInput} onChange={(e) => setDurationInput(e.target.value)} />
+                   <label className="label-caps !ml-0 text-blue-600">Arbeitszeit (Minuten)</label>
+                   <input type="number" className="input-standard !text-2xl font-black text-center" placeholder="z.B. 120" value={durationInput} onChange={(e) => setDurationInput(e.target.value)} />
                  </div>
                )}
                <button onClick={handleSubmit} disabled={isSubmitting} className="btn-primary w-full !py-4 shadow-xl shadow-blue-200 uppercase tracking-[0.2em] font-black">

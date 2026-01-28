@@ -18,13 +18,15 @@ import {
   Receipt,
   Sparkles,
   FileCheck,
-  ChevronRight
+  ChevronRight,
+  ShieldAlert // Neu für Audit Logs
 } from 'lucide-react';
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'System Administrator',
   EMPLOYEE: 'Team Mitglied',
-  CUSTOMER: 'Kunden-Portal'
+  CUSTOMER: 'Kunden-Portal',
+  MANAGER: 'Manager'
 };
 
 export default function DashboardLayout() {
@@ -34,7 +36,6 @@ export default function DashboardLayout() {
   
   const role = user?.role; 
   const firstName = user?.firstName || 'Benutzer';
-  const companyName = localStorage.getItem('companyName') || 'GlanzOps';
 
   // --- NAV SECTIONS ---
   const adminNav = [
@@ -61,6 +62,7 @@ export default function DashboardLayout() {
         { icon: FileSpreadsheet, label: 'Berichts-Archiv', path: '/dashboard/reports' },
     ]},
     { section: 'System', items: [
+        { icon: ShieldAlert, label: 'Audit Logs', path: '/dashboard/audit' }, // NEU: Audit Logs Link
         { icon: Settings, label: 'Einstellungen', path: '/dashboard/settings' },
     ]}
   ];

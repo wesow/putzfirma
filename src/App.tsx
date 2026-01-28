@@ -50,6 +50,7 @@ import OffersPage from './pages/sales/OffersPage';
 import InvoicesPage from './pages/invoices/InvoicesPage';
 import ExpensesPage from './pages/finances/ExpensesPage';
 import ReportsPage from './pages/ReportsPage';
+import AuditLogs from './pages/AuditLogs'; // <--- NEU: Audit Log Import
 
 // --- LAGER & SONSTIGES ---
 import InventoryPage from './pages/inventory/InventoryPage';
@@ -57,7 +58,6 @@ import SettingsPage from './pages/SettingsPage';
 
 /**
  * Hilfskomponente für die Dashboard-Weiche
- * Leitet Benutzer basierend auf ihrer Rolle zum richtigen Startbildschirm
  */
 const DashboardSwitcher = () => {
   const { user } = useAuth();
@@ -69,7 +69,6 @@ const DashboardSwitcher = () => {
 function App() {
   return (
     <HelmetProvider>
-      {/* Premium Toast Styling passend zum Dark/Blue Theme */}
       <Toaster 
         position="top-right" 
         toastOptions={{
@@ -103,7 +102,6 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/impressum" element={<ImpressumPage />} />
         
-        {/* AUTH ROUTES */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -113,10 +111,9 @@ function App() {
         <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE', 'CUSTOMER', 'MANAGER']} />}>
           <Route path="/dashboard" element={<DashboardLayout />}>
             
-            {/* Dynamische Startseite */}
             <Route index element={<DashboardSwitcher />} />
 
-            {/* --- OPERATIVES TEAM & BACKOFFICE (Admin & Mitarbeiter) --- */}
+            {/* --- OPERATIVES TEAM (Admin & Mitarbeiter) --- */}
             <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE', 'MANAGER']} />}>
               <Route path="jobs" element={<JobsPage />} />
               <Route path="calendar" element={<CalendarPage />} />
@@ -145,6 +142,7 @@ function App() {
               <Route path="invoices" element={<InvoicesPage />} />
               <Route path="expenses" element={<ExpensesPage />} />
               <Route path="reports" element={<ReportsPage />} />
+              <Route path="audit" element={<AuditLogs />} /> {/* <--- NEU: Audit Log Route */}
               <Route path="settings" element={<SettingsPage />} />
             </Route>
 

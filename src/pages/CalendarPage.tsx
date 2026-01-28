@@ -8,7 +8,8 @@ import { de } from 'date-fns/locale';
 import { 
   X, Plus, Calendar as CalIcon, 
   Clock, MapPin, CheckCircle, Palmtree, Thermometer,
-  Trash2, Loader2, Users, Briefcase, ChevronRight, Sparkles, Navigation, CalendarDays
+  Trash2, Loader2, Users, Briefcase, ChevronRight, Sparkles, Navigation, CalendarDays,
+  Play, RefreshCw
 } from 'lucide-react'; 
 import toast from 'react-hot-toast'; 
 import api from '../lib/api';
@@ -70,13 +71,19 @@ export default function CalendarPage() {
   const [view, setView] = useState<View>(Views.WEEK);
   const [date, setDate] = useState(new Date());
   const [isLoading, setIsLoading] = useState(false); 
-  const [isSaving, setIsSaving] = useState(false);   
+  const [isSaving, setIsSaving] = useState(false); 
+  const [isGenerating, setIsGenerating] = useState(false); // NEU
 
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   
   const [newJobData, setNewJobData] = useState({ date: new Date(), time: '08:00', customerId: '', serviceId: '' });
+  const isAdmin = localStorage.getItem('role') === 'ADMIN';
+
+  // --- ARBEITSZEITEN ---
+  const minTime = new Date(); minTime.setHours(6, 0, 0);
+  const maxTime = new Date(); maxTime.setHours(22, 0, 0);
 
   useEffect(() => { fetchData(); }, []);
 
@@ -107,6 +114,22 @@ export default function CalendarPage() {
 
       setEvents([...jobEvents, ...absenceEvents]);
     } catch (e) { toast.error('Synchronisierung fehlgeschlagen'); } finally { setIsLoading(false); }
+  };
+
+  // --- NEU: Generator Trigger ---
+  const handleManualGeneration = async () => {
+    if (!confirm("Vorschau generieren? Das System erstellt Jobs aus den Verträgen für die nächsten 60 Tage.")) return;
+    setIsGenerating(true);
+    const toastId = toast.loading("Fülle Kalender auf...");
+    try {
+        await api.post('/debug/trigger-cron');
+        toast.success("Kalender aktualisiert!", { id: toastId });
+        fetchData();
+    } catch (error) {
+        toast.error("Fehler bei der Generierung", { id: toastId });
+    } finally {
+        setIsGenerating(false);
+    }
   };
 
   const handleEventDrop = async ({ event, start }: any) => {
@@ -192,13 +215,29 @@ export default function CalendarPage() {
             </div>
             <div>
                 <h1 className="text-xl font-black text-slate-900 tracking-tight leading-none mb-1 uppercase">Dienstplan</h1>
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div> Live Operations
-                </p>
+              <div className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div> Live Operations
+            </div>
             </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+            {/* Generator Button (NEU) */}
+            {isAdmin && (
+                <button 
+                    onClick={handleManualGeneration} 
+                    disabled={isGenerating}
+                    className="btn-secondary !py-2.5 !px-3 bg-indigo-50 text-indigo-600 border-indigo-100 hover:bg-indigo-100"
+                    title="Vorschau generieren"
+                >
+                    {isGenerating ? <Loader2 size={16} className="animate-spin"/> : <Play size={16} fill="currentColor"/>}
+                </button>
+            )}
+
+            <button onClick={fetchData} className="btn-secondary !py-2.5 !px-3">
+                <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''}/>
+            </button>
+
             <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner">
                 <span className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg text-[9px] font-black text-slate-600 shadow-sm uppercase tracking-widest"><div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div> Offen</span>
                 <span className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg text-[9px] font-black text-slate-600 shadow-sm uppercase tracking-widest"><div className="w-1.5 h-1.5 bg-amber-500 rounded-full"></div> Aktiv</span>
@@ -216,6 +255,7 @@ export default function CalendarPage() {
                     <Loader2 className="animate-spin text-blue-600" size={40} />
                 </div>
             )}
+
             <DnDCalendar
               localizer={localizer}
               events={events}
@@ -223,6 +263,10 @@ export default function CalendarPage() {
               onNavigate={setDate}
               view={view}
               onView={setView}
+              min={minTime}
+              max={maxTime}
+              step={60}
+              timeslots={1}
               selectable
               onSelectSlot={({ start }: { start: Date }) => { setNewJobData({ ...newJobData, date: start }); setIsCreateModalOpen(true); }}
               onSelectEvent={(e: any) => { if(e.resource.type === 'JOB') { setSelectedJob(e.resource.data); setIsEditModalOpen(true); } }}
@@ -236,7 +280,7 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* MODAL: CREATE JOB (KOMPAKT) */}
+      {/* MODAL: CREATE JOB */}
       {isCreateModalOpen && (
           <div className="modal-overlay px-4">
               <div className="modal-content !max-w-md animate-in zoom-in-95 duration-200 shadow-2xl">
@@ -284,7 +328,7 @@ export default function CalendarPage() {
           </div>
       )}
 
-      {/* MODAL: EDIT JOB (KOMPAKT) */}
+      {/* MODAL: EDIT JOB */}
       {isEditModalOpen && selectedJob && (
           <div className="modal-overlay px-4">
               <div className="modal-content !max-w-lg animate-in zoom-in-95 duration-200 shadow-2xl">
