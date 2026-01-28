@@ -1,187 +1,196 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Plus, Search, MapPin, Phone, Mail, Loader2, AlertCircle, Pencil, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { 
+  Calendar, FileText, MapPin, Phone, Mail, 
+  ShieldCheck, Clock, User, CheckCircle, FileCheck 
+} from 'lucide-react';
 import api from '../lib/api';
+import toast from 'react-hot-toast'; // Für Feedback
 import { useAuth } from '../context/AuthContext';
-import { toast } from 'react-hot-toast';
 
-interface Customer {
-  id: string;
-  firstName: string;
-  lastName: string;
-  companyName: string | null;
-  email: string;
-  phone: string | null;
-  addresses: {
-    street: string;
-    city: string;
-    zipCode: string;
-  }[];
-}
-
-export default function CustomersPage() {
+export default function CustomerDashboard() {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [profile, setProfile] = useState<any>(null);
+  const [nextJob, setNextJob] = useState<any>(null);
+  const [openInvoices, setOpenInvoices] = useState<any[]>([]);
+  
+  // NEU: Offers State
+  const [openOffers, setOpenOffers] = useState<any[]>([]); 
+  
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const isAdmin = user?.role === 'ADMIN';
 
   useEffect(() => {
-    fetchCustomers();
+    loadCustomerData();
   }, []);
 
-  const fetchCustomers = async () => {
+  const loadCustomerData = async () => {
     try {
-      const res = await api.get('/customers');
-      setCustomers(res.data);
-    } catch (error) {
-      toast.error('Kundenliste konnte nicht geladen werden.');
+      // 1. Profil
+      const custRes = await api.get('/customers');
+      const myProfile = custRes.data[0]; 
+      setProfile(myProfile);
+
+      if (myProfile) {
+        // 2. Next Job
+        const jobsRes = await api.get('/jobs?limit=1&status=SCHEDULED'); 
+        setNextJob(jobsRes.data[0] || null);
+
+        // 3. Invoices
+        const invRes = await api.get('/invoices');
+        const openInv = invRes.data.filter((i: any) => i.status === 'SENT' || i.status === 'OVERDUE');
+        setOpenInvoices(openInv);
+
+        // 4. OFFERS (NEU)
+        const offRes = await api.get('/offers');
+        // Wir zeigen dem Kunden nur "SENT" (Offen) oder "ACCEPTED" (schon angenommen) an
+        const relevantOffers = offRes.data.filter((o: any) => o.status === 'SENT' || o.status === 'ACCEPTED');
+        setOpenOffers(relevantOffers);
+      }
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGenerateInvoice = async (customerId: string) => {
-    const toastId = toast.loading('Beleg wird generiert...');
-    try {
-      const genRes = await api.post('/invoices/generate', { customerId });
-      const invoice = genRes.data; 
-      const pdfRes = await api.get(`/invoices/${invoice.id}/pdf`, { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([pdfRes.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `Rechnung-${invoice.invoiceNumber}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      toast.success(`Beleg ${invoice.invoiceNumber} erfolgreich erstellt!`, { id: toastId });
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Abrechnung fehlgeschlagen.", { id: toastId });
-    }
+  const handleAcceptOffer = async (offerId: string) => {
+      if(!confirm("Möchten Sie dieses Angebot verbindlich annehmen?")) return;
+      
+      const toastId = toast.loading("Wird bestätigt...");
+      try {
+          await api.patch(`/offers/${offerId}/accept`);
+          toast.success("Vielen Dank! Angebot angenommen.", { id: toastId });
+          loadCustomerData(); // Daten neu laden
+      } catch (e) {
+          toast.error("Fehler beim Speichern.", { id: toastId });
+      }
   };
 
-  const filteredCustomers = customers.filter(c => {
-    const term = searchTerm.toLowerCase();
-    return (
-      `${c.firstName} ${c.lastName}`.toLowerCase().includes(term) || 
-      (c.companyName?.toLowerCase() || '').includes(term) || 
-      c.email.toLowerCase().includes(term)
-    );
-  });
+  if (loading) return <div className="p-10 text-center text-slate-400">Lade Portal...</div>;
+  if (!profile) return <div className="p-10 text-center">Profil nicht gefunden.</div>;
 
   return (
     <div className="page-container">
       
-      {/* HEADER SECTION */}
-      <div className="header-section">
-        <div className="text-left">
-          <h1 className="page-title leading-none">Kundenstamm</h1>
-          <p className="page-subtitle text-slate-500 mt-2 font-medium">Zentrale Übersicht und Verwaltung Ihres GlanzOps Kundennetzwerks.</p>
-        </div>
-        
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input 
-              type="text" 
-              placeholder="Kunde oder Firma suchen..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="input-standard pl-10"
-            />
-          </div>
-          {isAdmin && (
-            <Link to="/dashboard/customers/new" className="btn-primary shadow-blue-200">
-              <Plus size={18} /> <span>Neuer Kunde</span>
-            </Link>
-          )}
+      {/* HEADER (Wie vorher) */}
+      <div className="bg-slate-900 rounded-[2.5rem] p-8 md:p-12 text-white mb-8 shadow-2xl relative overflow-hidden">
+        {/* ... dein Header Code ... */}
+        <div className="relative z-10">
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-200 text-[10px] font-bold uppercase tracking-widest mb-4">
+                <ShieldCheck size={12} /> Kunden-Portal
+            </span>
+            <h1 className="text-3xl md:text-4xl font-black mb-2">
+                Hallo, {profile.companyName || profile.firstName}! 👋
+            </h1>
+            <p className="text-slate-400">Willkommen in Ihrer persönlichen Übersicht.</p>
         </div>
       </div>
 
-      {loading ? (
-        <div className="py-40 flex flex-col items-center justify-center text-slate-400">
-            <Loader2 className="animate-spin text-blue-600 mb-4" size={40} />
-            <span className="font-black text-[10px] uppercase tracking-[0.2em] italic">Synchronisiere Kundenstamm...</span>
-        </div>
-      ) : filteredCustomers.length === 0 ? (
-        <div className="py-24 text-center bg-white rounded-[2.5rem] border border-dashed border-slate-200 shadow-sm animate-in fade-in duration-500">
-           <AlertCircle className="h-12 w-12 text-slate-200 mx-auto mb-4" />
-           <p className="text-slate-400 font-black uppercase text-xs tracking-widest">Keine Ergebnisse gefunden</p>
-        </div>
-      ) : (
-        /* --- CUSTOMER GRID --- */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          {filteredCustomers.map((c) => (
-            <div key={c.id} className="customer-card group">
-              {/* Status Indicator Top */}
-              <div className={`absolute top-0 left-0 w-full h-1.5 ${c.companyName ? 'bg-indigo-500' : 'bg-blue-500'}`}></div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* LINKS (2 Spalten breit) */}
+        <div className="space-y-6 lg:col-span-2">
+            
+            {/* === NEU: ANGEBOTE SEKTION === */}
+            {openOffers.length > 0 && (
+                <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-xl shadow-emerald-100/50">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="font-black text-slate-800 flex items-center gap-2">
+                            <FileCheck className="text-emerald-600" size={20}/> Meine Angebote
+                        </h3>
+                    </div>
+                    <div className="space-y-4">
+                        {openOffers.map((offer: any) => (
+                            <div key={offer.id} className="p-6 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                                <div className="text-center md:text-left">
+                                    <div className="flex items-center justify-center md:justify-start gap-3 mb-1">
+                                        <span className="font-black text-slate-900 text-lg">#{offer.offerNumber}</span>
+                                        {offer.status === 'ACCEPTED' 
+                                            ? <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Angenommen</span>
+                                            : <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Neu</span>
+                                        }
+                                    </div>
+                                    <p className="text-sm text-slate-500 font-medium">
+                                        {offer.items[0]?.description} • {Number(offer.totalNet).toLocaleString('de-DE', {style:'currency', currency:'EUR'})} (Netto)
+                                    </p>
+                                </div>
 
-              <div className="p-1">
-                <div className="flex justify-between items-start mb-6">
-                  <div className="text-left overflow-hidden">
-                    <h3 className="font-black text-slate-900 text-lg leading-tight truncate pr-2 group-hover:text-blue-600 transition-colors">
-                      {c.companyName || `${c.firstName} ${c.lastName}`}
+                                {offer.status === 'SENT' ? (
+                                    <button 
+                                        onClick={() => handleAcceptOffer(offer.id)}
+                                        className="btn-primary !bg-emerald-600 !border-emerald-700 shadow-lg shadow-emerald-200"
+                                    >
+                                        <CheckCircle size={18} /> Jetzt annehmen
+                                    </button>
+                                ) : (
+                                    <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm bg-white px-4 py-2 rounded-xl shadow-sm">
+                                        <CheckCircle size={18} /> Bestätigt
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* NEXT JOB CARD (Wie vorher) */}
+            <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
+                {/* ... dein Next Job Code ... */}
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="font-black text-slate-800 flex items-center gap-2">
+                        <Calendar className="text-blue-600" size={20}/> Nächster Termin
                     </h3>
-                    <div className="flex items-center gap-1.5 mt-2">
-                        <span className={`status-badge !rounded-md !px-2 font-black text-[9px] ${c.companyName ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
-                        {c.companyName ? 'GEWERBLICH' : 'PRIVAT'}
-                        </span>
-                    </div>
-                  </div>
-                  
-                  {isAdmin && (
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
-                            onClick={() => navigate(`/dashboard/customers/edit/${c.id}`)}
-                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                        >
-                            <Pencil size={16} />
-                        </button>
-                    </div>
-                  )}
                 </div>
-
-                <div className="space-y-3 mb-8 text-left">
-                  <div className="flex items-center gap-3 text-slate-500 font-medium text-xs">
-                    <Mail size={14} className="text-slate-300 shrink-0" />
-                    <span className="truncate">{c.email}</span>
-                  </div>
-                  
-                  {c.phone && (
-                    <div className="flex items-center gap-3 text-slate-500 font-medium text-xs">
-                      <Phone size={14} className="text-slate-300 shrink-0" />
-                      <span>{c.phone}</span>
-                    </div>
-                  )}
-
-                  {c.addresses && c.addresses.length > 0 && (
-                    <div className="pt-4 mt-4 border-t border-slate-50 flex items-start gap-3">
-                      <MapPin size={14} className="text-blue-400 shrink-0 mt-0.5" />
-                      <div className="text-left">
-                        <div className="text-xs font-black text-slate-700 leading-tight tracking-tight uppercase">{c.addresses[0].street}</div>
-                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-0.5">
-                            {c.addresses[0].zipCode} {c.addresses[0].city}
+                {nextJob ? (
+                    <div className="flex flex-col md:flex-row gap-6 items-center bg-slate-50 rounded-2xl p-6">
+                        <div className="text-center md:text-left bg-white p-4 rounded-xl shadow-sm border border-slate-100 min-w-[100px]">
+                            <p className="text-xs text-slate-400 font-bold uppercase">Datum</p>
+                            <p className="text-xl font-black text-slate-900">
+                                {new Date(nextJob.scheduledDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
+                            </p>
                         </div>
-                      </div>
+                        <div className="flex-1 space-y-1 text-center md:text-left">
+                            <h4 className="font-bold text-slate-900 text-lg">{nextJob.service?.name}</h4>
+                            <p className="text-sm text-slate-500 flex items-center justify-center md:justify-start gap-2">
+                                <MapPin size={14}/> {nextJob.address?.street}, {nextJob.address?.city}
+                            </p>
+                        </div>
                     </div>
-                  )}
-                </div>
-              </div>
-
-              {isAdmin && (
-                <button
-                  onClick={() => handleGenerateInvoice(c.id)}
-                  className="btn-secondary w-full py-3 justify-center text-[10px] uppercase tracking-[0.2em] font-black shadow-sm group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 transition-all"
-                >
-                  Rechnung erstellen
-                </button>
-              )}
+                ) : (
+                    <p className="text-slate-400 text-center py-4">Kein Termin geplant.</p>
+                )}
             </div>
-          ))}
+
+            {/* STAMMDATEN (Wie vorher) */}
+            {/* ... */}
         </div>
-      )}
+
+        {/* RECHTS: Rechnungen (Wie vorher) */}
+        <div className="space-y-6">
+            <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-xl shadow-slate-200/50 h-full">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="font-black text-slate-800 flex items-center gap-2">
+                        <FileText className="text-purple-600" size={20}/> Offene Posten
+                    </h3>
+                    {openInvoices.length > 0 && <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs font-bold">{openInvoices.length}</span>}
+                </div>
+                {/* ... Rechnungs Liste ... */}
+                {openInvoices.length === 0 ? <p className="text-center text-slate-400 py-10">Alles bezahlt!</p> : (
+                    <div className="space-y-3">
+                        {openInvoices.map((inv: any) => (
+                            <div key={inv.id} className="p-4 rounded-xl border border-slate-100">
+                                <div className="flex justify-between">
+                                    <span className="font-bold text-slate-800">#{inv.invoiceNumber}</span>
+                                    <span className="font-black text-slate-900">{Number(inv.totalGross).toLocaleString('de-DE', {style:'currency', currency:'EUR'})}</span>
+                                </div>
+                                <div className="text-xs text-red-500 font-bold mt-1 uppercase">Zahlung ausstehend</div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+
+      </div>
     </div>
   );
 }

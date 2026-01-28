@@ -1,3 +1,6 @@
+
+import ViewSwitcher from '../../components/ViewSwitcher'; // Falls du die Komponente hast, sonst nutzen wir Buttons direkt
+
 import { useEffect, useState } from 'react';
 import { 
   FilePlus, CheckCircle2, FileText, X, Plus, Calendar,
@@ -6,7 +9,6 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
-import ViewSwitcher from '../../components/ViewSwitcher'; // Falls du die Komponente hast, sonst nutzen wir Buttons direkt
 
 // --- TYPEN ---
 interface Customer { 
@@ -36,7 +38,7 @@ export default function OffersPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [viewMode, setViewMode] = useState<'GRID' | 'TABLE'>('GRID'); // NEU: View State
+  const [viewMode, setViewMode] = useState<'GRID' | 'TABLE'>('GRID');
 
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -56,7 +58,8 @@ export default function OffersPage() {
   // State für Umwandlung
   const [convertData, setConvertData] = useState({
       serviceId: '',
-      startDate: new Date().toISOString().split('T')[0]
+      startDate: new Date().toISOString().split('T')[0],
+      sendLink: false // <--- NEU: Steuert die E-Mail
   });
 
   const [availableAddresses, setAvailableAddresses] = useState<any[]>([]);
@@ -115,21 +118,25 @@ export default function OffersPage() {
     finally { setIsSubmitting(false); }
   };
 
+  // --- HIER IST DIE NEUE LOGIK FÜR DIE UMWANDLUNG ---
   const handleConvert = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!showConvertModal || !convertData.serviceId) return toast.error("Bitte Service wählen");
     
     setIsSubmitting(true);
+    const toastId = toast.loading(convertData.sendLink ? "Erstelle Vertrag & Sende Mail..." : "Aktiviere Vertrag...");
+
     try {
       await api.post(`/offers/${showConvertModal.id}/convert`, {
         startDate: new Date(convertData.startDate),
-        serviceId: convertData.serviceId
+        serviceId: convertData.serviceId,
+        sendLink: convertData.sendLink // <--- WICHTIG
       });
-      toast.success("Vertrag aktiv & Termin geplant!");
+      toast.success(convertData.sendLink ? "Link versendet!" : "Vertrag aktiv!", { id: toastId });
       setShowConvertModal(null);
       loadData();
     } catch (err: any) { 
-        toast.error(err.response?.data?.message || "Fehler"); 
+        toast.error(err.response?.data?.message || "Fehler", { id: toastId }); 
     } 
     finally { setIsSubmitting(false); }
   };
@@ -138,7 +145,6 @@ export default function OffersPage() {
   const totalVolume = offers.reduce((acc, o) => acc + Number(o.totalNet), 0);
   const openCount = offers.filter(o => o.status === 'SENT').length;
 
-  // --- HELPER FÜR STATUS BADGES ---
   const getStatusBadge = (status: string) => {
       switch(status) {
           case 'ACCEPTED': return <span className="status-badge bg-emerald-50 text-emerald-700 border-emerald-100">Angenommen</span>;
@@ -248,7 +254,7 @@ export default function OffersPage() {
           ))}
         </div>
       ) : (
-        /* --- TABLE VIEW (NEU) --- */
+        /* --- TABLE VIEW --- */
         <div className="table-container animate-in slide-in-from-bottom-4 duration-500 bg-white">
             <table className="table-main">
                 <thead className="table-head">
@@ -300,7 +306,7 @@ export default function OffersPage() {
         </div>
       )}
 
-      {/* --- CREATE MODAL (Identisch) --- */}
+      {/* --- CREATE MODAL --- */}
       {showCreateModal && (
         <div className="modal-overlay">
           <div className="modal-content animate-in zoom-in-95 duration-200 !max-w-lg">
@@ -416,6 +422,18 @@ export default function OffersPage() {
                   <input type="date" className="input-standard font-black" value={convertData.startDate} onChange={e => setConvertData({...convertData, startDate: e.target.value})} required />
                   <p className="text-[10px] text-slate-400 mt-1">Uhrzeit ({showConvertModal.preferredTime || '08:00'}) wird aus Angebot übernommen.</p>
                 </div>
+
+                {/* CHECKBOX FÜR E-MAIL */}
+                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100 cursor-pointer" onClick={() => setConvertData({...convertData, sendLink: !convertData.sendLink})}>
+                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${convertData.sendLink ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'}`}>
+                        {convertData.sendLink && <CheckCircle2 size={14} />}
+                    </div>
+                    <div>
+                        <p className="text-xs font-black text-slate-700 uppercase tracking-wide">Signatur anfordern</p>
+                        <p className="text-[10px] text-slate-500 font-medium">Sendet dem Kunden sofort einen Link per E-Mail.</p>
+                    </div>
+                </div>
+
               </div>
 
               <div className="modal-footer !bg-slate-50">

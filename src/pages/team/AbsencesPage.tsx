@@ -11,7 +11,11 @@ import {
   Info,
   ChevronRight,
   AlertCircle,
-  Clock
+  Clock,
+  ArrowRight,
+  CheckCircle2,
+  AlertTriangle,
+  X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
@@ -29,6 +33,12 @@ interface Absence {
   endDate: string;
   employee: Employee;
   comment?: string;
+}
+
+// Typen für Konfliktlösung
+interface ConflictData {
+    conflicts: any[];
+    availableEmployees: Employee[];
 }
 
 const AbsenceCard = ({ data, onDelete }: { data: Absence, onDelete: (id: string) => void }) => {
@@ -110,10 +120,15 @@ export default function AbsencesPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   
+  // Form State
   const [empId, setEmpId] = useState('');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [type, setType] = useState('VACATION');
+
+  // --- KONFLIKT STATE ---
+  const [conflictData, setConflictData] = useState<ConflictData | null>(null);
+  const [reassignments, setReassignments] = useState<Record<string, string>>({});
 
   useEffect(() => { loadData(); }, []);
 
@@ -133,12 +148,12 @@ export default function AbsencesPage() {
     }
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreate = async (e?: React.FormEvent, force = false) => {
+    if (e) e.preventDefault();
     if (new Date(start) > new Date(end)) return toast.error("Zeitraum ungültig!");
     
     setSubmitting(true);
-    const toastId = toast.loading("Wird eingetragen...");
+    const toastId = toast.loading(force ? "Löse Konflikte..." : "Wird eingetragen...");
 
     try {
       await api.post('/absences', {
@@ -146,14 +161,29 @@ export default function AbsencesPage() {
         startDate: start,
         endDate: end,
         type,
-        comment: 'Manuelle Buchung'
+        comment: 'Manuelle Buchung',
+        force,          // <--- WICHTIG
+        reassignments   // <--- WICHTIG
       });
+      
       toast.success("Abwesenheit gespeichert", { id: toastId });
       loadData();
+      
+      // Reset Form
       setStart(''); 
       setEnd('');
+      setConflictData(null);
+      setReassignments({});
+
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Fehler beim Speichern", { id: toastId });
+      // 🚨 KONFLIKT CHECK
+      if (err.response?.status === 409 && err.response.data.requireResolution) {
+          setConflictData(err.response.data);
+          toast.dismiss(toastId);
+          toast("Konflikte bei der Planung gefunden.", { icon: '⚠️' });
+      } else {
+          toast.error(err.response?.data?.message || "Fehler beim Speichern", { id: toastId });
+      }
     } finally {
         setSubmitting(false);
     }
@@ -168,6 +198,10 @@ export default function AbsencesPage() {
     } catch (err) {
         toast.error("Löschen fehlgeschlagen");
     }
+  };
+
+  const handleReassignmentChange = (jobId: string, employeeId: string) => {
+      setReassignments(prev => ({ ...prev, [jobId]: employeeId }));
   };
 
   return (
@@ -227,7 +261,7 @@ export default function AbsencesPage() {
                     </div>
                 </div>
 
-                <form onSubmit={handleCreate} className="p-8 space-y-6 bg-white text-left">
+                <form onSubmit={(e) => handleCreate(e, false)} className="p-8 space-y-6 bg-white text-left">
                     <div className="space-y-1.5">
                         <label className="label-caps text-blue-600">Personal auswählen</label>
                         <div className="relative group">
@@ -305,6 +339,78 @@ export default function AbsencesPage() {
         </div>
 
       </div>
+
+      {/* --- KONFLIKT-LÖSUNGS MODAL --- */}
+      {conflictData && (
+          <div className="modal-overlay">
+              <div className="modal-content animate-in zoom-in-95 !max-w-2xl border-2 border-amber-400">
+                  <div className="modal-header bg-amber-500 text-white">
+                      <div className="flex items-center gap-3">
+                          <AlertTriangle size={20}/>
+                          <h2 className="text-sm font-black uppercase">Einsatz-Konflikte lösen</h2>
+                      </div>
+                      <button onClick={() => setConflictData(null)} className="hover:bg-white/20 p-2 rounded-lg"><X size={20}/></button>
+                  </div>
+                  
+                  <div className="modal-body p-6 space-y-4 text-left">
+                      <div className="bg-amber-50 text-amber-800 p-4 rounded-xl text-xs font-medium border border-amber-100 leading-relaxed">
+                          Der Mitarbeiter ist für <strong>{conflictData.conflicts.length} Jobs</strong> eingeplant. 
+                          Bitte weisen Sie diese Jobs jetzt um, oder lassen Sie das Feld leer (Job wird unbesetzt).
+                      </div>
+
+                      <div className="max-h-[300px] overflow-y-auto space-y-3 custom-scrollbar pr-2">
+                          {conflictData.conflicts.map((conflict: any) => (
+                              <div key={conflict.id} className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col md:flex-row items-center gap-4">
+                                  
+                                  <div className="flex-1">
+                                      <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase mb-1">
+                                          <Calendar size={12}/> {new Date(conflict.job.scheduledDate).toLocaleDateString()}
+                                      </div>
+                                      <div className="font-bold text-slate-800 text-sm">
+                                          {conflict.job.customer.companyName || conflict.job.customer.lastName}
+                                      </div>
+                                      <div className="text-xs text-blue-600 font-bold">
+                                          {conflict.job.service.name}
+                                      </div>
+                                  </div>
+
+                                  <ArrowRight className="text-slate-300 hidden md:block" />
+
+                                  <div className="w-full md:w-64">
+                                      <label className="text-[9px] font-black text-slate-400 uppercase mb-1 block">Ersatzkraft wählen</label>
+                                      <select 
+                                          className={`input-standard font-bold text-xs ${reassignments[conflict.jobId] ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : ''}`}
+                                          onChange={(e) => handleReassignmentChange(conflict.jobId, e.target.value)}
+                                          value={reassignments[conflict.jobId] || ''}
+                                      >
+                                          <option value="">-- Nicht neu besetzen (Job rot) --</option>
+                                          {conflictData.availableEmployees.map(e => (
+                                              <option key={e.id} value={e.id}>
+                                                  {e.firstName} {e.lastName} (Verfügbar)
+                                              </option>
+                                          ))}
+                                      </select>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+
+                  <div className="modal-footer bg-slate-50 flex justify-between items-center">
+                      <span className="text-xs text-slate-400 font-bold">
+                          {Object.keys(reassignments).length} von {conflictData.conflicts.length} Jobs neu zugewiesen
+                      </span>
+                      <div className="flex gap-2">
+                          <button onClick={() => setConflictData(null)} className="btn-secondary">Abbrechen</button>
+                          <button onClick={() => handleCreate(undefined, true)} className="btn-primary bg-amber-500 border-amber-600 hover:bg-amber-600 shadow-amber-200">
+                              <CheckCircle2 size={18}/> Änderungen anwenden
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
     </div>
   );
 }

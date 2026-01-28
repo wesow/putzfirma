@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { 
   Play, Clock, MapPin, CheckCircle, Calendar, 
   Camera, UploadCloud, X, AlertCircle, ListTodo, 
-  ChevronRight, CheckSquare, Square as EmptySquare, Loader2, Sparkles, Navigation
+  ChevronRight, CheckSquare, Square as EmptySquare, Loader2, Sparkles, Navigation, Edit3
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
@@ -15,7 +15,7 @@ interface MyJob {
   service: { 
       name: string; 
       duration: number;
-      checklist: string[]; 
+      checklist: any; // <--- Typ gelockert, wir parsen es manuell
   };
   address: { street: string; city: string; zipCode: string };
   status: string; 
@@ -25,6 +25,7 @@ interface MyJob {
   proofs?: { id: string, url: string }[];
 }
 
+// Hilfskomponente für die Karte
 const JobCard = ({ job, label, colorClass, onClick }: { job: MyJob, label?: string, colorClass?: string, onClick: (job: MyJob) => void }) => (
     <div 
         onClick={() => onClick(job)}
@@ -81,6 +82,11 @@ export default function EmployeeDashboard() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // State für manuelles Nachtragen
+  const [showManualTime, setShowManualTime] = useState(false);
+  const [manualStart, setManualStart] = useState('');
+  const [manualEnd, setManualEnd] = useState('');
+
   useEffect(() => { fetchMyJobs(); }, []);
 
   const fetchMyJobs = async () => {
@@ -89,6 +95,14 @@ export default function EmployeeDashboard() {
       setJobs(res.data);
     } catch (e) { setJobs([]); } 
     finally { setLoading(false); }
+  };
+
+  const getSafeChecklist = (job: MyJob): string[] => {
+      try {
+          if (Array.isArray(job.service.checklist)) return job.service.checklist;
+          if (typeof job.service.checklist === 'string') return JSON.parse(job.service.checklist);
+          return [];
+      } catch (e) { return []; }
   };
 
   const grouped = (() => {
@@ -120,11 +134,14 @@ export default function EmployeeDashboard() {
   };
 
   const handleStop = async (job: MyJob) => {
-      const totalItems = job.service.checklist?.length || 0;
+      const list = getSafeChecklist(job);
+      const totalItems = list.length;
       const checkedCount = Object.values(checkedItems).filter(Boolean).length;
+      
       if (totalItems > 0 && checkedCount < totalItems) {
           if(!confirm(`Checkliste unvollständig (${checkedCount}/${totalItems}). Trotzdem beenden?`)) return;
       }
+      
       const toastId = toast.loading("Job wird abgeschlossen...");
       try {
           await api.post('/time/stop', { assignmentId: job.assignmentId });
@@ -133,6 +150,28 @@ export default function EmployeeDashboard() {
           setCheckedItems({}); 
           fetchMyJobs();
       } catch (e) { toast.error("Fehler beim Beenden", { id: toastId }); }
+  };
+
+  // Manuelles Nachtragen
+  const handleManualSubmit = async () => {
+      if(!activeJob || !manualStart || !manualEnd) return toast.error("Zeiten fehlen");
+      
+      // Datum vom Job nehmen, Uhrzeit vom Input
+      const baseDate = activeJob.scheduledDate.split('T')[0];
+      const startIso = `${baseDate}T${manualStart}:00.000Z`; // Vereinfacht (besser wäre local time handling)
+      const endIso = `${baseDate}T${manualEnd}:00.000Z`;
+
+      const toastId = toast.loading("Speichere Nachtrag...");
+      try {
+          await api.patch(`/time/${activeJob.assignmentId}/manual`, { 
+              startTime: new Date(`${baseDate}T${manualStart}`), 
+              endTime: new Date(`${baseDate}T${manualEnd}`) 
+          });
+          toast.success("Zeit nachgetragen!", { id: toastId });
+          setShowManualTime(false);
+          setActiveJob(null);
+          fetchMyJobs();
+      } catch (e) { toast.error("Fehler beim Speichern", { id: toastId }); }
   };
 
   const handleUpload = async () => {
@@ -158,6 +197,8 @@ export default function EmployeeDashboard() {
         <p className="font-black text-[10px] uppercase tracking-[0.2em]">Synchronisiere Dienstplan...</p>
     </div>
   );
+
+  const checklistItems = activeJob ? getSafeChecklist(activeJob) : [];
 
   return (
     <div className="max-w-md mx-auto p-4 pb-24 animate-in fade-in duration-500">
@@ -216,95 +257,130 @@ export default function EmployeeDashboard() {
       {activeJob && (
           <div className="fixed inset-0 z-[100] bg-slate-50 flex flex-col animate-in slide-in-from-bottom duration-500">
               <div className="bg-white p-5 flex justify-between items-center shadow-xl shadow-slate-200/50 sticky top-0 z-10 border-b border-slate-100">
-                  <button onClick={() => setActiveJob(null)} className="p-2.5 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900 transition-all"><X size={24}/></button>
+                  <button onClick={() => { setActiveJob(null); setShowManualTime(false); }} className="p-2.5 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900 transition-all"><X size={24}/></button>
                   <span className="font-black text-slate-900 text-xs uppercase tracking-[0.2em]">Einsatz-Details</span>
                   <div className="w-10"></div>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 pb-40 text-left">
-                  {activeJob.myStatus === 'IN_PROGRESS' && (
-                      <div className="bg-blue-600 text-white p-6 rounded-[2rem] shadow-xl shadow-blue-600/20 mb-8 flex items-center justify-between group">
-                          <div className="flex items-center gap-4">
-                              <div className="bg-white/20 p-3 rounded-2xl animate-pulse"><Play size={20} fill="currentColor"/></div>
+                  {/* ZEIT-NACHTRAGEN MODUS */}
+                  {showManualTime ? (
+                      <div className="bg-white p-6 rounded-[2rem] shadow-lg border border-slate-100 space-y-4">
+                          <h3 className="font-black text-lg">Zeit nachtragen</h3>
+                          <div className="grid grid-cols-2 gap-4">
                               <div>
-                                <span className="font-black text-sm uppercase tracking-widest block">Live am Einsatz</span>
-                                <p className="text-[10px] text-blue-100 font-medium uppercase mt-0.5 opacity-80 tracking-widest">Die Zeit wird erfasst</p>
+                                  <label className="label-caps">Start</label>
+                                  <input type="time" className="input-standard text-center" value={manualStart} onChange={e => setManualStart(e.target.value)} />
+                              </div>
+                              <div>
+                                  <label className="label-caps">Ende</label>
+                                  <input type="time" className="input-standard text-center" value={manualEnd} onChange={e => setManualEnd(e.target.value)} />
                               </div>
                           </div>
-                          <Clock size={20} className="animate-spin-slow opacity-30" />
+                          <button onClick={handleManualSubmit} className="btn-primary w-full justify-center">Speichern</button>
                       </div>
-                  )}
-
-                  <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 mb-6">
-                      <div className="label-caps !text-blue-600 !ml-0 mb-2">Kunde & Standort</div>
-                      <h2 className="text-2xl font-black text-slate-900 mb-4 tracking-tight leading-none">
-                          {activeJob.customer.companyName || `${activeJob.customer.firstName} ${activeJob.customer.lastName}`}
-                      </h2>
-                      <div className="flex gap-2">
-                        <a 
-                          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activeJob.address.street + ', ' + activeJob.address.city)}`}
-                          target="_blank" rel="noreferrer"
-                          className="flex items-center gap-3 text-white font-black text-[10px] uppercase tracking-[0.15em] bg-blue-600 p-4 rounded-2xl shadow-lg shadow-blue-600/20 active:scale-95 transition-all w-full justify-center"
-                        >
-                          <Navigation size={16} fill="currentColor"/> Route starten
-                        </a>
-                      </div>
-                  </div>
-
-                  <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 mb-6">
-                      <div className="flex items-center justify-between mb-6 border-b border-slate-50 pb-4">
-                        <div className="label-caps !text-indigo-600 !mb-0 flex items-center gap-2"><ListTodo size={16}/> Checkliste</div>
-                        <span className="status-badge bg-indigo-50 text-indigo-700 border-indigo-100 !rounded-md font-black">{activeJob.service.name}</span>
-                      </div>
-                      
-                      {activeJob.service.checklist && activeJob.service.checklist.length > 0 ? (
-                          <div className="space-y-3">
-                              {activeJob.service.checklist.map((item, idx) => (
-                                  <div 
-                                    key={idx} 
-                                    onClick={() => toggleCheckItem(item)}
-                                    className={`flex items-center gap-4 p-4 rounded-2xl border transition-all cursor-pointer ${checkedItems[item] ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}
-                                  >
-                                      <div className={`${checkedItems[item] ? 'text-emerald-500' : 'text-slate-300'} shrink-0`}>
-                                          {checkedItems[item] ? <CheckSquare size={24} strokeWidth={2.5}/> : <EmptySquare size={24} strokeWidth={2.5}/>}
+                  ) : (
+                      <>
+                          {activeJob.myStatus === 'IN_PROGRESS' && (
+                              <div className="bg-blue-600 text-white p-6 rounded-[2rem] shadow-xl shadow-blue-600/20 mb-8 flex items-center justify-between group">
+                                  <div className="flex items-center gap-4">
+                                      <div className="bg-white/20 p-3 rounded-2xl animate-pulse"><Play size={20} fill="currentColor"/></div>
+                                      <div>
+                                        <span className="font-black text-sm uppercase tracking-widest block">Live am Einsatz</span>
+                                        <p className="text-[10px] text-blue-100 font-medium uppercase mt-0.5 opacity-80 tracking-widest">Die Zeit wird erfasst</p>
                                       </div>
-                                      <span className={`text-sm font-bold ${checkedItems[item] ? 'text-emerald-900 line-through' : 'text-slate-700'}`}>{item}</span>
                                   </div>
-                              ))}
-                          </div>
-                      ) : (
-                          <div className="py-6 text-center text-slate-400 text-xs font-bold uppercase tracking-widest italic opacity-50">Keine Aufgaben hinterlegt</div>
-                      )}
-                  </div>
+                                  <Clock size={20} className="animate-spin-slow opacity-30" />
+                              </div>
+                          )}
 
-                  <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
-                      <div className="label-caps !text-amber-600 !ml-0 mb-4 flex items-center gap-2"><Camera size={16}/> Arbeitsnachweis</div>
-                      <div 
-                        onClick={() => fileInputRef.current?.click()}
-                        className={`border-2 border-dashed rounded-[1.5rem] p-10 flex flex-col items-center justify-center transition-all ${selectedFile ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-slate-50 text-slate-400 active:bg-slate-100'}`}
-                      >
-                          <UploadCloud size={32} className="mb-3"/>
-                          <span className="text-[10px] font-black uppercase tracking-widest text-center">
-                            {selectedFile ? 'Foto erfasst ✓' : 'Kamera öffnen & Foto aufnehmen'}
-                          </span>
-                          <input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={(e) => e.target.files && setSelectedFile(e.target.files[0])} className="hidden"/>
-                      </div>
-                      {selectedFile && (
-                          <button onClick={handleUpload} className="btn-primary w-full mt-4 !py-4 justify-center !bg-slate-900 border-slate-900 shadow-xl font-black text-[10px] uppercase tracking-widest">Foto jetzt hochladen</button>
-                      )}
-                  </div>
+                          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 mb-6">
+                              <div className="label-caps !text-blue-600 !ml-0 mb-2">Kunde & Standort</div>
+                              <h2 className="text-2xl font-black text-slate-900 mb-4 tracking-tight leading-none">
+                                  {activeJob.customer.companyName || `${activeJob.customer.firstName} ${activeJob.customer.lastName}`}
+                              </h2>
+                              <div className="flex gap-2">
+                                <a 
+                                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activeJob.address.street + ', ' + activeJob.address.zipCode + ' ' + activeJob.address.city)}`}
+                                  target="_blank" rel="noreferrer"
+                                  className="flex items-center gap-3 text-white font-black text-[10px] uppercase tracking-[0.15em] bg-blue-600 p-4 rounded-2xl shadow-lg shadow-blue-600/20 active:scale-95 transition-all w-full justify-center"
+                                >
+                                  <Navigation size={16} fill="currentColor"/> Route starten
+                                </a>
+                              </div>
+                          </div>
+
+                          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 mb-6">
+                              <div className="flex items-center justify-between mb-6 border-b border-slate-50 pb-4">
+                                <div className="label-caps !text-indigo-600 !mb-0 flex items-center gap-2"><ListTodo size={16}/> Checkliste</div>
+                                <span className="status-badge bg-indigo-50 text-indigo-700 border-indigo-100 !rounded-md font-black">{activeJob.service.name}</span>
+                              </div>
+                              
+                              {checklistItems.length > 0 ? (
+                                  <div className="space-y-3">
+                                      {checklistItems.map((item, idx) => (
+                                          <div 
+                                            key={idx} 
+                                            onClick={() => toggleCheckItem(item)}
+                                            className={`flex items-center gap-4 p-4 rounded-2xl border transition-all cursor-pointer ${checkedItems[item] ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}
+                                          >
+                                              <div className={`${checkedItems[item] ? 'text-emerald-500' : 'text-slate-300'} shrink-0`}>
+                                                  {checkedItems[item] ? <CheckSquare size={24} strokeWidth={2.5}/> : <EmptySquare size={24} strokeWidth={2.5}/>}
+                                              </div>
+                                              <span className={`text-sm font-bold ${checkedItems[item] ? 'text-emerald-900 line-through' : 'text-slate-700'}`}>{item}</span>
+                                          </div>
+                                      ))}
+                                  </div>
+                              ) : (
+                                  <div className="py-6 text-center text-slate-400 text-xs font-bold uppercase tracking-widest italic opacity-50">Keine Aufgaben hinterlegt</div>
+                              )}
+                          </div>
+
+                          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+                              <div className="label-caps !text-amber-600 !ml-0 mb-4 flex items-center gap-2"><Camera size={16}/> Arbeitsnachweis</div>
+                              <div 
+                                onClick={() => fileInputRef.current?.click()}
+                                className={`border-2 border-dashed rounded-[1.5rem] p-10 flex flex-col items-center justify-center transition-all ${selectedFile ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-slate-50 text-slate-400 active:bg-slate-100'}`}
+                              >
+                                  <UploadCloud size={32} className="mb-3"/>
+                                  <span className="text-[10px] font-black uppercase tracking-widest text-center">
+                                    {selectedFile ? 'Foto erfasst ✓' : 'Kamera öffnen & Foto aufnehmen'}
+                                  </span>
+                                  <input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={(e) => e.target.files && setSelectedFile(e.target.files[0])} className="hidden"/>
+                              </div>
+                              {selectedFile && (
+                                  <button onClick={handleUpload} className="btn-primary w-full mt-4 !py-4 justify-center !bg-slate-900 border-slate-900 shadow-xl font-black text-[10px] uppercase tracking-widest">Foto jetzt hochladen</button>
+                              )}
+                          </div>
+                      </>
+                  )}
               </div>
 
-              {activeJob.myStatus !== 'COMPLETED' && (
+              {/* FOOTER ACTIONS */}
+         {/* FOOTER ACTIONS */}
+              {activeJob.myStatus !== 'COMPLETED' && !showManualTime && (
                   <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-xl border-t border-slate-100 z-[70] pb-safe shadow-[0_-20px_40px_rgba(0,0,0,0.05)]">
-                      {activeJob.myStatus === 'PENDING' ? (
-                          <button 
-                            onClick={() => handleStart(activeJob)} 
-                            className="btn-primary w-full !py-5 justify-center text-sm font-black uppercase tracking-[0.2em] shadow-2xl shadow-blue-600/30"
-                          >
-                            <Play fill="currentColor" size={18}/> Einsatz starten
-                          </button>
+                      
+                      {/* Zeige START Button, wenn Status NICHT "IN_PROGRESS" ist */}
+                      {activeJob.myStatus !== 'IN_PROGRESS' ? (
+                          <div className="flex gap-3">
+                              <button 
+                                onClick={() => handleStart(activeJob)} 
+                                className="btn-primary flex-1 !py-5 justify-center text-sm font-black uppercase tracking-[0.2em] shadow-2xl shadow-blue-600/30"
+                              >
+                                <Play fill="currentColor" size={18}/> Start
+                              </button>
+                              
+                              {/* BUTTON FÜR MANUELLES NACHTRAGEN */}
+                              <button 
+                                onClick={() => setShowManualTime(true)}
+                                className="p-4 bg-slate-100 rounded-2xl text-slate-500 hover:text-slate-800"
+                              >
+                                  <Edit3 size={24} />
+                              </button>
+                          </div>
                       ) : (
+                          /* Zeige STOP Button, wenn Status "IN_PROGRESS" IST */
                           <button 
                             onClick={() => handleStop(activeJob)} 
                             className="btn-primary w-full !py-5 justify-center text-sm font-black uppercase tracking-[0.2em] !bg-emerald-600 border-emerald-700 shadow-2xl shadow-emerald-600/30"
