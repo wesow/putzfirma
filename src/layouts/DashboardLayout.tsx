@@ -19,7 +19,8 @@ import {
   Sparkles,
   FileCheck,
   ChevronRight,
-  ShieldAlert // Neu für Audit Logs
+  ShieldAlert, // Für Audit Logs
+  Landmark     // <--- NEU: Für Finance/Banking
 } from 'lucide-react';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -55,6 +56,9 @@ export default function DashboardLayout() {
         { icon: Package, label: 'Lager & Material', path: '/dashboard/inventory' },
     ]},
     { section: 'Finanzen', items: [
+        // --- HIER IST DER NEUE PUNKT ---
+        { icon: Landmark, label: 'Finanzen & Banking', path: '/dashboard/finance' }, 
+        
         { icon: Megaphone, label: 'Angebote', path: '/dashboard/offers' },
         { icon: FileCheck, label: 'Rechnungen', path: '/dashboard/invoices' },
         { icon: Receipt, label: 'Betriebsausgaben', path: '/dashboard/expenses' },
@@ -62,7 +66,7 @@ export default function DashboardLayout() {
         { icon: FileSpreadsheet, label: 'Berichts-Archiv', path: '/dashboard/reports' },
     ]},
     { section: 'System', items: [
-        { icon: ShieldAlert, label: 'Audit Logs', path: '/dashboard/audit' }, // NEU: Audit Logs Link
+        { icon: ShieldAlert, label: 'Audit Logs', path: '/dashboard/audit' },
         { icon: Settings, label: 'Einstellungen', path: '/dashboard/settings' },
     ]}
   ];
@@ -86,7 +90,7 @@ export default function DashboardLayout() {
     ]}
   ];
 
-  const menuGroups = role === 'ADMIN' ? adminNav : role === 'CUSTOMER' ? customerNav : employeeNav;
+  const menuGroups = role === 'ADMIN' || role === 'MANAGER' ? adminNav : role === 'CUSTOMER' ? customerNav : employeeNav;
 
   const handleLogout = () => {
     logout();

@@ -48,9 +48,10 @@ import PayrollPage from './pages/team/PayrollPage';
 // --- FINANZEN & SALES ---
 import OffersPage from './pages/sales/OffersPage';
 import InvoicesPage from './pages/invoices/InvoicesPage';
+import FinancePage from './pages/admin/FinancePage'; // <--- NEU: Finance Dashboard
 import ExpensesPage from './pages/finances/ExpensesPage';
 import ReportsPage from './pages/ReportsPage';
-import AuditLogs from './pages/AuditLogs'; // <--- NEU: Audit Log Import
+import AuditLogs from './pages/AuditLogs';
 
 // --- LAGER & SONSTIGES ---
 import InventoryPage from './pages/inventory/InventoryPage';
@@ -75,7 +76,7 @@ function App() {
           duration: 4000,
           style: { 
             background: '#0f172a', 
-            color: '#fff',
+            color: '#fff', 
             borderRadius: '16px',
             fontSize: '14px',
             fontWeight: '600'
@@ -138,11 +139,15 @@ function App() {
               <Route path="team/:id" element={<EditEmployeePage />} />
               
               <Route path="payroll" element={<PayrollPage />} />
+              
+              {/* FINANZEN */}
               <Route path="offers" element={<OffersPage />} />
               <Route path="invoices" element={<InvoicesPage />} />
+              <Route path="finance" element={<FinancePage />} /> {/* <--- NEU: Hier registriert */}
               <Route path="expenses" element={<ExpensesPage />} />
+              
               <Route path="reports" element={<ReportsPage />} />
-              <Route path="audit" element={<AuditLogs />} /> {/* <--- NEU: Audit Log Route */}
+              <Route path="audit" element={<AuditLogs />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>
 

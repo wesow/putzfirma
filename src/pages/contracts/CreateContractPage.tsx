@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Save, ArrowLeft, User, FileText, Calendar, Repeat, 
-  Loader2, AlertCircle, MapPin, Clock, CheckCircle2, PauseCircle
+  Loader2, AlertCircle, MapPin, Clock, CheckCircle2, PauseCircle, Building2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../../lib/api';
@@ -144,30 +144,26 @@ export default function CreateContractPage() {
   const isOneTime = formData.interval === 'ONCE';
 
   return (
-    <div className="page-container max-w-4xl mx-auto">
+    <div className="page-container max-w-6xl mx-auto">
       
-      {/* Header */}
-      <div className="mb-6 flex flex-col gap-4">
-        <button onClick={() => navigate('/dashboard/contracts')} className="w-fit text-[10px] text-slate-400 hover:text-blue-600 flex items-center gap-2 transition-all font-black uppercase tracking-widest bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm">
+      {/* HEADER */}
+      <div className="mb-8">
+        <button onClick={() => navigate('/dashboard/contracts')} className="text-[10px] text-slate-400 hover:text-blue-600 flex items-center gap-2 mb-4 font-black uppercase tracking-[0.2em] bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm transition-all">
           <ArrowLeft size={14} /> Zurück
         </button>
-        <div className="header-section !bg-transparent !border-none !p-0 !shadow-none">
-            <div className="text-left">
-                <h1 className="page-title text-3xl">Service-Vertrag erstellen</h1>
-                <p className="page-subtitle text-lg">Definieren Sie Zyklen oder Einmal-Aufträge.</p>
-            </div>
-        </div>
+        <h1 className="page-title text-3xl">Service-Vertrag erstellen</h1>
+        <p className="page-subtitle text-lg">Planen Sie wiederkehrende Dienstleistungen oder Einzelaufträge.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <form onSubmit={handleSubmit} className="animate-in fade-in slide-in-from-bottom-4 duration-500 mb-24">
         
-        {/* Intelligenter Info Banner */}
-        <div className={`rounded-[2rem] p-6 text-white shadow-xl relative overflow-hidden group transition-colors duration-500 ${isOneTime ? 'bg-indigo-600 shadow-indigo-200' : 'bg-blue-600 shadow-blue-200'}`}>
+        {/* INFO BANNER */}
+        <div className={`mb-8 rounded-[2rem] p-6 text-white shadow-xl relative overflow-hidden group transition-all duration-500 ${isOneTime ? 'bg-indigo-600 shadow-indigo-200' : 'bg-blue-600 shadow-blue-200'}`}>
             <div className="absolute right-[-20px] top-[-20px] opacity-10 group-hover:scale-110 transition-transform duration-700">
                 {isOneTime ? <CheckCircle2 size={120} /> : <Repeat size={120} />}
             </div>
             <div className="flex items-start gap-4 relative z-10">
-                <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-md">
+                <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-md shadow-inner">
                     {isOneTime ? <PauseCircle size={24} /> : <AlertCircle size={24} />}
                 </div>
                 <div>
@@ -182,108 +178,128 @@ export default function CreateContractPage() {
             </div>
         </div>
 
-        <div className="form-card space-y-12">
-            {/* 1. Partner & Leistung */}
-            <div className="space-y-8">
-                <div className="form-section-title"><User size={16} className="text-blue-500" /> 1. Wer, Wo & Was</div>
-                <div className="grid md:grid-cols-2 gap-8">
+        {/* 2-SPALTEN LAYOUT */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+            {/* LINKE SPALTE: PARTNER & LEISTUNG */}
+            <div className="space-y-6">
+                <div className="form-card space-y-6">
+                    <div className="form-section-title"><User size={16} className="text-blue-500" /> 1. Kunde & Objekt</div>
+                    <div className="space-y-4">
+                        <SelectField 
+                            label="Vertragspartner" 
+                            icon={User} 
+                            value={formData.customerId}
+                            onChange={(e: any) => setFormData({...formData, customerId: e.target.value})}
+                            placeholder="Kunde wählen..."
+                            options={customers.map(c => <option key={c.id} value={c.id}>{c.companyName || `${c.lastName}, ${c.firstName}`}</option>)}
+                        />
+                        <SelectField 
+                            label="Leistungsort (Adresse)" 
+                            icon={MapPin} 
+                            value={formData.addressId}
+                            onChange={(e: any) => setFormData({...formData, addressId: e.target.value})}
+                            placeholder={formData.customerId ? (customerAddresses.length > 0 ? "Adresse wählen" : "Keine Adresse gefunden") : "Zuerst Kunde wählen"}
+                            disabled={!formData.customerId || customerAddresses.length === 0}
+                            options={customerAddresses.map(a => <option key={a.id} value={a.id}>{a.street}, {a.zipCode} {a.city}</option>)}
+                        />
+                    </div>
+                </div>
+
+                <div className="form-card space-y-6">
+                    <div className="form-section-title"><FileText size={16} className="text-blue-500" /> 2. Dienstleistung</div>
                     <SelectField 
-                        label="Kunde" 
-                        icon={User} 
-                        value={formData.customerId}
-                        onChange={(e: any) => setFormData({...formData, customerId: e.target.value})}
-                        placeholder="Vertragspartner wählen"
-                        options={customers.map(c => <option key={c.id} value={c.id}>{c.companyName || `${c.lastName}, ${c.firstName}`}</option>)}
-                    />
-                    <SelectField 
-                        label="Objekt / Standort" 
-                        icon={MapPin} 
-                        value={formData.addressId}
-                        onChange={(e: any) => setFormData({...formData, addressId: e.target.value})}
-                        placeholder={formData.customerId ? (customerAddresses.length > 0 ? "Adresse wählen" : "Keine Adresse gefunden") : "Erst Kunden wählen"}
-                        disabled={!formData.customerId || customerAddresses.length === 0}
-                        options={customerAddresses.map(a => <option key={a.id} value={a.id}>{a.street}, {a.zipCode} {a.city}</option>)}
+                        label="Service-Paket" 
+                        icon={FileText} 
+                        value={formData.serviceId}
+                        onChange={(e: any) => setFormData({...formData, serviceId: e.target.value})}
+                        placeholder="Leistungskatalog öffnen..."
+                        options={services.map(s => <option key={s.id} value={s.id}>{s.name} — {Number(s.priceNet || 0).toFixed(2)} €</option>)}
                     />
                 </div>
-                <SelectField 
-                    label="Leistung" 
-                    icon={FileText} 
-                    value={formData.serviceId}
-                    onChange={(e: any) => setFormData({...formData, serviceId: e.target.value})}
-                    placeholder="Leistungskatalog öffnen"
-                    options={services.map(s => <option key={s.id} value={s.id}>{s.name} — {Number(s.priceNet || 0).toFixed(2)} €</option>)}
-                />
             </div>
 
-            {/* 2. Zeitplanung */}
-            <div className="space-y-8">
-                <div className="form-section-title"><Calendar size={16} className="text-blue-500" /> 2. Zyklus & Laufzeit</div>
-                
-                {/* Intervall Cards */}
-                <div className="space-y-2">
-                    <label className="label-caps">Wiederholung</label>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {[
-                            { id: 'ONCE', label: 'Einmalig', sub: 'Sonderreinigung' },
-                            { id: 'WEEKLY', label: 'Wöchentlich', sub: '7 Tage' },
-                            { id: 'BIWEEKLY', label: 'Alle 2 Wochen', sub: '14 Tage' },
-                            { id: 'MONTHLY', label: 'Monatlich', sub: 'ca. 30 Tage' },
-                        ].map(opt => (
-                            <div 
-                                key={opt.id}
-                                onClick={() => setFormData({...formData, interval: opt.id, endDate: opt.id === 'ONCE' ? '' : formData.endDate})}
-                                className={`cursor-pointer p-4 rounded-xl border-2 transition-all text-center group ${
-                                    formData.interval === opt.id 
-                                    ? 'border-blue-600 bg-blue-50/50 text-blue-700 shadow-md transform scale-[1.02]' 
-                                    : 'border-slate-100 bg-white text-slate-500 hover:border-blue-200 hover:text-slate-700'
-                                }`}
-                            >
-                                <div className="font-black text-xs uppercase mb-1">{opt.label}</div>
-                                <div className={`text-[10px] font-medium ${formData.interval === opt.id ? 'text-blue-400' : 'text-slate-300'}`}>{opt.sub}</div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-8 pt-4 border-t border-slate-50">
-                    <div className="space-y-1.5">
-                        <label className="label-caps">{isOneTime ? 'Ausführung am *' : 'Vertragsstart *'}</label>
-                        <div className="flex gap-2">
-                            <div className="relative group flex-1">
-                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500"><Calendar size={18} /></div>
-                                <input required type="date" className="input-standard pl-12" value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})} />
-                            </div>
-                            <div className="relative group w-32">
-                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500"><Clock size={18} /></div>
-                                <input required type="time" className="input-standard pl-12" value={formData.startTime} onChange={e => setFormData({...formData, startTime: e.target.value})} />
+            {/* RECHTE SPALTE: ZEITPLANUNG */}
+            <div className="space-y-6">
+                <div className="form-card space-y-6 h-full border-l-4 border-l-indigo-500">
+                    <div className="form-section-title text-indigo-700"><Calendar size={16} className="text-indigo-500" /> 3. Zeitplanung & Intervall</div>
+                    
+                    <div className="space-y-6">
+                        {/* INTERVALL WAHL */}
+                        <div>
+                            <label className="label-caps mb-2 block">Wiederholungs-Zyklus</label>
+                            <div className="grid grid-cols-2 gap-3">
+                                {[
+                                    { id: 'ONCE', label: 'Einmalig', sub: 'Sonderreinigung' },
+                                    { id: 'WEEKLY', label: 'Wöchentlich', sub: '7 Tage Zyklus' },
+                                    { id: 'BIWEEKLY', label: '14-tägig', sub: 'Alle 2 Wochen' },
+                                    { id: 'MONTHLY', label: 'Monatlich', sub: '30 Tage Zyklus' },
+                                ].map(opt => (
+                                    <div 
+                                        key={opt.id}
+                                        onClick={() => setFormData({...formData, interval: opt.id, endDate: opt.id === 'ONCE' ? '' : formData.endDate})}
+                                        className={`cursor-pointer p-4 rounded-xl border-2 transition-all text-center group relative overflow-hidden ${
+                                            formData.interval === opt.id 
+                                            ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-md' 
+                                            : 'border-slate-100 bg-white text-slate-500 hover:border-blue-200 hover:text-slate-700'
+                                        }`}
+                                    >
+                                        <div className="font-black text-xs uppercase mb-1 relative z-10">{opt.label}</div>
+                                        <div className={`text-[9px] font-bold relative z-10 ${formData.interval === opt.id ? 'text-blue-400' : 'text-slate-300'}`}>{opt.sub}</div>
+                                        {formData.interval === opt.id && <div className="absolute inset-0 bg-blue-100/50 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                                    </div>
+                                ))}
                             </div>
                         </div>
-                    </div>
 
-                    <div className={`space-y-1.5 transition-opacity duration-300 ${isOneTime ? 'opacity-30 pointer-events-none grayscale' : 'opacity-100'}`}>
-                        <label className="label-caps">Laufzeit Ende (Optional)</label>
-                        <div className="relative group">
-                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500"><Calendar size={18} /></div>
-                            <input 
-                                type="date" 
-                                className="input-standard pl-12 bg-slate-50 border-dashed" 
-                                value={formData.endDate} 
-                                onChange={e => setFormData({...formData, endDate: e.target.value})} 
-                                disabled={isOneTime}
-                                placeholder="Unbefristet"
-                            />
+                        {/* START & ZEIT */}
+                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
+                            <div className="space-y-1.5">
+                                <label className="label-caps">{isOneTime ? 'Ausführung am' : 'Vertragsstart'}</label>
+                                <div className="relative group">
+                                    <Calendar size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500" />
+                                    <input required type="date" className="input-standard pl-10" value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})} />
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="label-caps">Start-Uhrzeit</label>
+                                <div className="relative group">
+                                    <Clock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500" />
+                                    <input required type="time" className="input-standard pl-10" value={formData.startTime} onChange={e => setFormData({...formData, startTime: e.target.value})} />
+                                </div>
+                            </div>
                         </div>
-                        <p className="text-[9px] text-slate-400 font-medium pl-1">Leer lassen für unbefristeten Vertrag.</p>
+
+                        {/* LAUFZEIT ENDE */}
+                        <div className={`space-y-1.5 transition-all duration-300 ${isOneTime ? 'opacity-30 pointer-events-none grayscale' : 'opacity-100'}`}>
+                            <label className="label-caps">Vertragsende (Optional)</label>
+                            <div className="relative group">
+                                <Calendar size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500" />
+                                <input 
+                                    type="date" 
+                                    className="input-standard pl-10 bg-slate-50 border-dashed" 
+                                    value={formData.endDate} 
+                                    onChange={e => setFormData({...formData, endDate: e.target.value})} 
+                                    disabled={isOneTime}
+                                    placeholder="Unbefristet"
+                                />
+                            </div>
+                            <p className="text-[9px] text-slate-400 font-medium pl-1">Feld leer lassen für unbefristeten Vertrag.</p>
+                        </div>
                     </div>
                 </div>
             </div>
+
         </div>
 
-        <div className="flex items-center justify-end gap-4 bg-slate-100/50 p-6 rounded-[2rem] border border-slate-100">
-          <button type="button" onClick={() => navigate('/dashboard/contracts')} className="btn-secondary !shadow-none border-transparent hover:bg-slate-200">Abbrechen</button>
-          <button type="submit" disabled={loading} className="btn-primary min-w-[240px] shadow-xl shadow-blue-500/20 py-4">
-            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Save size={20} /><span className="uppercase tracking-widest text-[10px]">{isOneTime ? 'Auftrag erstellen' : 'Vertrag aktivieren'}</span></>}
-          </button>
+        {/* FLOATING FOOTER */}
+        <div className="fixed bottom-6 right-6 left-6 md:left-auto md:w-auto z-40">
+           <div className="bg-white/90 backdrop-blur-md p-2 rounded-[2rem] border border-slate-200 shadow-2xl flex items-center gap-2">
+              <button type="button" onClick={() => navigate('/dashboard/contracts')} className="px-6 py-3 rounded-xl text-slate-500 font-bold text-xs uppercase hover:bg-slate-100 transition-colors">Abbrechen</button>
+              <button type="submit" disabled={loading} className="btn-primary py-3 px-8 shadow-lg shadow-blue-600/20 min-w-[200px]">
+                {loading ? <Loader2 className="animate-spin" size={18} /> : <><Save size={18} /> <span className="uppercase tracking-widest text-[10px]">{isOneTime ? 'Auftrag erstellen' : 'Vertrag aktivieren'}</span></>}
+              </button>
+           </div>
         </div>
 
       </form>

@@ -1,48 +1,59 @@
 import axios from 'axios';
 
-// HIER IST DIE ÄNDERUNG:
-// Wir prüfen, ob wir im "Produktions-Modus" sind (online).
-// Vite nutzt dafür "import.meta.env.PROD".
-const baseURL = import.meta.env.PROD 
-  ? 'https://glanzops.de/api'   // <--- Deine neue Domain (Online)
-  : 'http://localhost:3000/api'; // <--- Dein PC (Lokal)
+// ==========================================
+// KONFIGURATION
+// ==========================================
+// WICHTIG: Prüfe, auf welchem Port dein Backend läuft! (Meist 5000)
+// VITE_API_URL kommt aus deiner .env Datei im Frontend-Ordner.
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: baseURL,
-  // Optional: Falls du Cookies nutzen willst, sonst kannst du es weglassen
-  withCredentials: true, 
+  withCredentials: true, // Wichtig für Cookies (Refresh Token)
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
-// --- Ab hier bleibt alles gleich wie vorher ---
-
-// Request Interceptor (Token mitsenden)
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+// ==========================================
+// 1. REQUEST INTERCEPTOR (Token anhängen)
+// ==========================================
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
-// Response Interceptor (Fehlerbehandlung)
+// ==========================================
+// 2. RESPONSE INTERCEPTOR (Fehlerbehandlung)
+// ==========================================
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     // Wenn 401 (Unauthorized) kommt
     if (error.response && error.response.status === 401) {
       
-      // WICHTIG: Prüfen, ob der Fehler vom Login oder Register kommt.
+      // Prüfen: War das ein Login-Versuch? Wenn ja, nicht redirecten (damit man die Fehlermeldung sieht)
       const isAuthRequest = error.config.url.includes('/auth/login') || error.config.url.includes('/auth/register');
 
       if (!isAuthRequest) {
-        console.warn('Sitzung abgelaufen oder ungültig. Logout...');
-        localStorage.removeItem('token');
-        localStorage.removeItem('role');
-        localStorage.removeItem('firstName'); // Auch den Namen löschen
-        localStorage.removeItem('lastName');
-        
-        // Weiterleitung zum Login
-        window.location.href = '/login';
+        // Nur redirecten, wenn wir NICHT eh schon auf der Login-Seite sind
+        if (window.location.pathname !== '/login') {
+            console.warn('Sitzung abgelaufen oder ungültig. Logout...');
+            
+            // Alles löschen
+            localStorage.clear();
+            
+            // Weiterleitung
+            window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);

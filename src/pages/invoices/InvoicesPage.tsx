@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { 
-  FileText, Plus, Download, CheckCircle, AlertCircle, Mail, Info, Loader2, Clock, Send, History
+  FileText, Plus, Download, CheckCircle, AlertCircle, Mail, Info, Loader2, Clock, Send, History, Lock, FileCheck
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
-import { useAuth } from '../../context/AuthContext'; // <--- WICHTIG: Auth importieren
+import { useAuth } from '../../context/AuthContext';
 
 interface Invoice {
   id: string;
@@ -12,7 +12,9 @@ interface Invoice {
   date: string;
   dueDate: string;
   totalGross: number;
+  // Status 'DRAFT' ist neu und wichtig für die UI-Logik
   status: 'DRAFT' | 'SENT' | 'PAID' | 'OVERDUE' | 'CANCELLED';
+  isLocked: boolean; // Neues Feld vom Backend
   customer: {
     companyName: string | null;
     firstName: string;
@@ -30,16 +32,20 @@ interface Customer {
 }
 
 export default function InvoicesPage() {
-  const { user } = useAuth(); // <--- Wir holen uns den User
+  const { user } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Generator State
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  
+  // Action States (Spinner für Buttons)
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [finalizingId, setFinalizingId] = useState<string | null>(null);
 
-  // Prüfen: Ist es ein Admin/Manager?
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
   useEffect(() => {
@@ -48,8 +54,6 @@ export default function InvoicesPage() {
 
   const fetchData = async () => {
     try {
-      // Wenn Admin: Lade Rechnungen UND Kundenliste (für das Dropdown)
-      // Wenn Kunde: Lade NUR Rechnungen
       const requests = [api.get('/invoices')];
       
       if (isAdmin) {
@@ -68,15 +72,16 @@ export default function InvoicesPage() {
     }
   };
 
+  // 1. ENTURF ERSTELLEN
   const handleGenerateInvoice = async () => {
     if (!selectedCustomerId) return toast.error("Bitte wählen Sie zuerst einen Kunden!");
     
     setIsGenerating(true);
-    const toastId = toast.loading("Rechnung wird erstellt...");
+    const toastId = toast.loading("Entwurf wird erstellt...");
 
     try {
       await api.post('/invoices/generate', { customerId: selectedCustomerId });
-      toast.success("Rechnung erfolgreich erstellt!", { id: toastId });
+      toast.success("Entwurf erfolgreich angelegt!", { id: toastId });
       setSelectedCustomerId(''); 
       fetchData(); 
     } catch (error: any) {
@@ -87,9 +92,28 @@ export default function InvoicesPage() {
     }
   };
 
-  const handleDownloadPdf = async (invoiceId: string, invoiceNumber: string) => {
+  // 2. FESTSCHREIBEN (GoBD)
+  const handleFinalize = async (invoice: Invoice) => {
+      if (!confirm(`Rechnung ${invoice.invoiceNumber} jetzt festschreiben?\n\nDanach sind keine Änderungen mehr möglich (GoBD).`)) return;
+
+      setFinalizingId(invoice.id);
+      const toastId = toast.loading("Rechnung wird festgeschrieben & PDF generiert...");
+
+      try {
+          await api.post(`/invoices/${invoice.id}/finalize`);
+          toast.success("Rechnung ist jetzt gültig & gesperrt!", { id: toastId });
+          fetchData();
+      } catch (error: any) {
+          toast.error(error.response?.data?.message || "Fehler beim Festschreiben", { id: toastId });
+      } finally {
+          setFinalizingId(null);
+      }
+  };
+
+  // 3. DOWNLOAD (Preview oder Original)
+  const handleDownloadPdf = async (invoiceId: string, invoiceNumber: string, isDraft: boolean) => {
     setDownloadingId(invoiceId);
-    const toastId = toast.loading("PDF wird generiert...");
+    const toastId = toast.loading(isDraft ? "Erstelle Vorschau..." : "Lade Original...");
 
     try {
       const response = await api.get(`/invoices/${invoiceId}/pdf`, {
@@ -113,6 +137,7 @@ export default function InvoicesPage() {
     }
   };
 
+  // 4. VERSENDEN (Nur wenn festgeschrieben)
   const handleSendEmail = async (invoiceId: string) => {
     if (!confirm("Rechnung jetzt verbindlich an den Kunden senden?")) return;
 
@@ -132,6 +157,8 @@ export default function InvoicesPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
+      case 'DRAFT':
+        return <span className="status-badge bg-slate-100 text-slate-500 border-slate-200 border-dashed"><FileText size={10}/> ENTWURF</span>;
       case 'PAID': 
         return <span className="status-badge bg-emerald-50 text-emerald-700 border-emerald-100"><CheckCircle size={10}/> BEZAHLT</span>;
       case 'SENT': 
@@ -139,7 +166,7 @@ export default function InvoicesPage() {
       case 'OVERDUE': 
         return <span className="status-badge bg-red-50 text-red-700 border-red-100"><AlertCircle size={10}/> ÜBERFÄLLIG</span>;
       default: 
-        return <span className="status-badge bg-slate-50 text-slate-500 border-slate-200">IN BEARBEITUNG</span>;
+        return <span className="status-badge bg-slate-50 text-slate-500 border-slate-200">UNBEKANNT</span>;
     }
   };
 
@@ -160,7 +187,7 @@ export default function InvoicesPage() {
         </div>
       </div>
 
-      {/* --- GENERATOR BOX (NUR FÜR ADMINS SICHTBAR) --- */}
+      {/* --- GENERATOR BOX (NUR FÜR ADMINS) --- */}
       {isAdmin && (
         <div className="form-card !bg-blue-50/40 !border-blue-100 shadow-xl shadow-blue-900/5 animate-in fade-in slide-in-from-top-4 duration-500 mb-8">
             <div className="flex flex-col md:flex-row gap-6 items-end">
@@ -190,13 +217,13 @@ export default function InvoicesPage() {
                 className="btn-primary w-full md:w-auto py-3 px-10 shadow-xl shadow-blue-500/20 uppercase tracking-widest text-[10px] font-black"
             >
                 {isGenerating ? <Loader2 className="animate-spin" size={18} /> : <FileText size={18} />}
-                {isGenerating ? 'Wird erstellt...' : 'Rechnung generieren'}
+                {isGenerating ? 'Wird erstellt...' : 'Entwurf generieren'}
             </button>
             </div>
             <div className="flex items-center gap-2 mt-4 pt-4 border-t border-blue-100/50">
                 <Info size={14} className="text-blue-500 shrink-0" />
                 <p className="text-[10px] text-blue-800/70 font-black uppercase tracking-tight">
-                Hinweis: Das System erfasst nur Aufträge mit dem Status <span className="text-blue-600">"Abgeschlossen"</span>.
+                Hinweis: Das System erstellt zunächst einen <span className="text-blue-600">Entwurf</span>. Dieser muss geprüft und festgeschrieben werden.
                 </p>
             </div>
         </div>
@@ -219,10 +246,7 @@ export default function InvoicesPage() {
             <thead className="table-head">
               <tr>
                 <th className="table-cell">Nr. / Referenz</th>
-                
-                {/* Spalte 'Auftraggeber' nur für Admin anzeigen */}
                 {isAdmin && <th className="table-cell">Auftraggeber</th>}
-                
                 <th className="table-cell">Belegdatum</th>
                 <th className="table-cell text-center">Leistungen</th>
                 <th className="table-cell text-right">Bruttobetrag</th>
@@ -250,7 +274,6 @@ export default function InvoicesPage() {
                       <div className="text-[9px] text-slate-400 font-bold uppercase">Ref: {inv.id.split('-')[0]}</div>
                     </td>
                     
-                    {/* Spalte 'Auftraggeber' nur für Admin anzeigen */}
                     {isAdmin && (
                         <td className="table-cell">
                         <div className="font-black text-slate-800 text-sm truncate max-w-[200px]">
@@ -278,20 +301,35 @@ export default function InvoicesPage() {
                     <td className="table-cell text-center">
                       {getStatusBadge(inv.status)}
                     </td>
+                    
+                    {/* --- ACTION BUTTONS --- */}
                     <td className="table-cell text-right">
                       <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
                         
+                        {/* 1. DOWNLOAD (Immer) */}
                         <button 
-                          onClick={() => handleDownloadPdf(inv.id, inv.invoiceNumber)}
+                          onClick={() => handleDownloadPdf(inv.id, inv.invoiceNumber, inv.status === 'DRAFT')}
                           disabled={!!downloadingId}
                           className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                          title="PDF herunterladen"
+                          title={inv.status === 'DRAFT' ? "Vorschau ansehen" : "Rechnung herunterladen"}
                         >
                           {downloadingId === inv.id ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
                         </button>
 
-                        {/* Button 'Email senden' nur für Admin */}
-                        {isAdmin && (
+                        {/* 2. FESTSCHREIBEN (Nur Admin & Draft) */}
+                        {isAdmin && inv.status === 'DRAFT' && (
+                            <button 
+                                onClick={() => handleFinalize(inv)}
+                                disabled={!!finalizingId}
+                                className="p-2 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl transition-all"
+                                title="Festschreiben (GoBD)"
+                            >
+                                {finalizingId === inv.id ? <Loader2 size={16} className="animate-spin" /> : <Lock size={16} />}
+                            </button>
+                        )}
+
+                        {/* 3. EMAIL SENDEN (Nur Admin & NICHT Draft) */}
+                        {isAdmin && inv.status !== 'DRAFT' && (
                             <button 
                             onClick={() => handleSendEmail(inv.id)}
                             disabled={sendingId === inv.id}
