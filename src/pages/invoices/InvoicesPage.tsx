@@ -1,8 +1,8 @@
 import {
+  Calendar as CalendarIcon,
   Download,
   FileSearch,
   History,
-  Info,
   Loader2,
   Lock,
   Plus,
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import ConfirmModal from '../../components/ConfirmModal';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../lib/api';
 
@@ -48,9 +49,27 @@ export default function InvoicesPage() {
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   
+  // Status für Ladeanimationen einzelner Zeilen
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [finalizingId, setFinalizingId] = useState<string | null>(null);
+
+  // Confirm Modal State
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant: 'danger' | 'warning' | 'info' | 'success';
+    confirmText: string;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    variant: 'info',
+    confirmText: 'Bestätigen'
+  });
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
@@ -89,8 +108,7 @@ export default function InvoicesPage() {
     }
   };
 
-  const handleFinalize = async (invoice: Invoice) => {
-      if (!confirm(`Rechnung ${invoice.invoiceNumber} jetzt festschreiben?\n\nDanach sind keine Änderungen mehr möglich (GoBD-konform).`)) return;
+  const executeFinalize = async (invoice: Invoice) => {
       setFinalizingId(invoice.id);
       const toastId = toast.loading("Wird festgeschrieben...");
       try {
@@ -104,7 +122,45 @@ export default function InvoicesPage() {
       }
   };
 
-  const handleDownloadPdf = async (invoiceId: string, invoiceNumber: string, isDraft: boolean) => {
+  const executeSendEmail = async (invoiceId: string) => {
+    setSendingId(invoiceId); 
+    const toastId = toast.loading("E-Mail wird versendet...");
+    try {
+      await api.post(`/invoices/${invoiceId}/send`);
+      toast.success("Versand erfolgreich", { id: toastId });
+      fetchData(); 
+    } catch (error) {
+      toast.error("Versand fehlgeschlagen", { id: toastId });
+    } finally {
+      setSendingId(null); 
+    }
+  };
+
+  // Modal Trigger für Festschreiben
+  const openFinalizeConfirm = (invoice: Invoice) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: "Rechnung festschreiben?",
+      message: `Möchten Sie Beleg ${invoice.invoiceNumber} jetzt GoBD-konform sperren? Danach sind keine Änderungen mehr möglich.`,
+      variant: 'warning',
+      confirmText: 'Jetzt festschreiben',
+      onConfirm: () => executeFinalize(invoice)
+    });
+  };
+
+  // Modal Trigger für Senden
+  const openSendConfirm = (invoice: Invoice) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: "Rechnung versenden?",
+      message: `Die Rechnung ${invoice.invoiceNumber} wird verbindlich an ${invoice.customer.email || 'den Kunden'} versendet.`,
+      variant: 'info',
+      confirmText: 'E-Mail senden',
+      onConfirm: () => executeSendEmail(invoice.id)
+    });
+  };
+
+  const handleDownloadPdf = async (invoiceId: string, invoiceNumber: string) => {
     setDownloadingId(invoiceId);
     try {
       const response = await api.get(`/invoices/${invoiceId}/pdf`, { responseType: 'blob' });
@@ -121,21 +177,6 @@ export default function InvoicesPage() {
       toast.error("Download fehlgeschlagen");
     } finally {
         setDownloadingId(null);
-    }
-  };
-
-  const handleSendEmail = async (invoiceId: string) => {
-    if (!confirm("Rechnung jetzt verbindlich per E-Mail versenden?")) return;
-    setSendingId(invoiceId); 
-    const toastId = toast.loading("E-Mail wird versendet...");
-    try {
-      await api.post(`/invoices/${invoiceId}/send`);
-      toast.success("Versand erfolgreich", { id: toastId });
-      fetchData(); 
-    } catch (error) {
-      toast.error("Versand fehlgeschlagen", { id: toastId });
-    } finally {
-      setSendingId(null); 
     }
   };
 
@@ -204,11 +245,6 @@ export default function InvoicesPage() {
                 {isGenerating ? 'Wird erstellt...' : 'Entwurf generieren'}
             </button>
           </div>
-          
-          <div className="flex items-center gap-2 mt-3 text-[10px] text-blue-600/70 font-medium italic">
-            <Info size={12} />
-            <span>Erstellte Entwürfe können vor der Festschreibung noch geprüft werden.</span>
-          </div>
         </div>
       )}
 
@@ -228,9 +264,9 @@ export default function InvoicesPage() {
           <table className="table-main">
             <thead className="table-head">
               <tr>
-                <th className="table-cell pl-4">Belegnummer</th>
-                {isAdmin && <th className="table-cell">Empfänger</th>}
-                <th className="table-cell">Datum</th>
+                <th className="table-cell pl-4 text-left">Belegnummer</th>
+                {isAdmin && <th className="table-cell text-left">Empfänger</th>}
+                <th className="table-cell text-left">Datum</th>
                 <th className="table-cell text-center">Pos.</th>
                 <th className="table-cell text-right">Betrag Brutto</th>
                 <th className="table-cell text-center">Status</th>
@@ -245,21 +281,21 @@ export default function InvoicesPage() {
               ) : (
                 invoices.map((inv) => (
                   <tr key={inv.id} className="table-row group">
-                    <td className="table-cell pl-4 align-middle">
+                    <td className="table-cell pl-4 align-middle text-left">
                       <div className="font-bold text-blue-600 text-sm">#{inv.invoiceNumber}</div>
                       <div className="text-[10px] text-slate-400 font-mono">ID: {inv.id.substring(0, 8)}</div>
                     </td>
                     
                     {isAdmin && (
-                      <td className="table-cell align-middle">
+                      <td className="table-cell align-middle text-left">
                         <div className="font-bold text-slate-700 truncate max-w-[180px]">
                             {inv.customer.companyName || `${inv.customer.firstName} ${inv.customer.lastName}`}
                         </div>
                       </td>
                     )}
 
-                    <td className="table-cell align-middle whitespace-nowrap">
-                      <div className="flex items-center gap-1.5 text-slate-500 font-medium">
+                    <td className="table-cell align-middle text-left whitespace-nowrap">
+                      <div className="flex items-center gap-1.5 text-slate-500 font-medium text-[12px]">
                         <CalendarIcon size={12} className="text-slate-300"/>
                         {new Date(inv.date).toLocaleDateString('de-DE')}
                       </div>
@@ -281,9 +317,8 @@ export default function InvoicesPage() {
                     <td className="table-cell text-right pr-4 align-middle">
                       <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
                         
-                        {/* Download/Vorschau */}
                         <button 
-                          onClick={() => handleDownloadPdf(inv.id, inv.invoiceNumber, inv.status === 'DRAFT')}
+                          onClick={() => handleDownloadPdf(inv.id, inv.invoiceNumber)}
                           disabled={!!downloadingId}
                           className="btn-icon-only"
                           title={inv.status === 'DRAFT' ? "Vorschau" : "PDF Laden"}
@@ -291,10 +326,9 @@ export default function InvoicesPage() {
                           {downloadingId === inv.id ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
                         </button>
 
-                        {/* GoBD Lock (Festschreiben) */}
                         {isAdmin && inv.status === 'DRAFT' && (
                           <button 
-                            onClick={() => handleFinalize(inv)}
+                            onClick={() => openFinalizeConfirm(inv)}
                             disabled={!!finalizingId}
                             className="btn-icon-only text-amber-500 hover:text-amber-600 hover:bg-amber-50"
                             title="Festschreiben"
@@ -303,10 +337,9 @@ export default function InvoicesPage() {
                           </button>
                         )}
 
-                        {/* E-Mail Versand */}
                         {isAdmin && inv.status !== 'DRAFT' && (
                           <button 
-                            onClick={() => handleSendEmail(inv.id)}
+                            onClick={() => openSendConfirm(inv)}
                             disabled={sendingId === inv.id}
                             className="btn-icon-only text-blue-500 hover:bg-blue-50"
                             title="E-Mail senden"
@@ -323,15 +356,17 @@ export default function InvoicesPage() {
           </table>
         </div>
       </div>
+
+      {/* --- CONFIRM MODAL --- */}
+      <ConfirmModal 
+        isOpen={confirmConfig.isOpen}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        variant={confirmConfig.variant}
+        confirmText={confirmConfig.confirmText}
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
-}
-
-// Helper für Icon (da Calendar in lucide-react existiert, aber oft anders importiert wird)
-function CalendarIcon({ size, className }: { size: number, className?: string }) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-            <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/>
-        </svg>
-    );
 }

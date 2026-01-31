@@ -11,7 +11,8 @@ import {
   Megaphone,
   Menu,
   Package,
-  Palmtree, Receipt,
+  Palmtree,
+  Receipt,
   Settings,
   ShieldAlert,
   ShieldCheck,
@@ -46,7 +47,6 @@ export default function DashboardLayout() {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
-  // --- NAV SECTIONS ---
   const adminNav = [
     { section: 'Übersicht', items: [
         { icon: LayoutDashboard, label: 'Zentrale', path: '/dashboard' },
@@ -106,7 +106,6 @@ export default function DashboardLayout() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
       
-      {/* MOBILE OVERLAY */}
       {isMobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 md:hidden animate-in fade-in duration-200"
@@ -114,16 +113,17 @@ export default function DashboardLayout() {
         />
       )}
 
-      {/* SIDEBAR */}
+      {/* SIDEBAR CONTAINER */}
       <aside 
         className={`
-          fixed md:static inset-y-0 left-0 z-50
+          fixed md:sticky top-0 h-screen z-50
           w-[260px] md:w-56 lg:w-60 bg-slate-900 text-white flex flex-col shadow-2xl shrink-0
           transform transition-transform duration-300 ease-in-out
           ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
       >
-        <div className="p-3 flex items-center justify-between border-b border-white/5 h-14">
+        {/* 1. HEADER (STAY TOP) */}
+        <div className="p-3 flex items-center justify-between border-b border-white/5 h-14 bg-slate-900 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="bg-blue-600 p-1.5 rounded-lg shadow-lg shadow-blue-500/20">
               <ShieldCheck size={18} className="text-white" />
@@ -138,7 +138,8 @@ export default function DashboardLayout() {
           </button>
         </div>
         
-        <nav className="flex-1 px-2 py-3 space-y-5 overflow-y-auto custom-scrollbar">
+        {/* 2. NAVIGATION (SCROLLABLE CENTER) */}
+        <nav className="flex-1 px-2 py-3 space-y-5 overflow-y-auto custom-scrollbar overflow-x-hidden">
           {menuGroups.map((group, idx) => (
             <div key={idx}>
               <p className="px-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 opacity-80">
@@ -170,14 +171,15 @@ export default function DashboardLayout() {
           ))}
         </nav>
 
-        <div className="p-3 bg-slate-950/30 border-t border-white/5 pb-safe">
+        {/* 3. USER AREA (STAY BOTTOM) */}
+        <div className="p-3 bg-slate-900 border-t border-white/5 shrink-0 pb-safe">
           <div className="flex items-center gap-2 px-2 py-2 bg-white/5 rounded-lg mb-2 border border-white/5">
-              <div className="w-7 h-7 rounded-md bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-xs font-bold shadow-inner shrink-0">
+              <div className="w-7 h-7 rounded-md bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-xs font-bold shadow-inner shrink-0 text-white">
                 {firstName.charAt(0)}
               </div>
-              <div className="overflow-hidden min-w-0">
-                <p className="text-[11px] font-semibold truncate text-white tracking-tight">{firstName}</p>
-                <p className="text-[8px] text-slate-500 truncate font-bold tracking-wider uppercase">
+              <div className="overflow-hidden min-w-0 text-left">
+                <p className="text-[11px] font-semibold truncate text-white tracking-tight leading-none mb-0.5">{firstName}</p>
+                <p className="text-[8px] text-slate-500 truncate font-bold tracking-wider uppercase leading-none">
                   {role ? ROLE_LABELS[role] : 'Gast'}
                 </p>
               </div>
@@ -192,8 +194,8 @@ export default function DashboardLayout() {
         </div>
       </aside>
 
-      {/* === HAUPTINHALT (FULL WIDTH FIX) === */}
-      <div className="flex-1 flex flex-col min-h-screen w-full relative bg-slate-50">
+      {/* HAUPTINHALT */}
+      <div className="flex-1 flex flex-col min-h-screen w-full relative bg-slate-50 overflow-x-hidden">
         
         {/* MOBILE TOP BAR */}
         <header className="md:hidden bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30 px-3 py-2 flex items-center justify-between shadow-sm h-12">
@@ -208,9 +210,7 @@ export default function DashboardLayout() {
            </div>
         </header>
 
-        {/* CONTENT AREA - 100% Breite, minimales Padding */}
-        <main className="flex-1 w-full animate-in fade-in duration-500 overflow-x-hidden pb-20 md:pb-0">
-             {/* WICHTIG: Kein max-w-7xl mehr! */}
+        <main className="flex-1 w-full animate-in fade-in duration-500 pb-20 md:pb-0">
              <Outlet />
         </main>
 

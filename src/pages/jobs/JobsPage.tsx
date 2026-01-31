@@ -334,20 +334,66 @@ export default function JobsPage() {
         </div>
       </div>
 
-      {/* KPI STATS */}
-      <div className="stats-grid mb-4">
+  {/* KPI STATS */}
+      <div className="stats-grid mb-4 grid grid-cols-2 lg:grid-cols-5 gap-3">
+        {/* Gesamt im Filter */}
         <div className="stat-card">
           <div className="stat-icon-wrapper icon-info"><Clock size={16} /></div>
           <div>
-            <span className="label-caps">In Filter</span>
-            <div className="text-base font-bold text-slate-900 leading-none">{filteredJobs.length} Einsätze</div>
+            <span className="label-caps">Gesamt</span>
+            <div className="text-base font-bold text-slate-900 leading-none">{filteredJobs.length}</div>
           </div>
         </div>
+
+        {/* GEPLANT */}
         <div className="stat-card">
-          <div className="stat-icon-wrapper icon-success"><CheckCircle2 size={16} /></div>
+          <div className="stat-icon-wrapper bg-blue-50 text-blue-600 border-blue-100">
+            <Calendar size={16} />
+          </div>
           <div>
-            <span className="label-caps">Heute Gesamt</span>
-            <div className="text-base font-bold text-slate-900 leading-none">{jobs.filter(j => isToday(new Date(j.scheduledDate))).length} Geplant</div>
+            <span className="label-caps">Geplant</span>
+            <div className="text-base font-bold text-slate-900 leading-none">
+              {filteredJobs.filter(j => j.status === 'SCHEDULED').length}
+            </div>
+          </div>
+        </div>
+
+        {/* IN ARBEIT */}
+        <div className="stat-card">
+          <div className="stat-icon-wrapper bg-amber-50 text-amber-600 border-amber-100">
+            <Play size={14} fill="currentColor" />
+          </div>
+          <div>
+            <span className="label-caps">In Arbeit</span>
+            <div className="text-base font-bold text-slate-900 leading-none">
+              {filteredJobs.filter(j => j.status === 'IN_PROGRESS').length}
+            </div>
+          </div>
+        </div>
+
+        {/* ERLEDIGT */}
+        <div className="stat-card">
+          <div className="stat-icon-wrapper icon-success">
+            <CheckCircle2 size={16} />
+          </div>
+          <div>
+            <span className="label-caps">Erledigt</span>
+            <div className="text-base font-bold text-slate-900 leading-none">
+              {filteredJobs.filter(j => j.status === 'COMPLETED').length}
+            </div>
+          </div>
+        </div>
+
+        {/* HEUTE (Schnellübersicht) */}
+        <div className="stat-card hidden lg:flex">
+          <div className="stat-icon-wrapper bg-indigo-50 text-indigo-600 border-indigo-100">
+            <Briefcase size={16} />
+          </div>
+          <div>
+            <span className="label-caps">Heute Total</span>
+            <div className="text-base font-bold text-slate-900 leading-none">
+              {jobs.filter(j => isToday(new Date(j.scheduledDate))).length}
+            </div>
           </div>
         </div>
       </div>

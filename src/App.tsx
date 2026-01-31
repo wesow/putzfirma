@@ -1,63 +1,63 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
 import { HelmetProvider } from 'react-helmet-async';
+import { Toaster } from 'react-hot-toast';
+import { Route, Routes } from 'react-router-dom';
 import './app.css';
 
 // --- CONTEXT ---
 import { useAuth } from './context/AuthContext';
 
 // --- LAYOUTS & GUARDS ---
-import DashboardLayout from './layouts/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
+import DashboardLayout from './layouts/DashboardLayout';
 
 // --- PUBLIC PAGES ---
-import LandingPage from './pages/public/LandingPage';
-import ImpressumPage from './pages/public/ImpressumPage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
+import ImpressumPage from './pages/public/ImpressumPage';
+import LandingPage from './pages/public/LandingPage';
+import RegisterPage from './pages/RegisterPage';
 
 // --- DASHBOARDS ---
+import CustomerDashboard from './pages/CustomerDashboard';
 import Dashboard from './pages/Dashboard'; // Admin Dashboard
 import EmployeeDashboard from './pages/EmployeeDashboard';
-import CustomerDashboard from './pages/CustomerDashboard';
 
 // --- OPERATIVE PAGES ---
-import JobsPage from './pages/jobs/JobsPage';
 import CalendarPage from './pages/CalendarPage';
+import JobsPage from './pages/jobs/JobsPage';
 import AbsencesPage from './pages/team/AbsencesPage';
 
 // --- VERWALTUNG ---
-import CustomersPage from './pages/customers/CustomersPage';
-import CreateCustomerPage from './pages/customers/CreateCustomerPage';
-import EditCustomerPage from './pages/customers/EditCustomerPage';
-import ServicesPage from './pages/services/ServicesPage';
-import CreateServicePage from './pages/services/CreateServicePage';
-import EditServicePage from './pages/services/EditServicePage';
 import ContractsPage from './pages/contracts/ContractsPage';
 import CreateContractPage from './pages/contracts/CreateContractPage';
+import CreateCustomerPage from './pages/customers/CreateCustomerPage';
+import CustomersPage from './pages/customers/CustomersPage';
+import EditCustomerPage from './pages/customers/EditCustomerPage';
+import CreateServicePage from './pages/services/CreateServicePage';
+import EditServicePage from './pages/services/EditServicePage';
+import ServicesPage from './pages/services/ServicesPage';
 
 // --- TEAM & HR ---
-import TeamPage from './pages/team/TeamPage';
 import CreateEmployeePage from './pages/team/CreateEmployeePage';
 import EditEmployeePage from './pages/team/EditEmployeePage';
 import PayrollPage from './pages/team/PayrollPage';
+import TeamPage from './pages/team/TeamPage';
 
 // --- FINANZEN & SALES ---
-import OffersPage from './pages/sales/OffersPage';
-import CreateOffersPage from './pages/sales/CreateOfferPage';
-import InvoicesPage from './pages/invoices/InvoicesPage';
 import FinancePage from './pages/admin/FinancePage'; // <--- NEU: Finance Dashboard
-import ExpensesPage from './pages/finances/ExpensesPage';
-import ReportsPage from './pages/ReportsPage';
 import AuditLogs from './pages/AuditLogs';
+import ExpensesPage from './pages/expenses/ExpensesPage';
+import InvoicesPage from './pages/invoices/InvoicesPage';
+import ReportsPage from './pages/ReportsPage';
+import CreateOffersPage from './pages/sales/CreateOfferPage';
+import OffersPage from './pages/sales/OffersPage';
 
 // --- LAGER & SONSTIGES ---
+import CreateInventoryPage from './pages/inventory/CreateInventoryPage';
 import InventoryPage from './pages/inventory/InventoryPage';
 import SettingsPage from './pages/SettingsPage';
-import CreateInventoryPage from './pages/inventory/CreateInventoryPage';
 
 /**
  * Hilfskomponente für die Dashboard-Weiche
