@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Lock, Mail, ArrowRight, AlertCircle, Sparkles, Loader2, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Lock, Mail, ArrowRight, AlertCircle, Loader2, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { login as apiLogin } from '../services/auth.service';
 import { useAuth } from '../context/AuthContext'; 
 import { toast } from 'react-hot-toast';
@@ -16,6 +16,8 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email || !password) return toast.error("Bitte alle Felder ausfüllen.");
+    
     setLoading(true);
     setError('');
 
@@ -55,15 +57,15 @@ export default function LoginPage() {
             <h2 className="text-4xl font-black tracking-tight text-slate-900">
               Anmelden
             </h2>
-            <p className="mt-4 text-slate-500 font-medium leading-relaxed">
+            <p className="mt-4 text-slate-500 font-medium leading-relaxed text-[13px]">
               Zentrale Verwaltungsebene. Bitte identifizieren Sie sich für den Systemzugriff.
             </p>
           </div>
 
           {error && (
-            <div className="mb-8 rounded-[1.5rem] bg-red-50 p-5 text-sm text-red-600 border border-red-100 flex items-center animate-shake shadow-sm shadow-red-100">
-              <AlertCircle className="h-5 w-5 mr-3 shrink-0" />
-              <span className="font-bold">{error}</span>
+            <div className="mb-8 rounded-xl bg-red-50 p-4 text-[12px] text-red-600 border border-red-100 flex items-center animate-shake shadow-sm shadow-red-100/50">
+              <AlertCircle className="h-4 w-4 mr-3 shrink-0" />
+              <span className="font-bold uppercase tracking-tight">{error}</span>
             </div>
           )}
 
@@ -80,7 +82,7 @@ export default function LoginPage() {
                   disabled={loading}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="input-standard pl-12 py-4 font-bold"
+                  className="input-standard pl-12 py-3.5 font-bold focus:ring-4 focus:ring-blue-500/5"
                   placeholder="personal@glanzops.de"
                 />
               </div>
@@ -91,7 +93,7 @@ export default function LoginPage() {
                 <label className="label-caps !ml-0">Sicherheits-Key</label>
                 <Link 
                   to="/forgot-password" 
-                  className="text-[9px] font-black text-blue-500 hover:text-blue-700 uppercase tracking-widest transition-colors bg-blue-50 px-2 py-1 rounded-md"
+                  className="text-[9px] font-black text-slate-400 hover:text-blue-500 uppercase tracking-widest transition-colors px-1 py-1 rounded-md"
                 >
                   Passwort vergessen?
                 </Link>
@@ -106,7 +108,7 @@ export default function LoginPage() {
                   disabled={loading}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="input-standard pl-12 py-4 font-bold"
+                  className="input-standard pl-12 py-3.5 font-bold focus:ring-4 focus:ring-blue-500/5"
                   placeholder="••••••••"
                 />
               </div>
@@ -115,7 +117,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full py-4.5 shadow-2xl shadow-blue-500/20 mt-4 group"
+              className="btn-primary w-full py-4 shadow-2xl shadow-blue-500/20 mt-4 group"
             >
               {loading ? (
                 <Loader2 className="animate-spin h-5 w-5" />

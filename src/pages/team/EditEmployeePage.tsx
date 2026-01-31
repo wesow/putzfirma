@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   Save, ArrowLeft, User, Mail, CreditCard, Briefcase, 
-  Badge as BadgeIcon, Loader2, Send, CheckCircle, ShieldCheck 
+  Badge as BadgeIcon, Loader2, Send, ShieldCheck 
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../../lib/api';
@@ -40,7 +40,7 @@ export default function EditEmployeePage() {
           email: emp.email || '',
           personnelNumber: emp.personnelNumber || '',
           role: emp.user?.role || 'EMPLOYEE',
-          position: emp.role || '', // DB field 'role' is position, user.role is system role
+          position: emp.role || '', 
           hourlyWage: emp.hourlyWage ? String(emp.hourlyWage) : ''
         });
       } catch (error) {
@@ -94,55 +94,67 @@ export default function EditEmployeePage() {
     }
   };
 
-  if (loading) return <div className="page-container flex justify-center py-40"><Loader2 className="animate-spin text-blue-600" size={40} /></div>;
+  if (loading) return (
+    <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-3">
+        <Loader2 className="animate-spin text-blue-600" size={32} />
+        <span className="text-[10px] uppercase tracking-widest font-bold">Lade Akte...</span>
+    </div>
+  );
 
   return (
-    <div className="page-container max-w-6xl mx-auto">
+    <div className="page-container space-y-4">
       
       {/* HEADER */}
-      <div className="mb-6">
-        <button onClick={() => navigate('/dashboard/team')} className="text-[10px] text-slate-400 hover:text-blue-600 flex items-center gap-2 mb-4 font-black uppercase tracking-[0.2em] bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm transition-all">
-          <ArrowLeft size={14} /> Zurück
-        </button>
-        <h1 className="page-title text-3xl">Personalakte bearbeiten</h1>
-        <p className="page-subtitle text-lg">Daten von <span className="text-slate-900 font-bold">{formData.firstName} {formData.lastName}</span>.</p>
+      <div className="header-section">
+        <div className="text-left">
+            <button 
+                onClick={() => navigate('/dashboard/team')} 
+                className="text-[10px] text-slate-400 hover:text-blue-600 flex items-center gap-1 mb-2 font-bold uppercase tracking-wider transition-colors"
+            >
+                <ArrowLeft size={12} /> Zurück zur Liste
+            </button>
+            <h1 className="page-title">Personalakte bearbeiten</h1>
+            <p className="page-subtitle">Daten von <span className="text-slate-900 font-bold">{formData.firstName} {formData.lastName}</span>.</p>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="animate-in fade-in slide-in-from-bottom-4 duration-500 mb-24">
+      <form onSubmit={handleSubmit} className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
         
         {/* STATUS BANNER */}
-        <div className={`p-6 mb-8 rounded-[2rem] border flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm ${
+        <div className={`p-4 mb-4 rounded-xl border flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm ${
           employeeState.hasUser ? 'bg-emerald-50 border-emerald-100' : 'bg-blue-50 border-blue-100'
         }`}>
-          <div className="flex items-center gap-5">
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner ${employeeState.hasUser ? 'bg-emerald-500 text-white' : 'bg-blue-500 text-white'}`}>
-              {employeeState.hasUser ? <ShieldCheck size={28} /> : <Send size={28} />}
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-sm ${employeeState.hasUser ? 'bg-emerald-500 text-white' : 'bg-blue-500 text-white'}`}>
+              {employeeState.hasUser ? <ShieldCheck size={20} /> : <Send size={20} />}
             </div>
             <div>
-              <h4 className={`text-lg font-black tracking-tight ${employeeState.hasUser ? 'text-emerald-900' : 'text-blue-900'}`}>
+              <h4 className={`text-sm font-bold tracking-tight ${employeeState.hasUser ? 'text-emerald-900' : 'text-blue-900'}`}>
                 {employeeState.hasUser ? 'Account Aktiv' : 'Zugang Ausstehend'}
               </h4>
-              <p className={`text-sm ${employeeState.hasUser ? 'text-emerald-700' : 'text-blue-700'}`}>
-                {employeeState.hasUser ? 'Mitarbeiter kann sich in die App einloggen.' : 'Mitarbeiter hat Einladung noch nicht angenommen.'}
+              <p className={`text-[11px] ${employeeState.hasUser ? 'text-emerald-700' : 'text-blue-700'}`}>
+                {employeeState.hasUser ? 'Mitarbeiter kann sich einloggen.' : 'Einladung noch nicht angenommen.'}
               </p>
             </div>
           </div>
           {!employeeState.hasUser && (
-            <button type="button" onClick={handleResendInvite} disabled={resending} className="btn-primary !bg-blue-600 !border-blue-700 min-w-[200px]">
-              {resending ? <Loader2 className="animate-spin" size={18} /> : 'Einladung senden'}
+            <button type="button" onClick={handleResendInvite} disabled={resending} className="btn-primary !bg-blue-600 !border-blue-700 !py-2 !px-4 text-[11px]">
+              {resending ? <Loader2 className="animate-spin" size={14} /> : 'Einladung erneut senden'}
             </button>
           )}
         </div>
 
-        {/* 2-SPALTEN LAYOUT */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* 2-SPALTEN LAYOUT (FULL WIDTH) */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
 
             {/* LINKE SPALTE */}
-            <div className="space-y-6">
-                <div className="form-card space-y-6">
-                    <div className="form-section-title"><User size={16} className="text-blue-500" /> Stammdaten</div>
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
+                <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2 mb-4">
+                        <User size={14} className="text-blue-500" /> Stammdaten
+                    </div>
+                    <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
                                 <label className="label-caps">Vorname</label>
                                 <input name="firstName" className="input-standard font-bold" value={formData.firstName} onChange={handleChange} />
@@ -153,26 +165,37 @@ export default function EditEmployeePage() {
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <label className="label-caps">E-Mail (Locked)</label>
-                            <input disabled className="input-standard bg-slate-50 text-slate-400 cursor-not-allowed border-dashed" value={formData.email} />
+                            <label className="label-caps">E-Mail (System)</label>
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><Mail size={16} /></div>
+                                <input disabled className="input-standard pl-9 bg-slate-50 text-slate-400 cursor-not-allowed" value={formData.email} />
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* RECHTE SPALTE */}
-            <div className="space-y-6">
-                <div className="form-card space-y-6 border-l-4 border-l-indigo-500 h-full">
-                    <div className="form-section-title text-indigo-700"><Briefcase size={16} className="text-indigo-500" /> Vertrag & Rolle</div>
-                    <div className="space-y-5">
-                        <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
+                <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 border-l-[3px] border-l-indigo-500 h-full">
+                    <div className="flex items-center gap-2 text-[11px] font-bold text-indigo-700 uppercase tracking-widest border-b border-slate-50 pb-2 mb-4">
+                        <Briefcase size={14} className="text-indigo-500" /> Vertrag & Rolle
+                    </div>
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
                                 <label className="label-caps">Personal-Nr.</label>
-                                <input name="personnelNumber" className="input-standard font-mono text-indigo-600 font-bold" value={formData.personnelNumber} onChange={handleChange} />
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><BadgeIcon size={16} /></div>
+                                    <input name="personnelNumber" className="input-standard pl-9 font-mono text-indigo-600 font-bold" value={formData.personnelNumber} onChange={handleChange} />
+                                </div>
                             </div>
                             <div className="space-y-1">
                                 <label className="label-caps">Stundenlohn</label>
-                                <input type="number" step="0.01" name="hourlyWage" className="input-standard font-black text-emerald-700" value={formData.hourlyWage} onChange={handleChange} />
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><CreditCard size={16} /></div>
+                                    <input type="number" step="0.01" name="hourlyWage" className="input-standard pl-9 font-bold text-emerald-700" value={formData.hourlyWage} onChange={handleChange} />
+                                </div>
                             </div>
                         </div>
                         <div className="space-y-1">
@@ -181,12 +204,12 @@ export default function EditEmployeePage() {
                         </div>
                         <div className="space-y-1">
                             <label className="label-caps">System-Rolle</label>
-                            <div className="relative">
-                                <ShieldCheck size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-500" />
-                                <select name="role" value={formData.role} onChange={handleChange} className="input-standard pl-10 cursor-pointer font-bold bg-white">
-                                <option value="EMPLOYEE">Mitarbeiter</option>
-                                <option value="MANAGER">Manager</option>
-                                <option value="ADMIN">Administrator</option>
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><ShieldCheck size={16} /></div>
+                                <select name="role" value={formData.role} onChange={handleChange} className="input-standard pl-9 cursor-pointer font-bold bg-white appearance-none">
+                                    <option value="EMPLOYEE">Mitarbeiter</option>
+                                    <option value="MANAGER">Manager</option>
+                                    <option value="ADMIN">Administrator</option>
                                 </select>
                             </div>
                         </div>
@@ -197,11 +220,11 @@ export default function EditEmployeePage() {
         </div>
 
         {/* FLOATING FOOTER */}
-        <div className="fixed bottom-6 right-6 left-6 md:left-auto md:w-auto z-40">
-           <div className="bg-white/90 backdrop-blur-md p-2 rounded-[2rem] border border-slate-200 shadow-2xl flex items-center gap-2">
-              <button type="button" onClick={() => navigate('/dashboard/team')} className="px-6 py-3 rounded-xl text-slate-500 font-bold text-xs uppercase hover:bg-slate-100 transition-colors">Abbrechen</button>
-              <button type="submit" disabled={saving} className="btn-primary py-3 px-8 shadow-lg shadow-blue-600/20 min-w-[200px]">
-                {saving ? <Loader2 className="animate-spin" size={18} /> : <><Save size={18} /> Speichern</>}
+        <div className="fixed bottom-4 right-4 left-4 md:left-auto md:w-auto z-40">
+           <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-200 shadow-xl flex items-center gap-2 animate-in slide-in-from-bottom-2">
+              <button type="button" onClick={() => navigate('/dashboard/team')} className="px-4 py-2 rounded-lg text-slate-500 font-bold text-[11px] uppercase hover:bg-slate-50 transition-colors">Abbrechen</button>
+              <button type="submit" disabled={saving} className="btn-primary py-2.5 px-6 shadow-md min-w-[140px] text-[11px]">
+                {saving ? <Loader2 className="animate-spin" size={16} /> : <><Save size={16} /> Speichern</>}
               </button>
            </div>
         </div>

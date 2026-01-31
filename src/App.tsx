@@ -47,6 +47,7 @@ import PayrollPage from './pages/team/PayrollPage';
 
 // --- FINANZEN & SALES ---
 import OffersPage from './pages/sales/OffersPage';
+import CreateOffersPage from './pages/sales/CreateOfferPage';
 import InvoicesPage from './pages/invoices/InvoicesPage';
 import FinancePage from './pages/admin/FinancePage'; // <--- NEU: Finance Dashboard
 import ExpensesPage from './pages/finances/ExpensesPage';
@@ -56,6 +57,7 @@ import AuditLogs from './pages/AuditLogs';
 // --- LAGER & SONSTIGES ---
 import InventoryPage from './pages/inventory/InventoryPage';
 import SettingsPage from './pages/SettingsPage';
+import CreateInventoryPage from './pages/inventory/CreateInventoryPage';
 
 /**
  * Hilfskomponente für die Dashboard-Weiche
@@ -123,13 +125,14 @@ function App() {
               <Route path="customers/new" element={<CreateCustomerPage />} />
               <Route path="customers/edit/:id" element={<EditCustomerPage />} />
               <Route path="inventory" element={<InventoryPage />} />
+              <Route path="inventory/new" element={<CreateInventoryPage />} />
             </Route>
 
             {/* --- EXKLUSIVE ADMIN BEREICHE (Unternehmenssteuerung) --- */}
             <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']} />}>
               <Route path="services" element={<ServicesPage />} />
               <Route path="services/new" element={<CreateServicePage />} />
-              <Route path="services/:id" element={<EditServicePage />} />
+              <Route path="services/edit/:id" element={<EditServicePage />} />
               
               <Route path="contracts" element={<ContractsPage />} />
               <Route path="contracts/new" element={<CreateContractPage />} />
@@ -142,6 +145,7 @@ function App() {
               
               {/* FINANZEN */}
               <Route path="offers" element={<OffersPage />} />
+              <Route path="offers/new" element={<CreateOffersPage />} />
               <Route path="invoices" element={<InvoicesPage />} />
               <Route path="finance" element={<FinancePage />} /> {/* <--- NEU: Hier registriert */}
               <Route path="expenses" element={<ExpensesPage />} />

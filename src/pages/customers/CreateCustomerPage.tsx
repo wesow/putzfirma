@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Save, ArrowLeft, User, Building2, Mail, Phone, MapPin, 
-  Loader2, Send, Banknote, CreditCard, FileText 
+  Save, User, Building2, Mail, Phone, MapPin, 
+  Loader2, Send, Landmark, CreditCard, ChevronLeft, Layers, ShieldCheck
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../../lib/api';
@@ -15,7 +15,6 @@ export default function CreateCustomerPage() {
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', companyName: '', email: '', phone: '',
     street: '', zipCode: '', city: '',
-    // NEU: Finanzdaten
     iban: '', bic: '', vatId: '', taxId: ''
   });
 
@@ -31,7 +30,6 @@ export default function CreateCustomerPage() {
     try {
       const payload = {
         ...formData,
-        // Leere Strings zu undefined machen, damit DB sauber bleibt
         companyName: formData.companyName || undefined,
         phone: formData.phone || undefined,
         iban: formData.iban || undefined,
@@ -47,8 +45,7 @@ export default function CreateCustomerPage() {
       };
 
       await api.post('/customers', payload);
-      
-      toast.success(sendInvite ? 'Kunde erstellt & Einladung versendet!' : 'Kunde erfolgreich angelegt!', { id: toastId });
+      toast.success('Kunde erfolgreich angelegt!', { id: toastId });
       navigate('/dashboard/customers');
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || 'Fehler beim Speichern.';
@@ -59,84 +56,92 @@ export default function CreateCustomerPage() {
   };
 
   return (
-    <div className="page-container max-w-6xl mx-auto">
+    <div className="page-container">
       
-      {/* HEADER */}
-      <div className="mb-8">
-        <button 
-          onClick={() => navigate('/dashboard/customers')} 
-          className="text-[10px] text-slate-400 hover:text-blue-600 flex items-center gap-2 mb-4 transition-all font-black uppercase tracking-[0.2em] bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm"
-        >
-          <ArrowLeft size={14} /> Zurück
-        </button>
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      {/* --- HEADER SECTION --- */}
+      <div className="header-section">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate('/dashboard/customers')} 
+            className="btn-secondary !p-2"
+            title="Zurück"
+          >
+            <ChevronLeft size={18} />
+          </button>
           <div>
-            <h1 className="page-title text-3xl">Neuen Kunden anlegen</h1>
-            <p className="page-subtitle text-lg">Erfassen Sie Stammdaten und Zahlungsinformationen für SEPA.</p>
+            <h1 className="page-title text-base">Neuen Kunden anlegen</h1>
+            <p className="page-subtitle">Erfassen von Stammdaten und Finanzinformationen.</p>
           </div>
+        </div>
+
+        <div className="hidden md:flex items-center gap-2">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                CRM-System
+            </span>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <form onSubmit={handleSubmit} className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-4 pb-24">
         
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-24">
+        <div className="content-grid lg:grid-cols-12 gap-4">
           
-          {/* LINKE SPALTE: STAMMDATEN & ADRESSE */}
-          <div className="space-y-6">
+          {/* --- LINKS: STAMMDATEN & ADRESSE --- */}
+          <div className="lg:col-span-7 space-y-4">
             
-            {/* 1. STAMMDATEN */}
-            <div className="form-card space-y-6">
+            {/* 1. PERSÖNLICHE DATEN */}
+            <div className="form-card">
               <div className="form-section-title">
-                <User size={16} className="text-blue-500" /> Persönliche Daten
+                <User size={14} /> 1. Persönliche Daten & Firma
               </div>
               
               <div className="space-y-4">
                 <div className="space-y-1">
-                  <label className="label-caps">Firma (Optional)</label>
-                  <div className="relative">
-                    <Building2 size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input name="companyName" placeholder="GmbH, KG, etc." className="input-standard pl-10" value={formData.companyName} onChange={handleChange} />
+                  <label className="label-caps">Unternehmen / Organisation (Optional)</label>
+                  <div className="relative group">
+                    <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+                    <input name="companyName" placeholder="z.B. Muster GmbH" className="input-standard pl-10 font-bold" value={formData.companyName} onChange={handleChange} />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="label-caps">Vorname *</label>
-                    <input name="firstName" required placeholder="Max" className="input-standard font-bold" value={formData.firstName} onChange={handleChange} />
+                    <input name="firstName" required placeholder="Max" className="input-standard font-medium" value={formData.firstName} onChange={handleChange} />
                   </div>
                   <div className="space-y-1">
                     <label className="label-caps">Nachname *</label>
-                    <input name="lastName" required placeholder="Mustermann" className="input-standard font-bold" value={formData.lastName} onChange={handleChange} />
+                    <input name="lastName" required placeholder="Mustermann" className="input-standard font-medium" value={formData.lastName} onChange={handleChange} />
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="label-caps">E-Mail Adresse *</label>
-                  <div className="relative">
-                    <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input name="email" type="email" required placeholder="kontakt@firma.de" className="input-standard pl-10" value={formData.email} onChange={handleChange} />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="label-caps">Telefon</label>
-                  <div className="relative">
-                    <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input name="phone" placeholder="+49..." className="input-standard pl-10" value={formData.phone} onChange={handleChange} />
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                    <div className="space-y-1">
+                        <label className="label-caps text-blue-600">E-Mail (Rechnungsempfang) *</label>
+                        <div className="relative group">
+                            <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+                            <input name="email" type="email" required placeholder="max@beispiel.de" className="input-standard pl-10 font-bold" value={formData.email} onChange={handleChange} />
+                        </div>
+                    </div>
+                    <div className="space-y-1">
+                        <label className="label-caps">Telefonnummer</label>
+                        <div className="relative group">
+                            <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+                            <input name="phone" placeholder="+49 123..." className="input-standard pl-10" value={formData.phone} onChange={handleChange} />
+                        </div>
+                    </div>
                 </div>
               </div>
             </div>
 
-            {/* 2. ADRESSE */}
-            <div className="form-card space-y-6">
+            {/* 2. RECHNUNGSANSCHRIFT */}
+            <div className="form-card">
               <div className="form-section-title">
-                <MapPin size={16} className="text-blue-500" /> Rechnungsanschrift
+                <MapPin size={14} /> 2. Rechnungsanschrift
               </div>
               <div className="space-y-4">
                 <div className="space-y-1">
                   <label className="label-caps">Straße & Hausnummer *</label>
-                  <input name="street" required placeholder="Musterstraße 1" className="input-standard" value={formData.street} onChange={handleChange} />
+                  <input name="street" required placeholder="Hauptstraße 123" className="input-standard" value={formData.street} onChange={handleChange} />
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-1">
@@ -145,108 +150,103 @@ export default function CreateCustomerPage() {
                   </div>
                   <div className="col-span-2 space-y-1">
                     <label className="label-caps">Stadt *</label>
-                    <input name="city" required placeholder="Berlin" className="input-standard" value={formData.city} onChange={handleChange} />
+                    <input name="city" required placeholder="Musterstadt" className="input-standard" value={formData.city} onChange={handleChange} />
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* RECHTE SPALTE: FINANZEN & STATUS */}
-          <div className="space-y-6">
+          {/* --- RECHTE SPALTE: FINANZEN & STATUS --- */}
+          <div className="lg:col-span-5 space-y-4">
             
             {/* 3. FINANZEN (SEPA) */}
-            <div className="form-card space-y-6 border-l-4 border-l-emerald-500 h-fit">
-              <div className="form-section-title text-emerald-700">
-                <Banknote size={16} className="text-emerald-500" /> Zahlungsdaten & Steuern
+            <div className="form-card border-l-2 border-l-emerald-500">
+              <div className="form-section-title !text-emerald-600">
+                <Landmark size={14} /> 3. Zahlungsdaten & Steuern
               </div>
               
-              <div className="bg-emerald-50/50 border border-emerald-100 p-4 rounded-xl">
-                <p className="text-xs text-emerald-800 leading-relaxed">
-                  <strong>Hinweis für SEPA:</strong> Bitte hinterlegen Sie IBAN und BIC, um die automatische Lastschrift-Funktion für diesen Kunden zu aktivieren.
-                </p>
-              </div>
-
-              <div className="space-y-5">
+              <div className="space-y-4">
                 <div className="space-y-1">
-                  <label className="label-caps text-emerald-700">IBAN (Konto)</label>
-                  <div className="relative">
-                    <CreditCard size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500" />
+                  <label className="label-caps text-emerald-700">IBAN für SEPA-Lastschrift</label>
+                  <div className="relative group">
+                    <CreditCard size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500" />
                     <input 
                       name="iban" 
-                      placeholder="DE00 0000 0000 0000 0000 00" 
-                      className="input-standard pl-10 font-mono font-bold text-emerald-800 bg-emerald-50/30 focus:bg-white focus:border-emerald-500 focus:ring-emerald-200" 
+                      placeholder="DE00 0000..." 
+                      className="input-standard pl-10 font-mono font-bold text-emerald-800 bg-emerald-50/20 focus:bg-white" 
                       value={formData.iban} 
                       onChange={handleChange} 
                     />
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="label-caps">BIC (SWIFT)</label>
-                  <input name="bic" placeholder="GENO..." className="input-standard font-mono uppercase" value={formData.bic} onChange={handleChange} />
-                </div>
-
-                <div className="w-full border-t border-slate-100 my-2"></div>
-
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="label-caps">USt-IdNr.</label>
-                      <div className="relative">
-                         <FileText size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                         <input name="vatId" placeholder="DE..." className="input-standard pl-8" value={formData.vatId} onChange={handleChange} />
-                      </div>
+                        <label className="label-caps">BIC</label>
+                        <input name="bic" placeholder="BIC..." className="input-standard font-mono uppercase" value={formData.bic} onChange={handleChange} />
                     </div>
                     <div className="space-y-1">
-                      <label className="label-caps">Steuernummer</label>
-                      <input name="taxId" placeholder="00/000/..." className="input-standard" value={formData.taxId} onChange={handleChange} />
+                        <label className="label-caps">USt-IdNr.</label>
+                        <input name="vatId" placeholder="DE..." className="input-standard" value={formData.vatId} onChange={handleChange} />
                     </div>
                 </div>
               </div>
             </div>
 
-            {/* 4. EINLADUNG */}
+            {/* 4. PORTAL-AKTIVIERUNG */}
             <div 
               onClick={() => setSendInvite(!sendInvite)}
-              className={`p-6 rounded-[2rem] border transition-all cursor-pointer flex items-center justify-between gap-4 ${
-                sendInvite ? 'bg-blue-600 border-blue-700 shadow-xl shadow-blue-500/20' : 'bg-white border-slate-200 hover:border-blue-300'
+              className={`p-4 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-4 ${
+                sendInvite ? 'bg-blue-600 border-blue-700 shadow-lg shadow-blue-500/20' : 'bg-white border-slate-200 hover:border-blue-300'
               }`}
             >
-              <div className="flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${sendInvite ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400'}`}>
-                  <Send size={20} />
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${sendInvite ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                  <Send size={16} />
                 </div>
                 <div>
-                  <h4 className={`text-sm font-bold ${sendInvite ? 'text-white' : 'text-slate-900'}`}>Portal-Zugang senden</h4>
-                  <p className={`text-xs ${sendInvite ? 'text-blue-100' : 'text-slate-500'}`}>Kunde erhält E-Mail zur Aktivierung.</p>
+                  <h4 className={`text-[11px] font-bold uppercase tracking-wider ${sendInvite ? 'text-white' : 'text-slate-900'}`}>Kunden-Portal</h4>
+                  <p className={`text-[10px] font-medium ${sendInvite ? 'text-blue-100' : 'text-slate-500'}`}>Einladung zur Aktivierung senden</p>
                 </div>
               </div>
-              <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${sendInvite ? 'bg-emerald-400' : 'bg-slate-300'}`}>
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${sendInvite ? 'translate-x-6' : 'translate-x-1'}`} />
+              <div className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${sendInvite ? 'bg-emerald-400' : 'bg-slate-200'}`}>
+                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${sendInvite ? 'translate-x-5.5' : 'translate-x-1'}`} />
               </div>
+            </div>
+
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex gap-3">
+                <ShieldCheck size={18} className="text-slate-400 shrink-0" />
+                <p className="text-[10px] text-slate-500 leading-relaxed italic">
+                    Die erhobenen Daten werden ausschließlich zur Auftragsabwicklung und Rechnungsstellung gemäß GoBD verwendet.
+                </p>
             </div>
 
           </div>
         </div>
 
-        {/* FOOTER ACTIONS */}
-        <div className="fixed bottom-6 right-6 left-6 md:left-auto md:w-auto z-40">
-           <div className="bg-white/90 backdrop-blur-md p-2 rounded-[2rem] border border-slate-200 shadow-2xl flex items-center gap-2">
-              <button 
-                type="button" 
-                onClick={() => navigate('/dashboard/customers')} 
-                className="px-6 py-3 rounded-xl text-slate-500 font-bold text-xs uppercase hover:bg-slate-100 transition-colors"
-              >
-                Abbrechen
-              </button>
-              <button 
-                type="submit" 
-                disabled={loading} 
-                className="btn-primary py-3 px-8 shadow-lg shadow-blue-600/20 min-w-[200px]"
-              >
-                {loading ? <Loader2 className="animate-spin" size={18} /> : <><Save size={18} /> Kunde Speichern</>}
-              </button>
-           </div>
+        {/* --- FLOATING ACTION FOOTER --- */}
+        <div className="fixed bottom-4 left-4 right-4 md:left-auto md:w-[450px] z-50">
+          <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-2xl flex items-center gap-2">
+            <button 
+              type="button" 
+              onClick={() => navigate('/dashboard/customers')} 
+              className="flex-1 px-4 py-2.5 rounded-xl text-slate-500 font-bold text-[11px] uppercase tracking-wider hover:bg-slate-100 transition-colors"
+            >
+              Abbrechen
+            </button>
+            <button 
+              type="submit" 
+              disabled={loading} 
+              className="btn-primary flex-[2] py-2.5 shadow-lg shadow-blue-600/20"
+            >
+              {loading ? (
+                <Loader2 className="animate-spin" size={16} />
+              ) : (
+                <><Save size={16} /> Kunde anlegen</>
+              )}
+            </button>
+          </div>
         </div>
 
       </form>

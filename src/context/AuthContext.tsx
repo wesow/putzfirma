@@ -25,16 +25,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // 3. Provider Komponente
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  
-  // WICHTIG: Startet IMMER auf true
   const [loading, setLoading] = useState<boolean>(true);
 
-  // === A. SESSION PRÜFEN ===
+  // === A. SESSION PRÜFEN (Beim App-Start) ===
   const refreshUser = async () => {
     const token = localStorage.getItem('token');
     
-    console.log("🔄 [AuthContext] Prüfe Session...", token ? "Token vorhanden" : "Kein Token");
-
     if (!token) {
       setUser(null);
       setLoading(false);
@@ -45,14 +41,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const userData = await getCurrentUser();
       
       if (userData) {
-        console.log("✅ [AuthContext] User erfolgreich geladen:", userData.email);
         setUser(userData);
       } else {
         throw new Error("Keine Userdaten erhalten");
       }
     } catch (error) {
-      console.error("❌ [AuthContext] Session ungültig:", error);
+      console.error("❌ [AuthContext] Session ungültig oder abgelaufen:", error);
+      // Wir löschen hier nicht sofort alles, da der Axios-Interceptor 
+      // in der api.ts bereits einen Refresh-Versuch unternommen hat.
+      // Wenn wir hier landen, ist die Session wirklich tot.
       localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
       setUser(null);
     } finally {
       setLoading(false);
@@ -63,29 +62,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     refreshUser();
   }, []);
 
-  // === B. LOGIN ===
+  // === B. LOGIN (Tokens & User-Daten speichern) ===
   const login = (data: any) => {
-    console.log("🔓 [AuthContext] Login wird ausgeführt", data);
+    console.log("🔓 [AuthContext] Login erfolgreich", data);
 
-    if (data.accessToken || data.token) {
-      localStorage.setItem('token', data.accessToken || data.token);
+    // Speichere beide Tokens im LocalStorage
+    if (data.accessToken) {
+      localStorage.setItem('token', data.accessToken);
+    }
+    if (data.refreshToken) {
+      localStorage.setItem('refreshToken', data.refreshToken);
     }
 
+    // User-Daten setzen
     const userObj = data.user ? data.user : data;
     setUser(userObj);
     setLoading(false);
   };
 
-  // === C. LOGOUT ===
+  // === C. LOGOUT (Clean Up) ===
   const logout = () => {
-    console.log("🔒 [AuthContext] Logout");
+    console.log("🔒 [AuthContext] Logout wird ausgeführt");
 
+    // Optionaler API-Call fürs Backend (Token invalidieren)
     apiLogout().catch((err) => console.warn("Logout API Warnung:", err));
     
-    localStorage.removeItem('token');
+    // LocalStorage komplett leeren
     localStorage.clear();
     setUser(null);
     
+    // Redirect zum Login
     window.location.href = '/login';
   };
 

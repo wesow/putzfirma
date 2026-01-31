@@ -6,25 +6,27 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../lib/api'; 
 import { registerWithInvite } from '../services/auth.service';
 
+// Kompaktere Input-Komponente
 const InputField = ({ label, icon: Icon, name, type = "text", placeholder, register, validation, errors }: any) => (
-  <div className="space-y-1.5 text-left">
+  <div className="space-y-1 text-left">
     <label className="label-caps !ml-0">{label}</label>
     <div className="relative group">
-      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
-        <Icon size={18} />
+      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+        <Icon size={16} />
       </div>
       <input
         type={type}
         {...register(name, validation)}
         autoComplete={type === "password" ? "new-password" : "off"} 
-        className={`input-standard pl-12 py-3.5 font-bold ${
+        // Nutzung der globalen input-standard Klasse, etwas angepasst für Icon
+        className={`input-standard pl-10 !py-2.5 ${
           errors[name] ? 'border-red-300 focus:ring-red-200' : ''
         }`}
         placeholder={placeholder}
       />
     </div>
     {errors[name] && (
-      <span className="text-[10px] font-black text-red-500 uppercase tracking-widest mt-1 block">
+      <span className="text-[10px] font-bold text-red-500 uppercase tracking-wide mt-1 block">
         {errors[name].message}
       </span>
     )}
@@ -65,7 +67,7 @@ export default function RegisterPage() {
 
   const onSubmit = async (data: any) => {
     setIsLoading(true);
-    const toastId = toast.loading("Account wird im System konfiguriert...");
+    const toastId = toast.loading("Account wird konfiguriert...");
     
     try {
       await registerWithInvite({
@@ -75,7 +77,7 @@ export default function RegisterPage() {
         lastName: data.lastName
       });
 
-      toast.success('Konto erfolgreich aktiviert!', { id: toastId });
+      toast.success('Erfolgreich aktiviert!', { id: toastId });
       setTimeout(() => navigate('/login'), 1500);
       
     } catch (error: any) {
@@ -89,8 +91,8 @@ export default function RegisterPage() {
   if (isVerifying) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 bg-dot-pattern">
-        <Loader2 className="animate-spin text-blue-600 mb-4" size={44} />
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Validierung läuft...</p>
+        <Loader2 className="animate-spin text-blue-600 mb-3" size={32} />
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Validierung läuft...</p>
       </div>
     );
   }
@@ -98,20 +100,20 @@ export default function RegisterPage() {
   // FEHLER-ZUSTAND: UNGÜLTIGER TOKEN
   if (!token || !isValid) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-6 font-sans bg-dot-pattern">
-        <div className="max-w-md w-full bg-white p-12 rounded-[3rem] shadow-2xl shadow-slate-200 border border-white text-center animate-in fade-in zoom-in duration-500">
-          <div className="mx-auto bg-red-50 w-24 h-24 rounded-[2rem] flex items-center justify-center mb-8 shadow-inner border border-red-100">
-            <AlertCircle className="h-10 w-10 text-red-500" />
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4 font-sans bg-dot-pattern">
+        <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl shadow-slate-200 border border-white text-center animate-in fade-in zoom-in duration-500">
+          <div className="mx-auto bg-red-50 w-16 h-16 rounded-xl flex items-center justify-center mb-6 shadow-sm border border-red-100">
+            <AlertCircle className="h-8 w-8 text-red-500" />
           </div>
-          <h2 className="text-2xl font-black text-slate-900 mb-4 uppercase tracking-tight">Sicherheits-Fehler</h2>
-          <p className="text-slate-500 mb-10 leading-relaxed font-medium">
+          <h2 className="text-lg font-bold text-slate-900 mb-2 uppercase tracking-wide">Sicherheits-Fehler</h2>
+          <p className="text-slate-500 mb-8 leading-relaxed font-medium text-[13px]">
             Dieser Aktivierungslink ist ungültig, abgelaufen oder wurde bereits verarbeitet.
           </p>
           <Link 
             to="/login" 
-            className="btn-primary w-full !py-5 justify-center shadow-xl shadow-blue-500/20 uppercase tracking-[0.2em] font-black text-[10px]"
+            className="btn-primary w-full justify-center shadow-lg"
           >
-            Zur Anmeldung <ArrowRight size={18} />
+            Zur Anmeldung <ArrowRight size={16} className="ml-2" />
           </Link>
         </div>
       </div>
@@ -120,35 +122,35 @@ export default function RegisterPage() {
 
   // REGISTRIERUNGS-FORMULAR
   return (
-    <div className="min-h-screen flex flex-col justify-center py-16 px-6 bg-slate-50 font-sans bg-dot-pattern overflow-hidden">
+    <div className="min-h-screen flex flex-col justify-center py-10 px-4 bg-slate-50 font-sans bg-dot-pattern overflow-hidden">
       
-      <div className="sm:mx-auto sm:w-full sm:max-w-lg text-center">
-        <div className="inline-flex justify-center mb-10 bg-blue-600 p-4 rounded-[2rem] shadow-2xl shadow-blue-600/30 animate-bounce-slow">
-          <ShieldCheck className="h-10 w-10 text-white" />
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
+        <div className="inline-flex justify-center mb-6 bg-blue-600 p-3 rounded-xl shadow-lg shadow-blue-600/20">
+          <ShieldCheck className="h-6 w-6 text-white" />
         </div>
-        <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase mb-2">Identität verifizieren</h2>
-        <p className="text-slate-500 font-medium text-lg">
-          Willkommen bei GlanzOps. Erstellen Sie Ihr Profil für <br/>
-          <span className="text-blue-600 font-black decoration-blue-200 underline underline-offset-4">{inviteData?.email}</span>
+        <h2 className="text-2xl font-bold text-slate-900 tracking-tight mb-2">Identität verifizieren</h2>
+        <p className="text-slate-500 font-medium text-sm">
+          Erstellen Sie Ihr Profil für <br/>
+          <span className="text-blue-600 font-bold">{inviteData?.email}</span>
         </p>
       </div>
 
-      <div className="mt-12 sm:mx-auto sm:w-full sm:max-w-lg">
-        <div className="bg-white py-12 px-10 shadow-2xl shadow-slate-200 rounded-[3rem] border border-white animate-in slide-in-from-bottom-10 duration-700 relative">
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-8 shadow-xl shadow-slate-200/60 rounded-2xl border border-white animate-in slide-in-from-bottom-8 duration-500 relative">
           
           {/* Decorative Corner */}
-          <div className="absolute top-0 right-0 p-8 opacity-5">
-            <Sparkles size={80} className="text-blue-600" />
+          <div className="absolute top-0 right-0 p-6 opacity-5">
+            <Sparkles size={60} className="text-blue-600" />
           </div>
 
-          <form className="space-y-8 relative z-10" onSubmit={handleSubmit(onSubmit)}>
+          <form className="space-y-5 relative z-10" onSubmit={handleSubmit(onSubmit)}>
             
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-4">
               <InputField 
                 label="Vorname" 
                 icon={User} 
                 name="firstName" 
-                placeholder="z.B. Max" 
+                placeholder="Max" 
                 register={register} 
                 errors={errors} 
                 validation={{ required: 'Erforderlich' }} 
@@ -173,8 +175,8 @@ export default function RegisterPage() {
               register={register} 
               errors={errors} 
               validation={{ 
-                required: 'Bitte wählen Sie ein Passwort', 
-                minLength: { value: 8, message: 'Mindestens 8 Zeichen' } 
+                required: 'Passwort erforderlich', 
+                minLength: { value: 8, message: 'Min. 8 Zeichen' } 
               }} 
             />
 
@@ -187,35 +189,35 @@ export default function RegisterPage() {
               register={register} 
               errors={errors} 
               validation={{ 
-                validate: (val: string) => val === password || 'Passwörter nicht identisch' 
+                validate: (val: string) => val === password || 'Passwörter stimmen nicht übere' 
               }} 
             />
 
-            <div className="pt-4">
+            <div className="pt-2">
               <button
                 type="submit"
                 disabled={isLoading}
-                className="btn-primary w-full !py-5 justify-center shadow-2xl shadow-blue-600/30 uppercase tracking-[0.2em] font-black text-[11px]"
+                className="btn-primary w-full justify-center shadow-lg"
               >
                 {isLoading ? (
-                  <Loader2 className="animate-spin h-6 w-6" />
+                  <Loader2 className="animate-spin h-4 w-4" />
                 ) : (
-                  <>Konto jetzt aktivieren</>
+                  <>Konto aktivieren</>
                 )}
               </button>
             </div>
           </form>
           
-          <div className="mt-12 text-center border-t border-slate-50 pt-8">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">
+          <div className="mt-8 text-center border-t border-slate-50 pt-6">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
               GlanzOps Security &bull; Encrypted Session
             </p>
           </div>
         </div>
 
         {/* Support Link */}
-        <p className="mt-8 text-center text-xs text-slate-400 font-bold uppercase tracking-widest">
-            Probleme beim Login? <Link to="/support" className="text-blue-500 hover:text-blue-600 ml-1">Support kontaktieren</Link>
+        <p className="mt-6 text-center text-[11px] text-slate-400 font-bold uppercase tracking-wide">
+            Probleme? <Link to="/support" className="text-blue-600 hover:text-blue-700 ml-1 transition-colors">Support kontaktieren</Link>
         </p>
       </div>
     </div>

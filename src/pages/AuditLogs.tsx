@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Shield, Clock, User, Activity, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
+import { Shield, Clock, Activity, Loader2, RefreshCw } from 'lucide-react';
 import api from '../lib/api';
 
 interface AuditLog {
@@ -23,7 +23,7 @@ export default function AuditLogs() {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/stats/audit'); // Wir nutzen die Route im stats.controller
+      const res = await api.get('/stats/audit'); 
       setLogs(res.data);
     } catch (error) {
       console.error("Fehler beim Laden der Logs");
@@ -42,75 +42,90 @@ export default function AuditLogs() {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container space-y-4">
+      
+      {/* HEADER SECTION */}
       <div className="header-section">
         <div className="text-left">
-          <h1 className="page-title text-3xl font-black tracking-tight flex items-center gap-3">
-            Sicherheits-Audit <Shield className="text-blue-600" size={28} />
+          <h1 className="page-title flex items-center gap-2">
+            Sicherheits-Audit <Shield className="text-blue-600" size={18} />
           </h1>
-          <p className="page-subtitle text-lg">Vollständige Protokollierung aller Systemaktivitäten.</p>
+          <p className="page-subtitle">Vollständige Protokollierung aller Systemaktivitäten.</p>
         </div>
-        <button onClick={fetchLogs} className="btn-secondary !p-3.5">
-          <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
+        <button onClick={fetchLogs} className="btn-secondary !p-2 !px-3">
+          <RefreshCw size={14} className={loading ? "animate-spin text-blue-600" : "text-slate-400"} />
         </button>
       </div>
 
-      <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+      {/* TABLE CONTAINER (Compact) */}
+      <div className="table-container flex flex-col h-full shadow-sm border border-slate-200">
+        <div className="overflow-x-auto flex-1 bg-white">
+          <table className="table-main">
             <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Zeitpunkt</th>
-                <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Benutzer</th>
-                <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Aktion</th>
-                <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Objekt</th>
-                <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">ID / Info</th>
+              <tr className="table-head">
+                <th className="table-cell w-40">Zeitpunkt</th>
+                <th className="table-cell">Benutzer</th>
+                <th className="table-cell">Aktion</th>
+                <th className="table-cell">Objekt</th>
+                <th className="table-cell text-right">ID</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="p-20 text-center">
-                    <Loader2 className="animate-spin mx-auto text-blue-600 mb-4" size={32} />
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Lade Protokolle...</p>
+                  <td colSpan={5} className="py-20 text-center">
+                    <Loader2 className="animate-spin mx-auto text-blue-600 mb-3" size={32} />
+                    <p className="font-bold text-[10px] text-slate-400 uppercase tracking-widest">Lade Protokolle...</p>
                   </td>
                 </tr>
-              ) : logs.map((log) => (
-                <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="p-6">
-                    <div className="flex items-center gap-2 text-slate-600 font-bold text-xs">
-                      <Clock size={14} className="text-slate-300" />
-                      {new Date(log.createdAt).toLocaleString('de-DE')}
-                    </div>
-                  </td>
-                  <td className="p-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-black text-[10px]">
-                        {log.user ? log.user.firstName[0] : <Activity size={12} />}
-                      </div>
-                      <div>
-                        <p className="text-xs font-black text-slate-800 uppercase tracking-tight">
-                          {log.user ? `${log.user.firstName} ${log.user.lastName}` : 'System / Gast'}
-                        </p>
-                        {log.user && <p className="text-[10px] text-slate-400">{log.user.email}</p>}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-6">
-                    <span className={`px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-widest ${getActionColor(log.action)}`}>
-                      {log.action.replace(/_/g, ' ')}
-                    </span>
-                  </td>
-                  <td className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                    {log.entity}
-                  </td>
-                  <td className="p-6">
-                    <code className="text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-600 font-mono">
-                      {log.entityId}
-                    </code>
-                  </td>
+              ) : logs.length === 0 ? (
+                <tr>
+                    <td colSpan={5} className="py-20 text-center text-slate-400 text-xs italic">
+                        Keine Logs vorhanden.
+                    </td>
                 </tr>
-              ))}
+              ) : (
+                logs.map((log) => (
+                  <tr key={log.id} className="table-row group">
+                    <td className="table-cell text-slate-500 font-mono text-[11px]">
+                      <div className="flex items-center gap-2">
+                        <Clock size={12} className="text-slate-300" />
+                        {new Date(log.createdAt).toLocaleString('de-DE')}
+                      </div>
+                    </td>
+                    
+                    <td className="table-cell">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-md bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-[10px] border border-slate-200">
+                          {log.user ? log.user.firstName[0] : <Activity size={10} />}
+                        </div>
+                        <div className="leading-tight">
+                          <p className="font-bold text-[12px] text-slate-700">
+                            {log.user ? `${log.user.firstName} ${log.user.lastName}` : 'System / Gast'}
+                          </p>
+                          {log.user && <p className="text-[10px] text-slate-400">{log.user.email}</p>}
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="table-cell">
+                      <span className={`px-2 py-0.5 rounded-md border text-[9px] font-bold uppercase tracking-wide inline-block ${getActionColor(log.action)}`}>
+                        {log.action.replace(/_/g, ' ')}
+                      </span>
+                    </td>
+
+                    <td className="table-cell font-medium text-slate-600 uppercase text-[10px] tracking-wide">
+                      {log.entity}
+                    </td>
+
+                    <td className="table-cell text-right">
+                      <code className="text-[10px] bg-slate-50 px-1.5 py-0.5 rounded text-slate-400 font-mono border border-slate-100 group-hover:border-slate-200 transition-colors">
+                        {log.entityId.substring(0, 8)}...
+                      </code>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

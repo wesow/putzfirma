@@ -1,61 +1,80 @@
 import axios from 'axios';
 
-// ==========================================
-// KONFIGURATION
-// ==========================================
-// WICHTIG: Prüfe, auf welchem Port dein Backend läuft! (Meist 5000)
-// VITE_API_URL kommt aus deiner .env Datei im Frontend-Ordner.
 const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: baseURL,
-  withCredentials: true, // Wichtig für Cookies (Refresh Token)
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  withCredentials: true, // ZWINGEND: Damit sendet der Browser den Cookie automatisch mit
 });
 
-// ==========================================
-// 1. REQUEST INTERCEPTOR (Token anhängen)
-// ==========================================
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+let isRefreshing = false;
+let failedQueue: any[] = [];
 
-// ==========================================
-// 2. RESPONSE INTERCEPTOR (Fehlerbehandlung)
-// ==========================================
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(prom => {
+    if (error) prom.reject(error);
+    else prom.resolve(token);
+  });
+  failedQueue = [];
+};
+
+// Request Interceptor: Access-Token aus LocalStorage mitschicken
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Response Interceptor: Wenn 401 kommt, Refresh versuchen
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    // Wenn 401 (Unauthorized) kommt
-    if (error.response && error.response.status === 401) {
-      
-      // Prüfen: War das ein Login-Versuch? Wenn ja, nicht redirecten (damit man die Fehlermeldung sieht)
-      const isAuthRequest = error.config.url.includes('/auth/login') || error.config.url.includes('/auth/register');
+  async (error) => {
+    const originalRequest = error.config;
 
-      if (!isAuthRequest) {
-        // Nur redirecten, wenn wir NICHT eh schon auf der Login-Seite sind
-        if (window.location.pathname !== '/login') {
-            console.warn('Sitzung abgelaufen oder ungültig. Logout...');
-            
-            // Alles löschen
-            localStorage.clear();
-            
-            // Weiterleitung
-            window.location.href = '/login';
-        }
+    // Falls 401 kommt und es kein Login-Versuch war
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(token => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return api(originalRequest);
+          })
+          .catch(err => Promise.reject(err));
       }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      return new Promise((resolve, reject) => {
+        // Wir senden ein leeres POST, da der Token im Cookie steckt
+        axios.post(`${baseURL}/auth/refresh`, {}, { withCredentials: true })
+          .then(({ data }) => {
+            const newToken = data.accessToken;
+            localStorage.setItem('token', newToken);
+            
+            api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            
+            processQueue(null, newToken);
+            resolve(api(originalRequest));
+          })
+          .catch((err) => {
+            processQueue(err, null);
+            // Wenn Refresh scheitert: Alles putzen und raus
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+            reject(err);
+          })
+          .finally(() => {
+            isRefreshing = false;
+          });
+      });
     }
+
     return Promise.reject(error);
   }
 );

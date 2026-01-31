@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   Plus, FileText, CalendarClock, Search, 
   Repeat, AlertCircle, Loader2, CheckCircle, 
-  PauseCircle, MapPin, Trash2, Play, Coffee, X, PenTool, FileSignature, ArrowRight
+  PauseCircle, MapPin, Trash2, Play, Coffee, X, PenTool, FileSignature, ChevronRight
 } from 'lucide-react';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
 import SignatureModal from '../../components/SignatureModal';
+import ViewSwitcher from '../../components/ViewSwitcher';
 
 interface Contract {
   id: string;
@@ -22,9 +23,11 @@ interface Contract {
 }
 
 export default function ContractsPage() {
+  const navigate = useNavigate();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState<'GRID' | 'TABLE'>('GRID');
   const [showPauseModal, setShowPauseModal] = useState<Contract | null>(null);
   const [pauseData, setPauseData] = useState({ startDate: '', endDate: '', reason: '' });
   const [signContractData, setSignContractData] = useState<{id: string, name: string} | null>(null);
@@ -82,7 +85,7 @@ export default function ContractsPage() {
   };
 
   const translateInterval = (interval: string) => {
-    const map: Record<string, string> = { 'WEEKLY': 'WÖCHENTLICH', 'BIWEEKLY': 'ALLE 2 WOCHEN', 'MONTHLY': 'MONATLICH', 'ONCE': 'EINMALIG' };
+    const map: Record<string, string> = { 'WEEKLY': 'WÖCHENTLICH', 'BIWEEKLY': '14-TÄGIG', 'MONTHLY': 'MONATLICH', 'ONCE': 'EINMALIG' };
     return map[interval] || interval;
   };
 
@@ -96,148 +99,218 @@ export default function ContractsPage() {
   return (
     <div className="page-container">
       
-      {/* HEADER */}
+      {/* --- HEADER SECTION --- */}
       <div className="header-section">
-        <div className="text-left">
-          <h1 className="page-title">Verträge & Aufträge</h1>
-          <p className="page-subtitle text-slate-500 font-medium">Verwalten Sie wiederkehrende Zyklen und Einzelaufträge.</p>
+        <div>
+          <h1 className="page-title">Vertragsmanagement</h1>
+          <p className="page-subtitle">Verwaltung wiederkehrender Zyklen und aktiver Dienstleistungsverträge.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input type="text" placeholder="Vertrag suchen..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="input-standard pl-10" />
-          </div>
-          <Link to="/dashboard/contracts/new" className="btn-primary shadow-xl shadow-blue-500/20">
-            <Plus size={18} /> <span>Neuer Vertrag</span>
-          </Link>
+
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+           <div className="flex items-center gap-2 w-full sm:w-auto bg-slate-50 p-1 rounded-lg border border-slate-200">
+              <ViewSwitcher viewMode={viewMode} onViewChange={setViewMode} />
+              <div className="w-px h-6 bg-slate-200 mx-1 hidden sm:block"></div>
+              <div className="relative flex-1 sm:w-48">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <input 
+                  type="text" 
+                  placeholder="Suchen..." 
+                  value={searchTerm} 
+                  onChange={(e) => setSearchTerm(e.target.value)} 
+                  className="w-full bg-white border-none rounded-md py-1.5 pl-8 pr-2 text-[12px] focus:ring-0 placeholder:text-slate-400 font-medium" 
+                />
+              </div>
+           </div>
+
+           <button onClick={() => navigate('/dashboard/contracts/new')} className="btn-primary w-full sm:w-auto whitespace-nowrap">
+             <Plus size={16} /> Neuer Vertrag
+           </button>
         </div>
       </div>
 
-      {/* CONTENT */}
+      {/* --- CONTENT AREA --- */}
       {loading ? (
-        <div className="py-40 flex flex-col items-center justify-center text-slate-400">
-          <Loader2 className="animate-spin mb-4 text-blue-600" size={44} />
-          <span className="font-black text-[10px] uppercase tracking-[0.2em] italic">Synchronisiere...</span>
+        <div className="flex-1 flex flex-col items-center justify-center min-h-[400px]">
+          <Loader2 className="animate-spin text-blue-600 mb-3" size={32} />
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest italic">Synchronisiere Vertragsdaten...</span>
         </div>
       ) : filteredContracts.length === 0 ? (
-        <div className="py-24 text-center bg-white rounded-[2.5rem] border border-dashed border-slate-200 shadow-sm">
-          <AlertCircle className="h-12 w-12 text-slate-200 mx-auto mb-4" />
-          <p className="text-slate-400 font-black uppercase text-xs tracking-widest">Keine Verträge gefunden</p>
+        <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50 m-4 py-20">
+           <FileText size={40} className="text-slate-200 mb-3" />
+           <p className="text-slate-500 font-bold text-sm">Keine Verträge gefunden</p>
+        </div>
+      ) : viewMode === 'GRID' ? (
+        
+        /* --- GRID VIEW (IDENTISCH ZU TEAM/KUNDEN) --- */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-in fade-in duration-500 pb-safe">
+          {filteredContracts.map((contract) => (
+            <div key={contract.id} className="employee-card group h-full">
+              {/* Farbstreifen oben */}
+              <div className={`absolute top-0 left-0 w-full h-1 ${contract.isActive ? 'bg-blue-500' : 'bg-slate-300'}`}></div>
+              
+              <div className="flex justify-between items-start mb-4 pt-1">
+                <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black text-white shadow-sm shrink-0 ${contract.isActive ? 'bg-blue-500' : 'bg-slate-300'}`}>
+                        {contract.customer.firstName.charAt(0)}{contract.customer.lastName.charAt(0)}
+                    </div>
+                    <div className="text-left overflow-hidden">
+                        <div className="flex items-center gap-1.5">
+                          <h3 className="font-bold text-slate-900 text-sm leading-tight truncate w-24">
+                              {getCustomerName(contract.customer)}
+                          </h3>
+                          {contract.isSigned && (
+                             <span className="text-[8px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-1 py-0.5 rounded font-black uppercase tracking-tighter">Signed</span>
+                          )}
+                        </div>
+                        <span className={`status-badge mt-1 ${contract.isActive ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
+                            {contract.isActive ? 'AKTIV' : 'PAUSIERT'}
+                        </span>
+                    </div>
+                </div>
+                
+                <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
+                   <button onClick={() => handleDelete(contract.id)} className="btn-icon-only hover:text-red-600"><Trash2 size={14} /></button>
+                </div>
+              </div>
+
+              <div className="space-y-2 mb-4 flex-1">
+                <div className="flex items-center gap-2 text-[11px] text-blue-600 font-bold bg-blue-50 p-1.5 rounded border border-blue-100">
+                  <FileText size={12} className="shrink-0" /> <span className="truncate uppercase tracking-tight">{contract.service.name}</span>
+                </div>
+                
+                <div className="flex flex-col gap-1 px-1.5 pt-1">
+                   <div className="flex items-center gap-2 text-[10px] text-slate-500 font-medium">
+                      <Repeat size={10} className="text-slate-300" /> {translateInterval(contract.interval)}
+                   </div>
+                   {contract.address && (
+                      <div className="flex items-start gap-2 text-[10px] text-slate-400 font-medium">
+                        <MapPin size={10} className="text-slate-300 mt-0.5" /> 
+                        <span className="leading-tight">{contract.address.street}, {contract.address.city}</span>
+                      </div>
+                   )}
+                </div>
+
+                <div className="mt-3 p-2 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <CalendarClock size={14} className={contract.isActive ? 'text-blue-500' : 'text-slate-300'} />
+                        <span className={`text-[11px] font-bold ${contract.isActive ? 'text-slate-700' : 'text-slate-400'}`}>
+                           {new Date(contract.nextExecutionDate).toLocaleDateString('de-DE')}
+                        </span>
+                    </div>
+                    <span className="text-[9px] font-black text-slate-300 uppercase">Nächster Termin</span>
+                </div>
+              </div>
+              
+              <div className="pt-3 border-t border-slate-50 flex items-center justify-end gap-2 mt-auto">
+                  {!contract.isSigned && (
+                      <button onClick={() => setSignContractData({ id: contract.id, name: getCustomerName(contract.customer) })} className="btn-secondary !py-1 !px-2 !text-[10px] gap-1">
+                        <PenTool size={12} /> Sign
+                      </button>
+                  )}
+                  {contract.interval !== 'ONCE' && (
+                      <>
+                        <button onClick={() => setShowPauseModal(contract)} className="btn-secondary !py-1 !px-2 !text-[10px] gap-1">
+                          <Coffee size={12} /> Pause
+                        </button>
+                        <button onClick={() => handleToggleStatus(contract)} className={`btn-secondary !py-1 !px-2 !text-[10px] gap-1 ${contract.isActive ? 'hover:!bg-amber-50 hover:!text-amber-600' : 'hover:!bg-emerald-50 hover:!text-emerald-600'}`}>
+                          {contract.isActive ? <PauseCircle size={12} /> : <Play size={12} />} {contract.isActive ? 'Stop' : 'Start'}
+                        </button>
+                      </>
+                  )}
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
-        <div className="table-container shadow-xl shadow-slate-200/50 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <table className="table-main">
-            <thead className="table-head">
-              <tr>
-                <th className="table-cell">Vertragspartner</th>
-                <th className="table-cell">Leistungsumfang</th>
-                <th className="table-cell">Nächste Ausführung</th>
-                <th className="table-cell text-center">Status</th>
-                <th className="table-cell text-right">Aktionen</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredContracts.map((contract) => (
-                <tr key={contract.id} className="table-row group">
-                  <td className="table-cell">
-                    <div className="flex items-center gap-2">
-                        <div className="font-black text-slate-900 text-sm leading-tight">{getCustomerName(contract.customer)}</div>
-                        {contract.isSigned && (
-                            <div className="text-[9px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded flex items-center gap-1 font-bold" title="Digital unterschrieben">
-                                <FileSignature size={10} /> Signed
-                            </div>
-                        )}
-                    </div>
-                    {contract.address && (
-                      <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-bold uppercase mt-1 italic tracking-tight">
-                        <MapPin size={10} className="text-slate-300" /> {contract.address.street}, {contract.address.city}
-                      </div>
-                    )}
-                  </td>
-                  <td className="table-cell">
-                    <div className="flex items-center gap-2 font-black text-blue-600 text-xs mb-1.5 uppercase tracking-tighter">
-                      <FileText size={14} className="text-blue-400" /> {contract.service.name}
-                    </div>
-                    <span className="status-badge bg-slate-50 text-slate-500 border-slate-200 !rounded-md font-black text-[9px]">
-                      <Repeat size={10} className="mr-1" /> {translateInterval(contract.interval)}
-                    </span>
-                  </td>
-                  <td className="table-cell">
-                    {contract.interval === 'ONCE' && !contract.isActive ? (
-                        <span className="text-xs text-slate-400 italic">Erledigt</span>
-                    ) : (
+        /* --- TABLE VIEW (WIE IM LETZTEN SCHRITT) --- */
+        <div className="table-container animate-in slide-in-from-bottom-2 duration-300 pb-safe">
+          <div className="flex-1 custom-scrollbar overflow-y-auto">
+            <table className="table-main">
+                <thead className="table-head sticky top-0 z-10">
+                <tr>
+                    <th className="px-4 py-3 text-left">Vertragspartner</th>
+                    <th className="px-4 py-3 text-left">Leistung & Turnus</th>
+                    <th className="px-4 py-3 text-left">Nächster Termin</th>
+                    <th className="px-4 py-3 text-center">Status</th>
+                    <th className="px-4 py-3 text-right pr-4">Aktionen</th>
+                </tr>
+                </thead>
+                <tbody>
+                {filteredContracts.map((contract) => (
+                    <tr key={contract.id} className="table-row group">
+                      <td className="table-cell pl-4 align-middle">
                         <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-inner border ${contract.isActive ? 'bg-blue-50 text-blue-600 border-blue-100/50' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
-                                <CalendarClock size={20} />
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black text-white shadow-sm shrink-0 ${contract.isActive ? 'bg-blue-500' : 'bg-slate-300'}`}>
+                                {contract.customer.firstName.charAt(0)}{contract.customer.lastName.charAt(0)}
                             </div>
-                            <div className="text-left">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Geplant am</p>
-                                <span className={`font-black text-sm tracking-tight ${contract.isActive ? 'text-slate-700' : 'text-slate-400 line-through'}`}>
-                                {new Date(contract.nextExecutionDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                                </span>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                  <div className="font-bold text-slate-800 leading-tight">{getCustomerName(contract.customer)}</div>
+                                  {contract.isSigned && <span className="text-[8px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-1 py-0.5 rounded font-black uppercase">Signed</span>}
+                                </div>
+                                {contract.address && <div className="text-[10px] text-slate-400 font-medium">{contract.address.street}, {contract.address.city}</div>}
                             </div>
                         </div>
-                    )}
-                  </td>
-                  <td className="table-cell text-center">
-                    {contract.isActive ? (
-                      <span className="status-badge bg-emerald-50 text-emerald-700 border-emerald-100 font-black text-[10px] shadow-sm"><CheckCircle size={10} className="mr-1" /> AKTIV</span>
-                    ) : (
-                      <span className="status-badge bg-slate-50 text-slate-400 border-slate-200 font-black text-[10px]"><PauseCircle size={10} className="mr-1" /> {contract.interval === 'ONCE' ? 'BEENDET' : 'PAUSIERT'}</span>
-                    )}
-                  </td>
-                  <td className="table-cell text-right">
-                    <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                      {!contract.isSigned && (
-                          <button onClick={() => setSignContractData({ id: contract.id, name: getCustomerName(contract.customer) })} className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-xl transition-all" title="Unterschreiben"><PenTool size={16} /></button>
-                      )}
-                      {contract.interval !== 'ONCE' && (
-                          <>
-                            <button onClick={() => setShowPauseModal(contract)} className="p-2 text-amber-500 hover:bg-amber-50 rounded-xl transition-all" title="Pause"><Coffee size={16} /></button>
-                            <button onClick={() => handleToggleStatus(contract)} className={`p-2 rounded-xl transition-all ${contract.isActive ? 'text-blue-500 hover:bg-blue-50' : 'text-emerald-600 hover:bg-emerald-50'}`} title={contract.isActive ? "Pausieren" : "Aktivieren"}>{contract.isActive ? <PauseCircle size={16} /> : <Play size={16} />}</button>
-                          </>
-                      )}
-                      <button onClick={() => handleDelete(contract.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Löschen"><Trash2 size={16} /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      </td>
+                      <td className="table-cell align-middle">
+                        <div className="flex flex-col gap-1">
+                            <div className="font-bold text-blue-600 text-[11px] uppercase tracking-tight flex items-center gap-1.5"><FileText size={12} /> {contract.service.name}</div>
+                            <span className="status-badge bg-slate-50 text-slate-500 border-slate-200 w-fit"><Repeat size={10} /> {translateInterval(contract.interval)}</span>
+                        </div>
+                      </td>
+                      <td className="table-cell align-middle">
+                        <div className="flex items-center gap-2.5">
+                            <div className={`p-1.5 rounded-lg border ${contract.isActive ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-slate-50 text-slate-300 border-slate-100'}`}><CalendarClock size={14} /></div>
+                            <div className={`text-[12px] font-bold ${contract.isActive ? 'text-slate-700' : 'text-slate-400 line-through'}`}>{new Date(contract.nextExecutionDate).toLocaleDateString('de-DE')}</div>
+                        </div>
+                      </td>
+                      <td className="table-cell text-center align-middle">
+                         <span className={`status-badge ${contract.isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>
+                            {contract.isActive ? 'AKTIV' : 'PAUSIERT'}
+                         </span>
+                      </td>
+                      <td className="table-cell text-right pr-4 align-middle">
+                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                          {!contract.isSigned && <button onClick={() => setSignContractData({ id: contract.id, name: getCustomerName(contract.customer) })} className="btn-icon-only text-indigo-500 hover:bg-indigo-50"><PenTool size={14} /></button>}
+                          {contract.interval !== 'ONCE' && (
+                            <>
+                              <button onClick={() => setShowPauseModal(contract)} className="btn-icon-only text-amber-500 hover:bg-amber-50"><Coffee size={14} /></button>
+                              <button onClick={() => handleToggleStatus(contract)} className="btn-icon-only">{contract.isActive ? <PauseCircle size={14} /> : <Play size={14} />}</button>
+                            </>
+                          )}
+                          <button onClick={() => handleDelete(contract.id)} className="btn-icon-only text-slate-400 hover:text-red-600"><Trash2 size={14} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                ))}
+                </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {/* PAUSE MODAL */}
+      {/* --- MODALS --- */}
       {showPauseModal && (
         <div className="modal-overlay">
-            <div className="modal-content !max-w-md animate-in zoom-in-95">
-                <div className="modal-header bg-amber-500 text-white">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white/20 rounded-lg"><Coffee size={20} /></div>
-                        <div>
-                            <h3 className="font-bold text-lg leading-none">Pausenzeit eintragen</h3>
-                            <p className="text-[10px] opacity-90 mt-1 font-medium">Für {getCustomerName(showPauseModal.customer)}</p>
-                        </div>
-                    </div>
-                    <button onClick={() => setShowPauseModal(null)} className="hover:bg-white/20 p-2 rounded-lg transition"><X size={20}/></button>
-                </div>
-                <form onSubmit={handleSavePause} className="modal-body space-y-5 p-6">
-                    <div className="bg-amber-50 p-4 rounded-xl text-xs text-amber-800 border border-amber-100 flex gap-3">
-                        <AlertCircle size={32} className="shrink-0 text-amber-600"/>
-                        <p>In diesem Zeitraum werden <strong>keine Jobs generiert</strong>. Der Vertrag läuft danach automatisch weiter.</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1.5"><label className="label-caps">Von</label><input type="date" required className="input-standard" value={pauseData.startDate} onChange={e => setPauseData({...pauseData, startDate: e.target.value})} /></div>
-                        <div className="space-y-1.5"><label className="label-caps">Bis (Inkl.)</label><input type="date" required className="input-standard" value={pauseData.endDate} onChange={e => setPauseData({...pauseData, endDate: e.target.value})} /></div>
-                    </div>
-                    <div className="space-y-1.5"><label className="label-caps">Grund (Optional)</label><input type="text" className="input-standard" placeholder="z.B. Betriebsferien" value={pauseData.reason} onChange={e => setPauseData({...pauseData, reason: e.target.value})} /></div>
-                    <div className="pt-2"><button type="submit" className="btn-primary w-full bg-amber-500 border-amber-600 shadow-amber-200/50 hover:bg-amber-600">Pause bestätigen</button></div>
-                </form>
+          <div className="modal-content !max-w-sm">
+            <div className="modal-header">
+              <h2 className="text-sm font-bold text-slate-900">Pause eintragen</h2>
+              <button onClick={() => setShowPauseModal(null)} className="p-1.5 hover:bg-slate-100 rounded-lg"><X size={18}/></button>
             </div>
+            <form onSubmit={handleSavePause}>
+              <div className="modal-body space-y-4 !p-5 text-left">
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1"><label className="label-caps">Von</label><input type="date" required className="input-standard" value={pauseData.startDate} onChange={e => setPauseData({...pauseData, startDate: e.target.value})} /></div>
+                    <div className="space-y-1"><label className="label-caps">Bis</label><input type="date" required className="input-standard" value={pauseData.endDate} onChange={e => setPauseData({...pauseData, endDate: e.target.value})} /></div>
+                </div>
+                <div className="space-y-1"><label className="label-caps">Grund</label><input type="text" className="input-standard" value={pauseData.reason} onChange={e => setPauseData({...pauseData, reason: e.target.value})} /></div>
+              </div>
+              <div className="modal-footer !py-4"><button type="submit" className="btn-primary w-full !bg-amber-600">Bestätigen</button></div>
+            </form>
+          </div>
         </div>
       )}
 
-      {/* SIGNATURE MODAL */}
       {signContractData && (
           <SignatureModal 
               contractId={signContractData.id}

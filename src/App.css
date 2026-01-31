@@ -3,62 +3,83 @@
 @tailwind utilities;
 
 @layer base {
-  /* Globaler Standard: Inter Schriftart */
+  /* GLOBALER STANDARD: Kompakt & Fein */
   body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    @apply bg-slate-50 text-slate-900 antialiased m-0 p-0 overflow-x-hidden;
+    /* 13px Basisgröße für mehr Informationsdichte */
+    @apply bg-slate-50 text-slate-800 text-[13px] antialiased m-0 p-0 overflow-x-hidden leading-normal;
+  }
+
+  /* Feine Scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 rounded-full hover:bg-slate-400 transition-colors;
   }
 }
 
 @layer components {
-  /* --- LAYOUT SYSTEM --- */
+  /* --- LAYOUT SYSTEM (FULL WIDTH & KOMPAKT) --- */
   .page-container {
-    @apply w-full min-h-screen p-4 md:p-8 space-y-6 flex flex-col relative z-0;
+    /* WICHTIG: Nutzt 100% Breite und Höhe, minimales Padding */
+    @apply w-full min-h-screen p-2 md:p-4 flex flex-col relative z-0;
   }
 
   .header-section {
-    @apply flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative z-20;
+    /* Header ist flacher und breiter */
+    @apply flex flex-col md:flex-row justify-between items-start md:items-center gap-2 bg-white px-4 py-3 rounded-lg border border-slate-200 shadow-sm relative z-20 mb-3;
   }
 
   .page-title {
-    @apply text-2xl font-bold text-slate-800 tracking-tight leading-none;
+    /* Kleiner und weniger fett */
+    @apply text-base font-bold text-slate-900 tracking-tight leading-none;
   }
 
   .page-subtitle {
-    @apply text-slate-500 text-sm mt-1 font-medium;
+    @apply text-slate-500 text-[11px] mt-0.5 font-medium;
   }
 
   /* --- STATS GRID & CARDS --- */
   .stats-grid {
-    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4;
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4;
   }
 
   .stat-card {
-    @apply p-5 rounded-2xl border transition-all flex items-center gap-4 bg-white shadow-sm hover:shadow-md;
+    /* Kompakteres Padding (p-3) */
+    @apply p-3 rounded-lg border transition-all flex items-center gap-3 bg-white shadow-sm hover:shadow-md;
   }
 
   .stat-card-v2 {
-    @apply bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-36 transition-all hover:border-blue-200;
+    @apply bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-between h-28 transition-all hover:border-blue-200;
   }
 
-  .stat-card-critical { @apply border-l-4 border-l-red-500; }
-  .stat-card-success { @apply border-l-4 border-l-emerald-500; }
-
+  /* Icons in Cards */
   .stat-icon-wrapper {
-    @apply w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm;
+    @apply w-8 h-8 rounded-md flex items-center justify-center shrink-0 shadow-sm;
   }
 
   .stat-icon-box {
-    @apply p-2.5 rounded-lg transition-colors shrink-0;
+    @apply p-1.5 rounded-md transition-colors shrink-0;
   }
 
+  /* Farb-Themes */
+  .stat-card-critical { @apply border-l-[3px] border-l-red-500; }
+  .stat-card-success { @apply border-l-[3px] border-l-emerald-500; }
+  
   .icon-critical { @apply bg-red-50 text-red-600; }
   .icon-success { @apply bg-emerald-50 text-emerald-600; }
   .icon-info { @apply bg-blue-50 text-blue-600; }
+  /* NEU: Icon Theme für Lila (genutzt in Payroll) */
+  .icon-purple { @apply bg-violet-50 text-violet-600; }
 
-  /* --- DATA TABLES --- */
+  /* --- DATA TABLES (EXCEL STYLE) --- */
   .table-container {
-    @apply bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex-1 relative z-10;
+    @apply bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden flex-1 relative z-10;
   }
 
   .table-main {
@@ -66,68 +87,71 @@
   }
 
   .table-head {
-    @apply bg-slate-50 text-slate-500 uppercase text-[10px] font-black tracking-[0.1em] border-b border-slate-200;
+    /* Sehr kompakt */
+    @apply bg-slate-50 text-slate-500 uppercase text-[9px] font-bold tracking-wider border-b border-slate-200;
   }
 
   .table-row {
-    @apply transition-colors border-b border-slate-100 last:border-0;
+    @apply transition-colors border-b border-slate-50 last:border-0;
   }
   
   .table-row:hover {
-    @apply bg-slate-50/80;
+    @apply bg-blue-50/30;
   }
 
   .table-cell {
-    @apply px-6 py-4 text-sm relative;
+    /* Minimales Padding */
+    @apply px-3 py-2 text-[12px] relative whitespace-nowrap;
   }
 
-  /* --- MODAL SYSTEM --- */
+  /* --- MODAL SYSTEM (MODERN & SCHLANK) --- */
   .modal-overlay {
-    @apply fixed inset-0 z-[999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4;
+    @apply fixed inset-0 z-[999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2;
   }
 
   .modal-content {
-    @apply bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden border border-white flex flex-col animate-in zoom-in-95 duration-200;
+    @apply bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-white flex flex-col animate-in zoom-in-95 duration-200;
   }
 
   .modal-header {
-    @apply px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white;
+    @apply px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-white;
   }
 
   .modal-body {
-    @apply p-8 space-y-6 bg-white overflow-y-auto max-h-[70vh];
+    @apply p-4 space-y-3 bg-white overflow-y-auto max-h-[85vh];
   }
 
   .modal-footer {
-    @apply px-8 py-5 bg-slate-50 border-t border-slate-100 flex gap-3 justify-end;
+    @apply px-4 py-3 bg-slate-50 border-t border-slate-100 flex gap-2 justify-end;
   }
 
   /* --- FORMS & INPUTS --- */
   .input-standard {
-    @apply w-full bg-white border border-slate-200 rounded-xl py-3 px-4 
-            focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 outline-none 
-            font-medium text-sm transition-all shadow-sm text-slate-900 placeholder:text-slate-400;
+    /* Schlankere Inputs */
+    @apply w-full bg-white border border-slate-200 rounded-lg py-1.5 px-2.5 
+           focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 outline-none 
+           font-medium text-[12px] transition-all shadow-sm text-slate-900 placeholder:text-slate-400;
   }
 
   .label-caps {
-    @apply block text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1.5 ml-1;
+    @apply block text-[9px] font-bold text-slate-500 uppercase tracking-[0.1em] mb-1 ml-0.5;
   }
 
   .form-card {
-    @apply bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200;
+    @apply bg-white p-4 rounded-xl shadow-sm border border-slate-200;
   }
 
   .form-section-title {
-    @apply flex items-center gap-2 text-xs font-black text-slate-400 mb-8 pb-3 border-b border-slate-50 uppercase tracking-[0.2em];
+    @apply flex items-center gap-2 text-[10px] font-bold text-slate-400 mb-4 pb-2 border-b border-slate-50 uppercase tracking-[0.15em];
   }
 
   /* --- BUTTONS --- */
   .btn-primary {
-    @apply bg-blue-600 border border-blue-700 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer relative z-10 !important;
+    @apply bg-blue-600 border border-blue-700 text-white px-3 py-2 rounded-lg font-semibold text-[12px] shadow-sm shadow-blue-600/20 transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer relative z-10 !important;
   }
 
   .btn-primary:hover:not(:disabled) {
-    @apply bg-blue-700 border-blue-800 brightness-110 shadow-blue-600/30;
+    @apply bg-blue-700 border-blue-800 brightness-110;
   }
 
   .btn-primary:disabled {
@@ -135,53 +159,38 @@
   }
 
   .btn-secondary {
-    @apply bg-white border border-slate-200 text-slate-700 px-6 py-3 rounded-xl font-bold text-sm transition-all hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900 cursor-pointer relative z-10 shadow-sm;
+    @apply bg-white border border-slate-200 text-slate-700 px-3 py-2 rounded-lg font-semibold text-[12px] transition-all hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900 cursor-pointer relative z-10 shadow-sm;
   }
 
   .btn-ghost-danger {
-    @apply p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all cursor-pointer;
+    @apply p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all cursor-pointer;
   }
 
-  /* --- BADGES & STATUS --- */
+  /* --- BADGES --- */
   .status-badge {
-    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border;
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border;
   }
-
-  .customer-type-badge {
-    @apply text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1 rounded-lg;
-  }
-
-  .role-badge-admin { @apply bg-purple-50 text-purple-700 border-purple-100; }
-  .role-badge-employee { @apply bg-blue-50 text-blue-700 border-blue-100; }
 
   /* --- SPECIAL CARDS --- */
   .customer-card, .employee-card, .offer-card, .absence-card {
-    @apply bg-white rounded-2xl p-5 shadow-sm border border-slate-200 transition-all flex flex-col justify-between relative overflow-hidden;
+    @apply bg-white rounded-lg p-3 shadow-sm border border-slate-200 transition-all flex flex-col justify-between relative overflow-hidden;
   }
   
   .customer-card:hover, .employee-card:hover, .offer-card:hover, .absence-card:hover {
-    @apply shadow-xl shadow-slate-200/50 border-blue-200 -translate-y-1;
-  }
-
-  .action-card-dark {
-    @apply bg-slate-900 rounded-[2rem] p-8 text-white shadow-2xl relative overflow-hidden;
-  }
-
-  .quick-access-item {
-    @apply w-full flex items-center justify-between p-5 rounded-2xl bg-slate-50 transition-all text-sm font-bold text-slate-700 border border-transparent hover:bg-blue-600 hover:text-white cursor-pointer;
+    @apply shadow-md border-blue-300 -translate-y-0.5;
   }
 
   /* --- VIEW SWITCHER --- */
   .view-switcher-container {
-    @apply bg-slate-100 p-1.5 rounded-2xl flex items-center gap-1 border border-slate-200 relative z-20;
+    @apply bg-slate-100 p-0.5 rounded-lg flex items-center gap-0.5 border border-slate-200 relative z-20;
   }
 
   .view-btn {
-    @apply p-2.5 rounded-xl transition-all duration-200 cursor-pointer flex items-center justify-center;
+    @apply p-1.5 rounded-md transition-all duration-200 cursor-pointer flex items-center justify-center;
   }
 
   .view-btn-active {
-    @apply bg-white text-blue-600 shadow-md ring-1 ring-slate-200/50 scale-105;
+    @apply bg-white text-blue-600 shadow-sm ring-1 ring-slate-200/50;
   }
 
   .view-btn-inactive {
@@ -190,20 +199,35 @@
 
   /* --- SETTINGS TABS --- */
   .tab-button {
-    @apply px-6 py-3 rounded-xl text-sm font-bold flex items-center gap-2 transition-all duration-200 cursor-pointer;
+    @apply px-4 py-2 rounded-lg text-[12px] font-semibold flex items-center gap-2 transition-all duration-200 cursor-pointer;
   }
 
   .tab-button-active {
-    @apply bg-blue-600 text-white shadow-lg shadow-blue-600/20;
+    @apply bg-blue-600 text-white shadow-md shadow-blue-600/10;
   }
 
   .tab-button-inactive {
     @apply text-slate-500 hover:bg-slate-100 hover:text-slate-800;
   }
 
-  /* --- RECHARTS FIX --- */
+  /* ===========================================
+     ERWEITERUNGEN FÜR PAYROLL / SPLIT-LAYOUT
+     ===========================================
+  */
+  
+  /* Container für Diagramme (sieht aus wie table-container) */
   .chart-container {
-    @apply w-full bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col min-h-[350px];
+    @apply bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden flex flex-col relative z-10 p-4;
+  }
+
+  /* Grid Layout für Content (Links Chart / Rechts Tabelle) */
+  .content-grid {
+    @apply grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1 min-h-0 w-full;
+  }
+
+  /* Kleiner Icon Button für Tabellen Aktionen */
+  .btn-icon-only {
+    @apply p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer flex items-center justify-center;
   }
 }
 
@@ -221,66 +245,59 @@
 
 .bg-dot-pattern {
   background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
-  background-size: 32px 32px;
+  background-size: 24px 24px;
 }
 
-.custom-scrollbar::-webkit-scrollbar { width: 5px; }
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
 .custom-scrollbar::-webkit-scrollbar-track { @apply bg-transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { @apply bg-slate-700/50 rounded-full; }
+.custom-scrollbar::-webkit-scrollbar-thumb { @apply bg-slate-300 rounded-full; }
 
 .pb-safe {
-  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
-/* --- CALENDAR OVERRIDES --- */
-.rbc-calendar { font-family: 'Inter', sans-serif !important; @apply border-none !important; }
-.rbc-header { @apply py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-none !important; }
+/* --- CALENDAR OVERRIDES (REACT BIG CALENDAR) --- */
+/* Das ist der wichtigste Teil für den Kalender! */
+
+.rbc-calendar { 
+    font-family: 'Inter', sans-serif !important; 
+    @apply border-none text-[11px] !important; 
+}
+
+/* Header (Mo, Di...) */
+.rbc-header { 
+    @apply py-1.5 px-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100 bg-slate-50/50 !important; 
+}
+
+/* Grid & Lines */
 .rbc-month-view, .rbc-time-view { @apply border-none !important; }
-.rbc-day-bg { @apply border-slate-100 transition-colors !important; }
-.rbc-today { @apply bg-blue-50/40 !important; }
+.rbc-day-bg { @apply border-slate-50 transition-colors !important; }
+.rbc-today { @apply bg-blue-50/30 !important; }
 .rbc-event { @apply p-0 border-none shadow-sm transition-all !important; }
-.rbc-off-range-bg { @apply bg-slate-50/30 !important; }
+.rbc-off-range-bg { @apply bg-slate-50/50 !important; }
 
-/* Scrollbar styling für den Kalender-Inhalt */
-.rbc-time-content::-webkit-scrollbar {
-  width: 6px;
-}
-.rbc-time-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-.rbc-time-content::-webkit-scrollbar-thumb {
-  background-color: #cbd5e1;
-  border-radius: 10px;
-}
-
-/* Label Styling (06:00, 07:00...) */
-.rbc-time-slot {
-  font-size: 10px !important;
-  font-weight: 700 !important;
-  color: #94a3b8 !important;
-}
-
-/* --- CALENDAR COMPRESSION (06:00 - 22:00 Fix) --- */
-
-/* Verringert die Höhe jeder Stunde drastisch */
+/* Kompakte Zeilen für die Stunden */
 .rbc-timeslot-group {
-    min-height: 38px !important; 
+    min-height: 40px !important; /* Hier können wir es noch enger machen wenn nötig */
+    @apply border-b border-slate-50 !important;
 }
 
-/* Verhindert internes Scrollen, damit alles ins Fenster passt */
 .rbc-time-content {
-    overflow-y: hidden !important;
+    @apply border-t-0 !important;
 }
 
-/* Trennlinien */
 .rbc-time-gutter .rbc-timeslot-group {
-    border-bottom: 1px solid #f1f5f9 !important;
+    @apply border-b border-slate-50 text-[9px] text-slate-400 font-medium !important;
 }
 
-/* Uhrzeit-Labels links */
 .rbc-label {
-    padding: 0 8px !important;
-    font-size: 10px !important;
-    font-weight: 900 !important;
-    color: #94a3b8 !important;
+    @apply px-1 text-[10px] font-bold text-slate-400 !important;
+}
+
+/* Toolbar Buttons */
+.rbc-toolbar button {
+    @apply text-[11px] font-bold uppercase tracking-wide px-2 py-1 border border-slate-200 text-slate-500 rounded-lg mx-0.5 hover:bg-slate-50 !important;
+}
+.rbc-toolbar button.rbc-active {
+    @apply bg-slate-800 text-white border-slate-800 shadow-md !important;
 }
