@@ -1,11 +1,20 @@
-import { useEffect, useState } from 'react';
-import { 
-  Calendar, MapPin, Phone, Mail, ShieldCheck, Clock, User, 
-  CheckCircle, FileCheck, Loader2, AlertCircle, FileText 
+import {
+    AlertCircle,
+    Calendar,
+    CheckCircle,
+    Clock,
+    FileCheck,
+    FileText,
+    Loader2,
+    Mail,
+    MapPin, Phone,
+    ShieldCheck,
+    User
 } from 'lucide-react';
-import api from '../lib/api';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import api from '../lib/api';
 
 export default function CustomerDashboard() {
   const { user } = useAuth();

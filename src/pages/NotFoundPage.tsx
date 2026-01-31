@@ -1,5 +1,5 @@
+import { ArrowLeft, Ghost, Home, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Home, ArrowLeft, Ghost, Sparkles } from 'lucide-react';
 
 export default function NotFoundPage() {
   const navigate = useNavigate();

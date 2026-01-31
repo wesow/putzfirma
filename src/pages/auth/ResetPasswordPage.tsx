@@ -1,6 +1,6 @@
+import { AlertCircle, CheckCircle2, Loader2, Lock, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { Lock, ShieldCheck, Loader2, AlertCircle, CheckCircle2, ChevronLeft } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../../lib/api';
 
 export default function ResetPasswordPage() {

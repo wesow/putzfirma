@@ -1,16 +1,21 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Calendar, dateFnsLocalizer, Views, type View } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-import { format, parse, startOfWeek, getDay, addMinutes, differenceInMinutes } from 'date-fns';
+import { addMinutes, differenceInMinutes, format, getDay, parse, startOfWeek } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { 
-  RefreshCw, Loader2, Calendar as CalIcon, 
-  MapPin, Clock, Users, X, Camera, CheckCircle, Navigation, Play, Plus
+import {
+  Camera, CheckCircle,
+  Clock,
+  Loader2,
+  MapPin,
+  Navigation, Play,
+  RefreshCw,
+  X
 } from 'lucide-react';
-import toast from 'react-hot-toast'; 
+import toast from 'react-hot-toast';
 import api from '../lib/api';
 
 // --- LOCALIZER ---

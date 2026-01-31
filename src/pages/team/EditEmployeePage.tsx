@@ -1,10 +1,17 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  Save, ArrowLeft, User, Mail, CreditCard, Briefcase, 
-  Badge as BadgeIcon, Loader2, Send, ShieldCheck 
+import {
+  ArrowLeft,
+  Badge as BadgeIcon,
+  Briefcase,
+  CreditCard,
+  Loader2,
+  Mail,
+  Save,
+  Send, ShieldCheck,
+  User
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../lib/api';
 
 export default function EditEmployeePage() {

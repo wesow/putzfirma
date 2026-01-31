@@ -1,14 +1,21 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { 
-  Plus, Search, Trash2, Loader2, Clock, 
-  LayoutList, Tag, Pencil, Briefcase, Euro,
-  AlertCircle, ChevronRight
+import {
+  AlertCircle,
+  Briefcase,
+  ChevronRight,
+  Clock,
+  LayoutList,
+  Loader2,
+  Pencil,
+  Plus, Search,
+  Tag,
+  Trash2
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import api from '../../lib/api';
+import { Link, useNavigate } from 'react-router-dom';
 import ConfirmModal from '../../components/ConfirmModal';
 import ViewSwitcher from '../../components/ViewSwitcher';
+import api from '../../lib/api';
 
 interface Service {
   id: string;

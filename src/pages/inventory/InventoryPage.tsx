@@ -1,14 +1,20 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Plus, AlertTriangle, Search, Trash2, 
-  MinusCircle, PlusCircle, Loader2, TrendingUp,
-  AlertCircle, CheckCircle, Package, Euro, 
-  BarChart3, Hash, Pencil
+import {
+  AlertTriangle,
+  BarChart3,
+  Loader2,
+  MinusCircle,
+  Package,
+  Pencil,
+  Plus,
+  PlusCircle,
+  Search, Trash2,
+  TrendingUp
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import api from '../../lib/api';
+import { useNavigate } from 'react-router-dom';
 import ConfirmModal from '../../components/ConfirmModal';
+import api from '../../lib/api';
 
 interface Product {
   id: string;

@@ -1,10 +1,20 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Save, User, Building2, Mail, Phone, MapPin, 
-  Loader2, Send, Landmark, CreditCard, ChevronLeft, Layers, ShieldCheck
+import {
+  Building2,
+  ChevronLeft,
+  CreditCard,
+  Landmark,
+  Loader2,
+  Mail,
+  MapPin,
+  Phone,
+  Save,
+  Send,
+  ShieldCheck,
+  User
 } from 'lucide-react';
+import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import api from '../../lib/api';
 
 export default function CreateCustomerPage() {

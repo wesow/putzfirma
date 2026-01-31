@@ -1,13 +1,24 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom'; 
-import { 
-  Users, Briefcase, Euro, UserCheck, RefreshCw, PlusCircle, 
-  ArrowRight, Loader2, TrendingUp, Sparkles, 
-  Receipt, ShieldCheck, ShieldAlert, Clock, FileText, BarChart2
+import {
+  ArrowRight,
+  BarChart2,
+  Briefcase,
+  Clock,
+  Euro,
+  FileText,
+  Loader2,
+  PlusCircle,
+  Receipt,
+  RefreshCw,
+  ShieldAlert,
+  Sparkles,
+  UserCheck,
+  Users
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import api from '../lib/api';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useAuth } from '../context/AuthContext';
+import api from '../lib/api';
 
 // --- TYPEN ---
 interface DashboardStats {

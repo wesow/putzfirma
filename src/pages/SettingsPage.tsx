@@ -1,9 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Save, Building2, Lock, CreditCard, Mail, 
-  MapPin, Phone, Globe, Hash, Loader2, ShieldCheck, Banknote,
-  Fingerprint, FileText
+import {
+    Banknote,
+    Building2,
+    CreditCard,
+    FileText,
+    Fingerprint,
+    Globe, Hash, Loader2,
+    Lock,
+    Mail,
+    MapPin, Phone,
+    Save,
+    ShieldCheck
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
 

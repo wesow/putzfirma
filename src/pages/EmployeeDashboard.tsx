@@ -1,9 +1,23 @@
-import { useEffect, useState, useRef } from 'react';
-import { 
-  Play, Clock, MapPin, CheckCircle, Calendar, 
-  Camera, UploadCloud, X, AlertCircle, ListTodo, 
-  ChevronRight, CheckSquare, Square as EmptySquare, Loader2, Sparkles, Navigation, Edit3, RefreshCw
+import {
+    AlertCircle,
+    Calendar,
+    Camera,
+    CheckCircle,
+    CheckSquare,
+    ChevronRight,
+    Clock,
+    Edit3,
+    Square as EmptySquare,
+    ListTodo,
+    Loader2,
+    MapPin,
+    Navigation,
+    Play,
+    RefreshCw,
+    Sparkles,
+    UploadCloud, X
 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
 

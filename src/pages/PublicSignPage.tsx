@@ -1,9 +1,9 @@
+import { CheckCircle, Eraser, Info, Loader2, PenTool, ShieldCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useParams } from 'react-router-dom';
 import SignatureCanvas from 'react-signature-canvas';
-import { CheckCircle, Loader2, ShieldCheck, Eraser, PenTool, Info } from 'lucide-react';
 import api from '../lib/api';
-import toast from 'react-hot-toast';
 
 export default function PublicSignPage() {
     const { token } = useParams();

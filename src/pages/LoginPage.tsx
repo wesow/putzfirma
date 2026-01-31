@@ -1,9 +1,9 @@
+import { AlertCircle, ArrowRight, CheckCircle2, Loader2, Lock, Mail, ShieldCheck } from 'lucide-react';
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Lock, Mail, ArrowRight, AlertCircle, Loader2, CheckCircle2, ShieldCheck } from 'lucide-react';
-import { login as apiLogin } from '../services/auth.service';
-import { useAuth } from '../context/AuthContext'; 
 import { toast } from 'react-hot-toast';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { login as apiLogin } from '../services/auth.service';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');

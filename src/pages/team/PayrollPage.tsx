@@ -1,28 +1,28 @@
-import { useEffect, useState } from 'react';
-import { 
-  Clock, 
-  Users, 
-  Wallet, 
-  AlertCircle, 
-  Download, 
-  ChevronLeft, 
-  ChevronRight, 
-  FileText, 
-  Loader2,
-  TrendingUp,
-  PieChart
+import {
+    AlertCircle,
+    ChevronLeft,
+    ChevronRight,
+    Clock,
+    Download,
+    FileText,
+    Loader2,
+    PieChart,
+    TrendingUp,
+    Users,
+    Wallet
 } from 'lucide-react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer 
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
+import {
+    Bar,
+    BarChart,
+    CartesianGrid,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis
 } from 'recharts';
 import api from '../../lib/api';
-import toast from 'react-hot-toast';
 
 // --- Types ---
 interface EmployeeReport {

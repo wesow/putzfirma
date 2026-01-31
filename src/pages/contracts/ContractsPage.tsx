@@ -1,14 +1,24 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { 
-  Plus, FileText, CalendarClock, Search, 
-  Repeat, AlertCircle, Loader2, CheckCircle, 
-  PauseCircle, MapPin, Trash2, Play, Coffee, X, PenTool, FileSignature, ChevronRight
+import {
+  CalendarClock,
+  Coffee,
+  FileText,
+  Loader2,
+  MapPin,
+  PauseCircle,
+  PenTool,
+  Play,
+  Plus,
+  Repeat,
+  Search,
+  Trash2,
+  X
 } from 'lucide-react';
-import api from '../../lib/api';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import SignatureModal from '../../components/SignatureModal';
 import ViewSwitcher from '../../components/ViewSwitcher';
+import api from '../../lib/api';
 
 interface Contract {
   id: string;

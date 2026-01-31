@@ -1,5 +1,5 @@
+import { Clock, Link as LinkIcon, Loader2, Mail, Send, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Mail, Clock, Copy, Trash2, CheckCircle, AlertCircle, Loader2, Link as LinkIcon, Send } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../lib/api';
 

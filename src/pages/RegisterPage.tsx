@@ -1,9 +1,9 @@
-import { AlertCircle, ArrowRight, CheckCircle, Loader2, Lock, User, Sparkles, ShieldCheck } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle, Loader2, Lock, ShieldCheck, Sparkles, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import api from '../lib/api'; 
+import api from '../lib/api';
 import { registerWithInvite } from '../services/auth.service';
 
 // Kompaktere Input-Komponente

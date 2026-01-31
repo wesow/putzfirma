@@ -1,10 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  Save, ArrowLeft, Euro, Briefcase, Tag, Loader2, ListTodo, 
-  Plus, Trash2, Layers, ChevronLeft 
+import {
+    Briefcase,
+    ChevronLeft,
+    Euro,
+    Layers,
+    ListTodo,
+    Loader2,
+    Plus,
+    Save,
+    Tag,
+    Trash2
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../lib/api';
 
 export default function EditServicePage() {

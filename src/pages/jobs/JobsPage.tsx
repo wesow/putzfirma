@@ -1,18 +1,34 @@
-import { useEffect, useState, useRef } from 'react';
-import { 
-  CheckCircle, Calendar, MapPin, Play, RefreshCw, X, 
-  Loader2, Camera, UserPlus, Filter, Trash2,
-  Clock, Plus, Briefcase, ChevronDown, AlertCircle, Users,
-  CheckCircle2, Image as ImageIcon
-} from 'lucide-react'; 
-import { 
-  format, isWithinInterval, parseISO, differenceInMinutes, 
-  isToday, isTomorrow, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isSameDay 
+import {
+  differenceInMinutes,
+  endOfMonth,
+  endOfWeek,
+  format,
+  isToday, isTomorrow,
+  isWithinInterval, parseISO,
+  startOfMonth,
+  startOfWeek
 } from 'date-fns';
-import toast from 'react-hot-toast'; 
-import api from '../../lib/api';
+import {
+  AlertCircle,
+  Briefcase,
+  Calendar,
+  CheckCircle,
+  CheckCircle2,
+  Clock,
+  Filter,
+  Image as ImageIcon,
+  Loader2,
+  MapPin, Play,
+  Plus,
+  RefreshCw,
+  UserPlus,
+  X
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import ViewSwitcher from '../../components/ViewSwitcher';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../lib/api';
 
 // --- Interfaces ---
 interface Employee { id: string; firstName: string; lastName: string; }

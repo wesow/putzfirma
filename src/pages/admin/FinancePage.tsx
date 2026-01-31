@@ -1,8 +1,16 @@
-import { useEffect, useState } from 'react';
-import { 
-  TrendingUp, TrendingDown, DollarSign, Loader2, 
-  Landmark, FileSpreadsheet, ShieldAlert, AlertTriangle, Send, Receipt
+import {
+    AlertTriangle,
+    DollarSign,
+    FileSpreadsheet,
+    Landmark,
+    Loader2,
+    Receipt,
+    Send,
+    ShieldAlert,
+    TrendingDown,
+    TrendingUp
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
 

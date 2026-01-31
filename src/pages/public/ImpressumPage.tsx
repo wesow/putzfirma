@@ -172,7 +172,7 @@ export default function ImpressumPage() {
                 <p className="text-slate-400 text-xs leading-relaxed font-medium">
                     Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung bereit.
                 </p>
-            </div>
+            </div>خ
             <a 
                 href="https://ec.europa.org/consumers/odr/" 
                 target="_blank" 

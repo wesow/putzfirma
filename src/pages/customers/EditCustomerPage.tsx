@@ -1,11 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  Save, ArrowLeft, User, Building2, Mail, Phone, MapPin, 
-  Loader2, Send, ShieldCheck, Banknote, CreditCard, FileText, 
-  ChevronLeft, Landmark, Layers 
+import {
+  Banknote,
+  Building2,
+  ChevronLeft,
+  CreditCard,
+  Landmark, Layers,
+  Loader2,
+  Mail,
+  MapPin,
+  Phone,
+  Save,
+  Send, ShieldCheck
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../lib/api';
 
 export default function EditCustomerPage() {

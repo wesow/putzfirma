@@ -1,11 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Save, ArrowLeft, Euro, Briefcase, Tag, Loader2, ListTodo, 
-  Plus, Sparkles, Layers, Trash2, User, MapPin, Clock, Repeat,
-  ChevronLeft, Info
+import {
+  ChevronLeft,
+  Clock,
+  Euro,
+  Info,
+  ListTodo,
+  Loader2,
+  Plus,
+  Save,
+  Sparkles,
+  Trash2, User
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import api from '../../lib/api';
 
 export default function CreateOfferPage() {

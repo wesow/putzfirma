@@ -1,5 +1,5 @@
+import { Activity, Clock, Loader2, RefreshCw, Shield } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Shield, Clock, Activity, Loader2, RefreshCw } from 'lucide-react';
 import api from '../lib/api';
 
 interface AuditLog {

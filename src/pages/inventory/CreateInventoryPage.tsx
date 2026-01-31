@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Save, Euro, Package, Hash, Loader2, Layers, 
-  AlertTriangle, ChevronLeft, X 
+import {
+  AlertTriangle, ChevronLeft,
+  Euro,
+  Hash,
+  Layers,
+  Loader2,
+  Package,
+  Save
 } from 'lucide-react';
+import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import api from '../../lib/api';
 
 export default function CreateInventoryPage() {

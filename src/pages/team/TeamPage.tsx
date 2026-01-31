@@ -1,14 +1,22 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Plus, Search, Mail, Loader2, Send, 
-  CheckCircle, Pencil, Trash2, Shield, 
-  Hash, AlertCircle, Phone, User
+import {
+  AlertCircle,
+  CheckCircle,
+  Hash,
+  Loader2,
+  Mail,
+  Pencil,
+  Phone,
+  Plus, Search,
+  Send,
+  Shield,
+  Trash2
 } from 'lucide-react';
-import api from '../../lib/api';
+import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import ConfirmModal from '../../components/ConfirmModal';
 import ViewSwitcher from '../../components/ViewSwitcher';
+import api from '../../lib/api';
 
 interface Employee {
   id: string;

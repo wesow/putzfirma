@@ -1,12 +1,29 @@
-import { useState, useEffect } from 'react';
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { 
-  LayoutDashboard, Users, Briefcase, FileText, Settings, LogOut, 
-  Calendar, UserCheck, Package, FileSpreadsheet, ShieldCheck, 
-  Megaphone, Wallet, Palmtree, Receipt, Sparkles, FileCheck, 
-  ChevronRight, ShieldAlert, Landmark, Menu, X 
+import {
+  Briefcase,
+  Calendar,
+  ChevronRight,
+  FileCheck,
+  FileSpreadsheet,
+  FileText,
+  Landmark,
+  LayoutDashboard,
+  LogOut,
+  Megaphone,
+  Menu,
+  Package,
+  Palmtree, Receipt,
+  Settings,
+  ShieldAlert,
+  ShieldCheck,
+  Sparkles,
+  UserCheck,
+  Users,
+  Wallet,
+  X
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Admin',

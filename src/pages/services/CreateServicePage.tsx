@@ -1,10 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Save, ArrowLeft, Euro, Briefcase, Tag, Loader2, ListTodo, 
-  Plus, Sparkles, Layers, Trash2, Copy, CheckCircle2, ChevronLeft
+import {
+    Briefcase,
+    ChevronLeft,
+    Copy,
+    Euro,
+    Layers,
+    ListTodo,
+    Loader2,
+    Plus,
+    Save,
+    Sparkles,
+    Tag,
+    Trash2
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import api from '../../lib/api';
 
 export default function CreateServicePage() {

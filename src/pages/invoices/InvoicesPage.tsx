@@ -1,12 +1,18 @@
-import { useEffect, useState } from 'react';
-import { 
-  FileText, Plus, Download, CheckCircle, AlertCircle, Mail, Info, 
-  Loader2, Clock, Send, History, Lock, FileCheck, ChevronRight,
-  ShieldCheck, FileSearch
+import {
+  Download,
+  FileSearch,
+  History,
+  Info,
+  Loader2,
+  Lock,
+  Plus,
+  Send,
+  ShieldCheck
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import api from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../lib/api';
 
 // --- TYPEN ---
 interface Invoice {

@@ -1,27 +1,23 @@
-import { Link } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
-import { 
-  ArrowRight, 
-  Star, 
-  Clock, 
-  Smartphone, 
-  MapPin, 
-  Phone, 
-  Mail,
-  Menu,
-  X,
-  PlayCircle,
+import {
+  ArrowRight,
   Building2,
-  Sparkles,
-  Zap,
-  Shield,
   Camera,
   CheckCircle2,
+  Clock,
   FileSignature,
   LayoutDashboard,
-  ShieldCheck
+  Mail,
+  MapPin,
+  Menu,
+  Phone,
+  Shield,
+  ShieldCheck,
+  Sparkles,
+  X
 } from 'lucide-react';
 import { useState } from 'react';
+import { Helmet } from 'react-helmet-async';
+import { Link } from 'react-router-dom';
 
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

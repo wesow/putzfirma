@@ -1,9 +1,18 @@
-import { useEffect, useState } from 'react';
-import { 
-  Palmtree, Calendar, Trash2, Plus, Thermometer, Briefcase,
-  Loader2, User, Info, ChevronRight, ArrowRight, CheckCircle2,
-  AlertTriangle, X, Clock
+import {
+    AlertTriangle,
+    ArrowRight,
+    Briefcase,
+    Calendar,
+    CheckCircle2,
+    Clock,
+    Loader2,
+    Palmtree,
+    Plus, Thermometer,
+    Trash2,
+    User,
+    X
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
 

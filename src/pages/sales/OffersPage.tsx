@@ -1,13 +1,23 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  FilePlus, CheckCircle2, FileText, X, Plus, Calendar,
-  Loader2, TrendingUp, FileCheck, User, History, Euro, Clock,
-  Repeat, AlertCircle
+import {
+  Calendar,
+  CheckCircle2,
+  Clock,
+  FileCheck,
+  FilePlus,
+  FileText,
+  History,
+  Loader2,
+  Plus,
+  Repeat,
+  TrendingUp,
+  User,
+  X
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import api from '../../lib/api';
+import { useNavigate } from 'react-router-dom';
 import ViewSwitcher from '../../components/ViewSwitcher';
+import api from '../../lib/api';
 
 // --- TYPEN ---
 interface Customer { 

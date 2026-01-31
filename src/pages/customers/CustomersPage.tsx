@@ -1,14 +1,21 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Plus, Search, MapPin, Phone, Mail, 
-  Loader2, CheckCircle, Pencil, Trash2, 
-  AlertCircle, Building2, ChevronRight, CreditCard, Landmark
+import {
+  AlertCircle, Building2,
+  CheckCircle,
+  ChevronRight, CreditCard, Landmark,
+  Loader2,
+  Mail,
+  MapPin,
+  Pencil,
+  Phone,
+  Plus, Search,
+  Trash2
 } from 'lucide-react';
-import api from '../../lib/api';
+import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import ConfirmModal from '../../components/ConfirmModal';
 import ViewSwitcher from '../../components/ViewSwitcher';
+import api from '../../lib/api';
 
 interface Customer {
   id: string;
