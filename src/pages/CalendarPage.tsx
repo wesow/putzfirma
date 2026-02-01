@@ -10,12 +10,15 @@ import {
   Camera, CheckCircle,
   Clock,
   Loader2,
+  Lock // NEU: Icon für gesperrte Jobs
+  ,
   MapPin,
   Navigation, Play,
   RefreshCw,
   X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext'; // NEU: Auth Context importieren
 import api from '../lib/api';
 
 // --- LOCALIZER ---
@@ -102,6 +105,7 @@ const JobEvent = ({ event }: { event: any }) => {
 };
 
 export default function CalendarPage() {
+  const { user } = useAuth(); // User Role holen
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>(Views.WEEK);
@@ -128,6 +132,9 @@ export default function CalendarPage() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const isLocked = selectedJob?.status === 'COMPLETED' || selectedJob?.status === 'CANCELLED';
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
+
   // --- API ---
   const fetchData = async () => {
     setLoading(true);
@@ -152,6 +159,12 @@ export default function CalendarPage() {
 
   // --- HANDLERS ---
   const moveEvent = useCallback(async ({ event, start }: any) => {
+    // 🔒 STOPP: Erledigte Jobs dürfen nicht verschoben werden!
+    if (event.resource.status === 'COMPLETED' || event.resource.status === 'CANCELLED') {
+        toast.error("Erledigte Jobs sind fixiert!");
+        return;
+    }
+
     const tid = toast.loading("...");
     try {
        setEvents((prev) => prev.map((ev) => ev.id === event.id ? { ...ev, start, end: addMinutes(start, differenceInMinutes(ev.end, ev.start)) } : ev));
@@ -161,9 +174,14 @@ export default function CalendarPage() {
     } catch (e) { toast.error("Fehler", { id: tid }); fetchData(); }
   }, []);
 
-  const handleSelectEvent = (event: any) => { setSelectedJob(event.resource); setIsEditModalOpen(true); };
+  const handleSelectEvent = (event: any) => { 
+      setSelectedJob(event.resource); 
+      setIsEditModalOpen(true); 
+  };
   
   const handleSelectSlot = ({ start }: any) => {
+      // Nur Admins dürfen neue Jobs im Kalender klicken
+      if (!isAdmin) return;
       setNewJobData({ date: format(start, 'yyyy-MM-dd'), time: format(start, 'HH:mm'), customerId: '', serviceId: '' });
       setIsCreateModalOpen(true);
   };
@@ -177,8 +195,15 @@ export default function CalendarPage() {
     } catch (e) { toast.error("Fehler"); } finally { setIsSaving(false); }
   };
 
-  const handleAssignEmployee = async (eid: string) => { if (selectedJob) { try { await api.post(`/jobs/${selectedJob.id}/assign`, { employeeId: eid }); toast.success("Zugewiesen"); fetchData(); setIsEditModalOpen(false); } catch(e) { toast.error("Fehler"); }}};
-  const handleRemoveEmployee = async (eid: string) => { if (selectedJob) { try { await api.delete(`/jobs/${selectedJob.id}/assign`, { data: { employeeId: eid } }); toast.success("Entfernt"); fetchData(); setIsEditModalOpen(false); } catch(e) { toast.error("Fehler"); }}};
+  const handleAssignEmployee = async (eid: string) => { 
+      if (isLocked) return; // Gesperrt
+      if (selectedJob) { try { await api.post(`/jobs/${selectedJob.id}/assign`, { employeeId: eid }); toast.success("Zugewiesen"); fetchData(); setIsEditModalOpen(false); } catch(e) { toast.error("Fehler"); }}
+  };
+  
+  const handleRemoveEmployee = async (eid: string) => { 
+      if (isLocked) return; // Gesperrt
+      if (selectedJob) { try { await api.delete(`/jobs/${selectedJob.id}/assign`, { data: { employeeId: eid } }); toast.success("Entfernt"); fetchData(); setIsEditModalOpen(false); } catch(e) { toast.error("Fehler"); }}
+  };
 
   const openCompleteModal = () => {
       if(!selectedJob) return;
@@ -191,6 +216,12 @@ export default function CalendarPage() {
 
   const handleStatusUpdate = async (status: string) => {
       if(!selectedJob) return;
+      
+      // Wenn User kein Admin ist, darf er "COMPLETED" nicht auf "SCHEDULED" zurücksetzen
+      if (!isAdmin && selectedJob.status === 'COMPLETED' && status !== 'COMPLETED') {
+          return toast.error("Nur Admins können fertige Jobs öffnen.");
+      }
+
       if (status === 'COMPLETED') { openCompleteModal(); return; }
       try { await api.patch(`/jobs/${selectedJob.id}`, { status }); toast.success("Status OK"); fetchData(); setIsEditModalOpen(false); } catch (e) { toast.error("Fehler"); }
   };
@@ -217,7 +248,7 @@ export default function CalendarPage() {
   return (
     <div className="page-container h-screen flex flex-col overflow-hidden">
       
-      {/* HEADER SECTION (Einheitlich mit FinancePage) */}
+      {/* HEADER SECTION */}
       <div className="header-section shrink-0">
         <div className="text-left">
           <h1 className="page-title">Einsatzplan</h1>
@@ -229,7 +260,7 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* KALENDER WRAPPER (Nutzt jetzt table-container style) */}
+      {/* KALENDER WRAPPER */}
       <div className="table-container flex-1 relative flex flex-col min-h-0">
          {loading && (
             <div className="absolute inset-0 bg-white/50 z-50 flex items-center justify-center backdrop-blur-[2px]">
@@ -250,7 +281,7 @@ export default function CalendarPage() {
             onEventDrop={moveEvent}
             onSelectEvent={handleSelectEvent}
             onSelectSlot={handleSelectSlot}
-            selectable
+            selectable={isAdmin} // Nur Admins können Slots markieren
             step={30}
             timeslots={2}
             
@@ -263,7 +294,6 @@ export default function CalendarPage() {
             
             components={{ event: JobEvent }}
             
-            // Wichtig: style-Attribute für BigCalendar
             style={{ height: '100%', width: '100%' }}
             className="font-sans text-[11px]"
          />
@@ -296,13 +326,32 @@ export default function CalendarPage() {
       {isEditModalOpen && selectedJob && (
           <div className="modal-overlay">
               <div className="modal-content !max-w-lg">
-                  <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
-                      <div><span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">{selectedJob.service.name}</span><h2 className="text-sm font-bold">{selectedJob.customer.companyName || selectedJob.customer.lastName}</h2></div>
+                  <div className={`p-4 text-white flex justify-between items-center ${isLocked ? 'bg-slate-800' : 'bg-slate-900'}`}>
+                      <div>
+                          <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest flex items-center gap-2">
+                              {selectedJob.service.name} 
+                              {isLocked && <span className="bg-white/10 px-1.5 py-0.5 rounded text-white flex items-center gap-1"><Lock size={8}/> FIXIERT</span>}
+                          </span>
+                          <h2 className="text-sm font-bold">{selectedJob.customer.companyName || selectedJob.customer.lastName}</h2>
+                      </div>
                       <button onClick={()=>setIsEditModalOpen(false)} className="text-slate-400 hover:text-white"><X size={18}/></button>
                   </div>
                   <div className="modal-body space-y-4">
                     <div className="grid grid-cols-2 gap-3">
-                        <div className="p-2 border rounded-lg"><label className="text-[9px] font-bold uppercase text-blue-600 block mb-1">Status</label><select value={selectedJob.status} onChange={e=>handleStatusUpdate(e.target.value)} className="w-full text-xs font-semibold bg-transparent outline-none cursor-pointer"><option value="SCHEDULED">Geplant</option><option value="IN_PROGRESS">Aktiv</option><option value="COMPLETED">Fertig</option><option value="CANCELLED">Storno</option></select></div>
+                        <div className="p-2 border rounded-lg">
+                            <label className="text-[9px] font-bold uppercase text-blue-600 block mb-1">Status</label>
+                            <select 
+                                value={selectedJob.status} 
+                                onChange={e=>handleStatusUpdate(e.target.value)} 
+                                disabled={isLocked && !isAdmin} // Nur Admins können entsperren
+                                className={`w-full text-xs font-semibold bg-transparent outline-none ${isLocked && !isAdmin ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                            >
+                                <option value="SCHEDULED">Geplant</option>
+                                <option value="IN_PROGRESS">Aktiv</option>
+                                <option value="COMPLETED">Fertig</option>
+                                <option value="CANCELLED">Storno</option>
+                            </select>
+                        </div>
                         <div className="p-2 border rounded-lg"><label className="text-[9px] font-bold uppercase text-slate-400 block mb-1">Zeit</label><div className="flex items-center gap-2 text-xs font-semibold"><Clock size={14} className="text-blue-500"/>{format(new Date(selectedJob.scheduledDate), 'HH:mm')} Uhr</div></div>
                     </div>
                     <div className="p-3 bg-blue-50/50 rounded-lg border border-blue-100 flex justify-between items-center">
@@ -311,13 +360,19 @@ export default function CalendarPage() {
                     </div>
                     <div>
                         <div className="flex justify-between items-center mb-2"><h3 className="text-[10px] font-bold uppercase text-slate-500">Mitarbeiter</h3><span className="text-[9px] font-bold bg-slate-100 px-2 py-0.5 rounded text-slate-600">{selectedJob.assignments.length}</span></div>
-                        <div className="space-y-1">{selectedJob.assignments.map(a=><div key={a.employee.id} className="flex justify-between items-center p-2 border rounded-lg bg-slate-50"><span className="text-xs font-semibold">{a.employee.firstName} {a.employee.lastName}</span><button onClick={()=>handleRemoveEmployee(a.employee.id)} className="text-slate-400 hover:text-red-500"><X size={14}/></button></div>)}</div>
-                        <select onChange={e=>handleAssignEmployee(e.target.value)} value="" className="w-full mt-2 p-1.5 text-[11px] border-2 border-dashed rounded-lg text-center font-bold text-slate-400 cursor-pointer hover:border-blue-400 hover:text-blue-500"><option value="">+ Zuweisen</option>{employees.map(emp=><option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</option>)}</select>
+                        <div className="space-y-1">{selectedJob.assignments.map(a=><div key={a.employee.id} className="flex justify-between items-center p-2 border rounded-lg bg-slate-50"><span className="text-xs font-semibold">{a.employee.firstName} {a.employee.lastName}</span>
+                        {!isLocked && <button onClick={()=>handleRemoveEmployee(a.employee.id)} className="text-slate-400 hover:text-red-500"><X size={14}/></button>}
+                        </div>)}</div>
+                        {!isLocked && (
+                            <select onChange={e=>handleAssignEmployee(e.target.value)} value="" className="w-full mt-2 p-1.5 text-[11px] border-2 border-dashed rounded-lg text-center font-bold text-slate-400 cursor-pointer hover:border-blue-400 hover:text-blue-500"><option value="">+ Zuweisen</option>{employees.map(emp=><option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</option>)}</select>
+                        )}
                     </div>
                   </div>
-                  <div className="modal-footer bg-slate-50">
-                    <button onClick={openCompleteModal} className="w-full py-2.5 bg-slate-900 text-white rounded-lg text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-800"><Play size={12} fill="currentColor"/> Abschließen</button>
-                  </div>
+                  {!isLocked && (
+                      <div className="modal-footer bg-slate-50">
+                        <button onClick={openCompleteModal} className="w-full py-2.5 bg-slate-900 text-white rounded-lg text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-800"><Play size={12} fill="currentColor"/> Abschließen</button>
+                      </div>
+                  )}
               </div>
           </div>
       )}

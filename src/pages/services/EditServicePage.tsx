@@ -1,7 +1,9 @@
 import {
     Briefcase,
+    CheckCircle,
     ChevronLeft,
     Euro,
+    Info,
     Layers,
     ListTodo,
     Loader2,
@@ -15,16 +17,29 @@ import { toast } from 'react-hot-toast';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../lib/api';
 
+// --- TYPES ---
+type BillingType = 'FIXED' | 'HOURLY' | 'QM';
+
 export default function EditServicePage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
-  const [formData, setFormData] = useState({ name: '', description: '', priceNet: '', unit: 'hour' });
+  // FORM STATE
+  const [formData, setFormData] = useState({ 
+      name: '', 
+      description: '', 
+      priceNet: '', 
+      unit: 'Stunde', 
+      billingType: 'HOURLY' as BillingType 
+  });
+  
   const [checklist, setChecklist] = useState<string[]>([]);
   const [newItem, setNewItem] = useState('');
 
+  // 1. DATEN LADEN
   useEffect(() => {
     const load = async () => {
       try {
@@ -35,7 +50,8 @@ export default function EditServicePage() {
           name: data.name || '', 
           description: data.description || '', 
           priceNet: data.priceNet || '0', 
-          unit: data.unit || 'hour' 
+          unit: data.unit || 'Stunde',
+          billingType: (data.billingType as BillingType) || 'HOURLY'
         });
 
         if (data.checklist) {
@@ -44,7 +60,7 @@ export default function EditServicePage() {
             } catch { setChecklist([]); }
         }
       } catch (err) { 
-        toast.error("Fehler beim Laden"); 
+        toast.error("Fehler beim Laden der Leistung"); 
         navigate('/dashboard/services'); 
       } finally { 
         setLoading(false); 
@@ -53,20 +69,26 @@ export default function EditServicePage() {
     if (id) load();
   }, [id, navigate]);
 
+  // 2. SPEICHERN
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    const tid = toast.loading('Änderungen werden übernommen...');
+    const tid = toast.loading('Speichere Änderungen...');
+    
     try {
+      const price = parseFloat(String(formData.priceNet).replace(',', '.'));
+      if (isNaN(price) || price < 0) throw new Error("Ungültiger Preis");
+
       await api.put(`/services/${id}`, { 
         ...formData, 
-        priceNet: parseFloat(String(formData.priceNet).replace(',', '.')), 
+        priceNet: price, 
         checklist 
       });
+      
       toast.success('Leistung aktualisiert', { id: tid });
       navigate('/dashboard/services');
-    } catch { 
-        toast.error('Fehler beim Speichern', { id: tid }); 
+    } catch (e: any) { 
+        toast.error(e.message || 'Fehler beim Speichern', { id: tid }); 
     } finally { 
         setSaving(false); 
     }
@@ -80,9 +102,9 @@ export default function EditServicePage() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center">
-        <Loader2 className="animate-spin text-blue-600 mb-2" size={32} />
-        <span className="label-caps">Lade Konfiguration...</span>
+      <div className="h-screen flex flex-col items-center justify-center text-slate-400 gap-3">
+        <Loader2 className="animate-spin text-blue-600" size={32} />
+        <span className="text-[10px] font-bold uppercase tracking-widest">Lade Konfiguration...</span>
       </div>
     );
   }
@@ -90,7 +112,7 @@ export default function EditServicePage() {
   return (
     <div className="page-container">
       
-      {/* --- HEADER SECTION --- */}
+      {/* --- HEADER --- */}
       <div className="header-section">
         <div className="flex items-center gap-4">
           <button 
@@ -115,68 +137,98 @@ export default function EditServicePage() {
 
       <form onSubmit={handleSubmit} className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-4 pb-24">
         
-        {/* --- MAIN CONTENT GRID --- */}
         <div className="content-grid lg:grid-cols-12 gap-4">
 
-            {/* LINKS: STAMMDATEN */}
+            {/* LINKS: BASIS DATEN */}
             <div className="lg:col-span-7 space-y-4">
+                
+                {/* 1. ABRECHNUNGSMODELL */}
                 <div className="form-card">
                     <div className="form-section-title">
-                        <Layers size={14} /> Basis-Konfiguration
+                        <Tag size={14} /> 1. Abrechnungsmodell
                     </div>
-                    
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <label className={`cursor-pointer border rounded-xl p-4 transition-all relative flex flex-col gap-2 ${formData.billingType === 'FIXED' ? 'border-emerald-500 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}>
+                            <input type="radio" name="billingType" value="FIXED" className="hidden" checked={formData.billingType === 'FIXED'} onChange={() => setFormData({...formData, billingType: 'FIXED', unit: 'Pauschal'})} />
+                            <div className="flex items-center justify-between">
+                                <span className={`text-[11px] font-black uppercase tracking-widest ${formData.billingType === 'FIXED' ? 'text-emerald-700' : 'text-slate-600'}`}>Festpreis</span>
+                                {formData.billingType === 'FIXED' && <CheckCircle size={16} className="text-emerald-500"/>}
+                            </div>
+                            <p className="text-[10px] text-slate-500 leading-snug">
+                                Fixer Betrag pro Auftrag. Ideal für Pauschalen.
+                            </p>
+                        </label>
+
+                        <label className={`cursor-pointer border rounded-xl p-4 transition-all relative flex flex-col gap-2 ${formData.billingType === 'HOURLY' ? 'border-blue-500 bg-blue-50/20' : 'border-slate-200 hover:border-slate-300'}`}>
+                            <input type="radio" name="billingType" value="HOURLY" className="hidden" checked={formData.billingType === 'HOURLY'} onChange={() => setFormData({...formData, billingType: 'HOURLY', unit: 'Stunde'})} />
+                            <div className="flex items-center justify-between">
+                                <span className={`text-[11px] font-black uppercase tracking-widest ${formData.billingType === 'HOURLY' ? 'text-blue-700' : 'text-slate-600'}`}>Nach Aufwand</span>
+                                {formData.billingType === 'HOURLY' && <CheckCircle size={16} className="text-blue-500"/>}
+                            </div>
+                            <p className="text-[10px] text-slate-500 leading-snug">
+                                Abrechnung nach Stunden. Ideal für Regiearbeiten.
+                            </p>
+                        </label>
+                    </div>
+                </div>
+
+                {/* 2. STAMMDATEN */}
+                <div className="form-card">
+                    <div className="form-section-title">
+                        <Layers size={14} /> 2. Leistungsdaten
+                    </div>
+
                     <div className="space-y-4">
-                        <div>
+                        <div className="space-y-1">
                             <label className="label-caps">Bezeichnung</label>
                             <div className="relative group">
                                 <Briefcase size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
                                 <input 
                                     required 
-                                    className="input-standard pl-10 font-bold text-sm" 
+                                    className="input-standard pl-10 font-bold" 
                                     value={formData.name} 
                                     onChange={e => setFormData({...formData, name: e.target.value})} 
+                                    placeholder="z.B. Büroreinigung Standard" 
                                 />
                             </div>
                         </div>
 
-                        <div>
-                            <label className="label-caps">Beschreibung</label>
+                        <div className="space-y-1">
+                            <label className="label-caps">Beschreibung (für Angebot)</label>
                             <textarea 
-                                rows={4} 
-                                className="input-standard resize-none font-medium text-xs leading-relaxed" 
-                                value={formData.description || ''} 
+                                rows={3} 
+                                className="input-standard resize-none text-xs leading-relaxed" 
+                                value={formData.description} 
                                 onChange={e => setFormData({...formData, description: e.target.value})} 
+                                placeholder="Detaillierte Beschreibung der Tätigkeit..." 
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4 pt-2">
-                            <div>
-                                <label className="label-caps text-emerald-600">Netto-Preis</label>
-                                <div className="relative">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="label-caps text-emerald-600">Preis (Netto)</label>
+                                <div className="relative group">
                                     <Euro size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500" />
                                     <input 
-                                        type="number" 
-                                        step="0.01" 
-                                        required 
-                                        className="input-standard pl-10 font-bold text-emerald-700" 
+                                        type="number" step="0.01" required 
+                                        className="input-standard pl-10 font-black text-emerald-700" 
                                         value={formData.priceNet} 
                                         onChange={e => setFormData({...formData, priceNet: e.target.value})} 
+                                        placeholder="0.00" 
                                     />
                                 </div>
                             </div>
-                            <div>
+                            <div className="space-y-1">
                                 <label className="label-caps">Einheit</label>
-                                <div className="relative">
+                                <div className="relative group">
                                     <Tag size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                    <select 
-                                        className="input-standard pl-10 cursor-pointer appearance-none font-medium" 
+                                    <input 
+                                        className="input-standard pl-10" 
                                         value={formData.unit} 
-                                        onChange={e => setFormData({...formData, unit: e.target.value})}
-                                    >
-                                        <option value="hour">pro Stunde (Std.)</option>
-                                        <option value="sqm">pro Quadratmeter (m²)</option>
-                                        <option value="flat">Pauschalbetrag (Stck.)</option>
-                                    </select>
+                                        onChange={e => setFormData({...formData, unit: e.target.value})} 
+                                        placeholder={formData.billingType === 'FIXED' ? 'Pauschal' : 'Stunde'}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -186,61 +238,50 @@ export default function EditServicePage() {
 
             {/* RECHTS: CHECKLISTE */}
             <div className="lg:col-span-5 space-y-4">
-                <div className="form-card h-full flex flex-col border-l-2 border-l-blue-500">
-                    <div className="form-section-title">
-                        <ListTodo size={14} /> Operative Checkliste
+                <div className="form-card h-full flex flex-col border-l-2 border-l-indigo-500">
+                    <div className="form-section-title !text-indigo-600">
+                        <ListTodo size={14} /> 3. Mitarbeiter Checkliste
                     </div>
                     
+                    <div className="bg-indigo-50/50 p-3 rounded-lg border border-indigo-100 mb-4 flex items-start gap-2">
+                        <Info size={14} className="text-indigo-500 shrink-0 mt-0.5" />
+                        <p className="text-[10px] text-indigo-800 leading-snug">
+                            Diese Aufgaben müssen vom Mitarbeiter in der App abgehakt werden.
+                        </p>
+                    </div>
+
                     <div className="flex gap-2 mb-4">
                         <input 
-                            placeholder="Aufgabe hinzufügen..." 
-                            className="input-standard flex-1" 
+                            placeholder="Neue Aufgabe..." 
+                            className="input-standard flex-1 text-xs" 
                             value={newItem} 
                             onChange={e => setNewItem(e.target.value)} 
                             onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addChecklistItem())} 
                         />
-                        <button 
-                            type="button" 
-                            onClick={addChecklistItem} 
-                            className="btn-primary !p-2 shrink-0 shadow-sm"
-                        >
-                            <Plus size={18}/>
-                        </button>
+                        <button type="button" onClick={addChecklistItem} className="btn-primary !p-2 shrink-0"><Plus size={18}/></button>
                     </div>
 
-                    <div className="flex-1 space-y-1.5 overflow-y-auto custom-scrollbar max-h-[350px] pr-1">
+                    <div className="flex-1 space-y-2 overflow-y-auto custom-scrollbar max-h-[400px]">
                         {checklist.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-10 border-2 border-dashed border-slate-50 rounded-xl">
+                            <div className="flex flex-col items-center justify-center py-10 border-2 border-dashed border-slate-100 rounded-xl">
                                 <ListTodo size={24} className="text-slate-200 mb-2" />
-                                <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest text-center">
-                                    Keine Aufgaben definiert
-                                </p>
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300">Keine Aufgaben</span>
                             </div>
                         ) : (
                             checklist.map((item, idx) => (
-                                <div 
-                                    key={idx} 
-                                    className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-100 rounded-lg group hover:bg-white hover:shadow-sm transition-all"
-                                >
-                                    <div className="flex items-center gap-3 overflow-hidden">
-                                        <div className="w-5 h-5 rounded bg-white border border-slate-200 flex items-center justify-center text-[8px] font-black text-slate-400 shrink-0">
-                                            {idx + 1}
-                                        </div>
-                                        <span className="text-xs font-semibold text-slate-700 truncate">{item}</span>
+                                <div key={idx} className="flex items-center justify-between p-2.5 bg-white border border-slate-100 rounded-lg group hover:shadow-sm transition-all">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[9px] font-bold text-slate-500">{idx + 1}</div>
+                                        <span className="text-xs font-medium text-slate-700">{item}</span>
                                     </div>
-                                    <button 
-                                        type="button" 
-                                        onClick={() => setChecklist(checklist.filter((_, i) => i !== idx))} 
-                                        className="p-1 text-slate-300 hover:text-red-500 transition-colors"
-                                    >
-                                        <Trash2 size={14}/>
-                                    </button>
+                                    <button type="button" onClick={() => setChecklist(checklist.filter((_, i) => i !== idx))} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={14}/></button>
                                 </div>
                             ))
                         )}
                     </div>
                 </div>
             </div>
+
         </div>
 
         {/* --- FLOATING ACTION FOOTER --- */}

@@ -43,6 +43,10 @@ export default function DashboardLayout() {
   const role = user?.role; 
   const firstName = user?.firstName || 'Benutzer';
 
+  // --- NEU: Logik-Check ---
+  // Wenn true, blenden wir Header/Footer aus, damit die App-Ansicht wirkt
+  const isEmployee = role === 'EMPLOYEE';
+
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
@@ -79,9 +83,9 @@ export default function DashboardLayout() {
 
   const employeeNav = [
     { section: 'Mein Bereich', items: [
-        { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-        { icon: Briefcase, label: 'Meine Jobs', path: '/dashboard/jobs' },
-        { icon: Calendar, label: 'Einsatzplan', path: '/dashboard/calendar' },
+        // WICHTIG: Pfad auf /dashboard (Index), da dort das EmployeeDashboard liegt
+        { icon: LayoutDashboard, label: 'Meine Einsätze', path: '/dashboard' }, 
+        { icon: Calendar, label: 'Kalender', path: '/dashboard/calendar' },
         { icon: Palmtree, label: 'Abwesenheit', path: '/dashboard/absences' },
     ]},
     { section: 'Ressourcen', items: [
@@ -96,7 +100,7 @@ export default function DashboardLayout() {
     ]}
   ];
 
-  const menuGroups = role === 'ADMIN' || role === 'MANAGER' ? adminNav : role === 'CUSTOMER' ? customerNav : employeeNav;
+  const menuGroups = (role === 'ADMIN' || role === 'MANAGER') ? adminNav : role === 'CUSTOMER' ? customerNav : employeeNav;
 
   const handleLogout = () => {
     logout();
@@ -122,7 +126,7 @@ export default function DashboardLayout() {
           ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
       >
-        {/* 1. HEADER (STAY TOP) */}
+        {/* 1. HEADER (Sidebar) */}
         <div className="p-3 flex items-center justify-between border-b border-white/5 h-14 bg-slate-900 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="bg-blue-600 p-1.5 rounded-lg shadow-lg shadow-blue-500/20">
@@ -138,7 +142,7 @@ export default function DashboardLayout() {
           </button>
         </div>
         
-        {/* 2. NAVIGATION (SCROLLABLE CENTER) */}
+        {/* 2. NAVIGATION */}
         <nav className="flex-1 px-2 py-3 space-y-5 overflow-y-auto custom-scrollbar overflow-x-hidden">
           {menuGroups.map((group, idx) => (
             <div key={idx}>
@@ -147,6 +151,7 @@ export default function DashboardLayout() {
               </p>
               <div className="space-y-0.5">
                 {group.items.map((item) => {
+                  // Prüfung für Active State angepasst
                   const isActive = location.pathname === item.path || (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
                   return (
                     <Link
@@ -171,7 +176,7 @@ export default function DashboardLayout() {
           ))}
         </nav>
 
-        {/* 3. USER AREA (STAY BOTTOM) */}
+        {/* 3. USER AREA */}
         <div className="p-3 bg-slate-900 border-t border-white/5 shrink-0 pb-safe">
           <div className="flex items-center gap-2 px-2 py-2 bg-white/5 rounded-lg mb-2 border border-white/5">
               <div className="w-7 h-7 rounded-md bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-xs font-bold shadow-inner shrink-0 text-white">
@@ -197,48 +202,53 @@ export default function DashboardLayout() {
       {/* HAUPTINHALT */}
       <div className="flex-1 flex flex-col min-h-screen w-full relative bg-slate-50 overflow-x-hidden">
         
-        {/* MOBILE TOP BAR */}
-        <header className="md:hidden bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30 px-3 py-2 flex items-center justify-between shadow-sm h-12">
-           <div className="flex items-center gap-2">
-              <button onClick={() => setIsMobileMenuOpen(true)} className="p-1.5 -ml-1 text-slate-600 hover:bg-slate-100 rounded-lg active:scale-95 transition-all">
-                <Menu size={20} />
-              </button>
-              <span className="font-bold text-slate-800 tracking-tight text-sm">GlanzOps</span>
-           </div>
-           <div className="w-6 h-6 rounded-md bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-bold border border-blue-200">
-              {firstName.charAt(0)}
-           </div>
-        </header>
+        {/* MOBILE TOP BAR - Nur anzeigen wenn NICHT Mitarbeiter */}
+        {!isEmployee && (
+            <header className="md:hidden bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30 px-3 py-2 flex items-center justify-between shadow-sm h-12">
+               <div className="flex items-center gap-2">
+                  <button onClick={() => setIsMobileMenuOpen(true)} className="p-1.5 -ml-1 text-slate-600 hover:bg-slate-100 rounded-lg active:scale-95 transition-all">
+                    <Menu size={20} />
+                  </button>
+                  <span className="font-bold text-slate-800 tracking-tight text-sm">GlanzOps</span>
+               </div>
+               <div className="w-6 h-6 rounded-md bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-bold border border-blue-200">
+                  {firstName.charAt(0)}
+               </div>
+            </header>
+        )}
 
-        <main className="flex-1 w-full animate-in fade-in duration-500 pb-20 md:pb-0">
+        {/* Content Area - Padding anpassen: 0 für Mitarbeiter (wegen App-Look), sonst normal */}
+        <main className={`flex-1 w-full animate-in fade-in duration-500 ${isEmployee ? 'pb-0' : 'pb-20 md:pb-0'}`}>
              <Outlet />
         </main>
 
-        {/* MOBILE BOTTOM NAV */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200 px-2 py-1.5 flex justify-between items-center z-30 shadow-[0_-5px_15px_rgba(0,0,0,0.02)] pb-safe">
-            <Link to="/dashboard" className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all ${location.pathname === '/dashboard' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
-                <LayoutDashboard size={18} strokeWidth={location.pathname === '/dashboard' ? 2.5 : 2} />
-                <span className="text-[8px] font-bold uppercase tracking-tight">Home</span>
-            </Link>
-            <Link to="/dashboard/jobs" className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all ${location.pathname.includes('jobs') ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
-                <Briefcase size={18} strokeWidth={location.pathname.includes('jobs') ? 2.5 : 2} />
-                <span className="text-[8px] font-bold uppercase tracking-tight">Jobs</span>
-            </Link>
-            <Link to="/dashboard/calendar" className="flex flex-col items-center -mt-5">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-transform active:scale-95 ${location.pathname.includes('calendar') ? 'bg-blue-600 text-white shadow-blue-600/30' : 'bg-slate-900 text-white shadow-slate-900/30'}`}>
-                  <Calendar size={18} />
-                </div>
-                <span className="text-[8px] font-bold uppercase tracking-tight mt-0.5 text-slate-500">Plan</span>
-            </Link>
-            <Link to="/dashboard/absences" className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all ${location.pathname.includes('absences') ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
-                <Palmtree size={18} strokeWidth={location.pathname.includes('absences') ? 2.5 : 2} />
-                <span className="text-[8px] font-bold uppercase tracking-tight">Frei</span>
-            </Link>
-            <button onClick={() => setIsMobileMenuOpen(true)} className="flex flex-col items-center gap-0.5 p-1.5 text-slate-400 hover:text-slate-600">
-                <Menu size={18} />
-                <span className="text-[8px] font-bold uppercase tracking-tight">Menü</span>
-            </button>
-        </div>
+        {/* MOBILE BOTTOM NAV - Nur anzeigen wenn NICHT Mitarbeiter */}
+        {!isEmployee && (
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200 px-2 py-1.5 flex justify-between items-center z-30 shadow-[0_-5px_15px_rgba(0,0,0,0.02)] pb-safe">
+                <Link to="/dashboard" className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all ${location.pathname === '/dashboard' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
+                    <LayoutDashboard size={18} strokeWidth={location.pathname === '/dashboard' ? 2.5 : 2} />
+                    <span className="text-[8px] font-bold uppercase tracking-tight">Home</span>
+                </Link>
+                <Link to="/dashboard/jobs" className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all ${location.pathname.includes('jobs') ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
+                    <Briefcase size={18} strokeWidth={location.pathname.includes('jobs') ? 2.5 : 2} />
+                    <span className="text-[8px] font-bold uppercase tracking-tight">Jobs</span>
+                </Link>
+                <Link to="/dashboard/calendar" className="flex flex-col items-center -mt-5">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-transform active:scale-95 ${location.pathname.includes('calendar') ? 'bg-blue-600 text-white shadow-blue-600/30' : 'bg-slate-900 text-white shadow-slate-900/30'}`}>
+                      <Calendar size={18} />
+                    </div>
+                    <span className="text-[8px] font-bold uppercase tracking-tight mt-0.5 text-slate-500">Plan</span>
+                </Link>
+                <Link to="/dashboard/absences" className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all ${location.pathname.includes('absences') ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
+                    <Palmtree size={18} strokeWidth={location.pathname.includes('absences') ? 2.5 : 2} />
+                    <span className="text-[8px] font-bold uppercase tracking-tight">Frei</span>
+                </Link>
+                <button onClick={() => setIsMobileMenuOpen(true)} className="flex flex-col items-center gap-0.5 p-1.5 text-slate-400 hover:text-slate-600">
+                    <Menu size={18} />
+                    <span className="text-[8px] font-bold uppercase tracking-tight">Menü</span>
+                </button>
+            </div>
+        )}
 
       </div>
     </div>

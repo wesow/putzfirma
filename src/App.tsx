@@ -66,7 +66,7 @@ const DashboardSwitcher = () => {
   const { user } = useAuth();
   if (user?.role === 'ADMIN' || user?.role === 'MANAGER') return <Dashboard />;
   if (user?.role === 'CUSTOMER') return <CustomerDashboard />;
-  return <EmployeeDashboard />;
+  return <EmployeeDashboard />; // <-- Das wird korrekt geladen
 };
 
 function App() {
