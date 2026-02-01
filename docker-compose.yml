@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # 1. Datenbank
+  postgres:
+    image: postgres:15-alpine
+    container_name: glanzops_db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: glanzops
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  # 2. Backend API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: glanzops_api
+    environment:
+      DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@postgres:5432/glanzops
+      JWT_SECRET: ${JWT_SECRET}
+      FRONTEND_URL: https://${DOMAIN_NAME}
+      PORT: 5000
+    volumes:
+      - ./uploads:/app/uploads # Persistente Uploads auf dem Host
+    depends_on:
+      - postgres
+    restart: always
+
+  # 3. Frontend (React + Nginx)
+  web:
+    build:
+      context: . # Pfad zu deinem Frontend-Ordner (falls getrennt, Pfad anpassen)
+      dockerfile: Dockerfile.frontend
+    container_name: glanzops_web
+    depends_on:
+      - api
+    restart: always
+
+  # 4. HTTPS Server (Reverse Proxy)
+  caddy:
+    image: caddy:2-alpine
+    container_name: glanzops_https
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    command: caddy reverse-proxy --from https://${DOMAIN_NAME} --to http://web:80
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

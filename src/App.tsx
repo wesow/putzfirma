@@ -46,7 +46,7 @@ import PayrollPage from './pages/team/PayrollPage';
 import TeamPage from './pages/team/TeamPage';
 
 // --- FINANZEN & SALES ---
-import FinancePage from './pages/admin/FinancePage'; // <--- NEU: Finance Dashboard
+import FinancePage from './pages/admin/FinancePage';
 import AuditLogs from './pages/AuditLogs';
 import ExpensesPage from './pages/expenses/ExpensesPage';
 import InvoicesPage from './pages/invoices/InvoicesPage';
@@ -54,7 +54,11 @@ import ReportsPage from './pages/ReportsPage';
 import CreateOffersPage from './pages/sales/CreateOfferPage';
 import OffersPage from './pages/sales/OffersPage';
 
+// --- SYSTEM & INFRASTRUKTUR ---
+import SystemStatusPage from './pages/admin/SystemStatusPage'; // <--- NEU: Importiert
+
 // --- LAGER & SONSTIGES ---
+import BusinessFlowPage from './pages/admin/BusinessFlowPage';
 import CreateInventoryPage from './pages/inventory/CreateInventoryPage';
 import InventoryPage from './pages/inventory/InventoryPage';
 import SettingsPage from './pages/SettingsPage';
@@ -66,7 +70,7 @@ const DashboardSwitcher = () => {
   const { user } = useAuth();
   if (user?.role === 'ADMIN' || user?.role === 'MANAGER') return <Dashboard />;
   if (user?.role === 'CUSTOMER') return <CustomerDashboard />;
-  return <EmployeeDashboard />; // <-- Das wird korrekt geladen
+  return <EmployeeDashboard />; 
 };
 
 function App() {
@@ -147,11 +151,16 @@ function App() {
               <Route path="offers" element={<OffersPage />} />
               <Route path="offers/new" element={<CreateOffersPage />} />
               <Route path="invoices" element={<InvoicesPage />} />
-              <Route path="finance" element={<FinancePage />} /> {/* <--- NEU: Hier registriert */}
+              <Route path="finance" element={<FinancePage />} />
               <Route path="expenses" element={<ExpensesPage />} />
               
               <Route path="reports" element={<ReportsPage />} />
+              
+              
+              {/* SYSTEM & SETTINGS */}
               <Route path="audit" element={<AuditLogs />} />
+              <Route path="system-status" element={<SystemStatusPage />} /> 
+              <Route path="business-flow" element={<BusinessFlowPage />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>
 

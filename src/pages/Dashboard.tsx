@@ -21,13 +21,24 @@ import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 
 // --- TYPEN ---
+// NEU: Sauberes Interface für Logs
+interface AuditLog {
+  id: string;
+  action: string;
+  createdAt: string;
+  user?: {
+    firstName: string;
+    lastName: string;
+  };
+}
+
 interface DashboardStats {
   revenue: number;
   openJobs: number;
   activeCustomers: number;
   teamSize: number;
   chartData: { name: string; revenue: number }[];
-  auditLogs: any[];
+  auditLogs: AuditLog[]; // Typisiert
   failedLoginCount: number;
 }
 
@@ -60,7 +71,7 @@ const SecurityAlert = ({ count = 0 }: { count: number }) => {
   );
 };
 
-const AuditFeed = ({ logs = [] }: { logs?: any[] }) => {
+const AuditFeed = ({ logs = [] }: { logs?: AuditLog[] }) => {
   const safeLogs = Array.isArray(logs) ? logs : [];
 
   return (
@@ -132,8 +143,8 @@ export default function Dashboard() {
   });
   const [loading, setLoading] = useState(true);
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
+  const fetchDashboardData = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
     try {
       const res = await api.get('/dashboard');
       setStats({
@@ -144,11 +155,21 @@ export default function Dashboard() {
     } catch (error) {
       console.error("Dashboard-Fehler beim Laden");
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
-  useEffect(() => { fetchDashboardData(); }, []);
+  useEffect(() => { 
+      // 1. Initialer Load
+      fetchDashboardData(); 
+
+      // 2. Automatischer Refresh alle 60 Sekunden (Live-Feeling)
+      const intervalId = setInterval(() => {
+          fetchDashboardData(true); // true = Kein Spinner
+      }, 60000);
+
+      return () => clearInterval(intervalId);
+  }, []);
 
   if (loading && stats.revenue === 0) {
     return (
@@ -175,7 +196,7 @@ export default function Dashboard() {
             <button onClick={() => navigate('/dashboard/jobs')} className="btn-primary flex-1 md:flex-initial text-[11px] uppercase tracking-wider font-bold shadow-md">
               <PlusCircle size={14} className="mr-2" /> Neuer Auftrag
             </button>
-            <button onClick={fetchDashboardData} className="btn-secondary !p-2.5 bg-white shadow-sm border border-slate-200">
+            <button onClick={() => fetchDashboardData(false)} className="btn-secondary !p-2.5 bg-white shadow-sm border border-slate-200">
               <RefreshCw size={16} className={loading ? "animate-spin text-blue-600" : "text-slate-400"} />
             </button>
         </div>

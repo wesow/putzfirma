@@ -1,4 +1,5 @@
 import {
+  Activity, // <--- NEU
   Briefcase,
   Calendar,
   ChevronRight,
@@ -6,6 +7,7 @@ import {
   FileSpreadsheet,
   FileText,
   Landmark,
+  Layout,
   LayoutDashboard,
   LogOut,
   Megaphone,
@@ -43,14 +45,14 @@ export default function DashboardLayout() {
   const role = user?.role; 
   const firstName = user?.firstName || 'Benutzer';
 
-  // --- NEU: Logik-Check ---
-  // Wenn true, blenden wir Header/Footer aus, damit die App-Ansicht wirkt
+  // Logik-Check: Mitarbeiter erhalten eine App-ähnliche Ansicht ohne Header/Footer
   const isEmployee = role === 'EMPLOYEE';
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
+  // --- NAVIGATION CONFIG ---
   const adminNav = [
     { section: 'Übersicht', items: [
         { icon: LayoutDashboard, label: 'Zentrale', path: '/dashboard' },
@@ -77,6 +79,8 @@ export default function DashboardLayout() {
     ]},
     { section: 'System', items: [
         { icon: ShieldAlert, label: 'Audit', path: '/dashboard/audit' },
+        { icon: Activity, label: 'System-Status', path: '/dashboard/system-status' }, // <--- NEU
+        { icon: Layout, label: 'Prozess-Map', path: '/dashboard/business-flow' }, // <--- NEU
         { icon: Settings, label: 'Optionen', path: '/dashboard/settings' },
     ]}
   ];

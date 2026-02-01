@@ -1,8 +1,8 @@
 import {
   AlertCircle,
-  ArrowLeft,
   Calendar,
   CheckCircle2,
+  ChevronLeft,
   Clock,
   FileText,
   Loader2,
@@ -10,9 +10,12 @@ import {
   PauseCircle,
   Repeat,
   Save,
+  Search,
+  ShieldCheck,
+  Sparkles,
   User
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import api from '../../lib/api';
@@ -32,50 +35,29 @@ interface Service {
   priceNet: number;
 }
 
-// --- HILFSKOMPONENTE ---
-const SelectField = ({ label, icon: Icon, value, onChange, options, placeholder, required = true, disabled = false }: any) => (
-  <div className="space-y-1.5">
-    <label className="label-caps">{label} {required && '*'}</label>
-    <div className="relative group">
-      <div className={`absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-colors ${disabled ? 'text-slate-300' : 'text-slate-400 group-focus-within:text-blue-500'}`}>
-        <Icon size={18} />
-      </div>
-      <select
-        required={required}
-        disabled={disabled}
-        value={value}
-        onChange={onChange}
-        className={`input-standard pl-12 appearance-none cursor-pointer pr-10 ${disabled ? 'bg-slate-50 cursor-not-allowed text-slate-400' : ''}`}
-      >
-        <option value="">{placeholder}</option>
-        {options}
-      </select>
-      <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-300">
-        <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" /></svg>
-      </div>
-    </div>
-  </div>
-);
-
 export default function CreateContractPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   
+  // Data States
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [customerAddresses, setCustomerAddresses] = useState<any[]>([]);
+  const [customerSearch, setCustomerSearch] = useState('');
 
+  // Form State
   const [formData, setFormData] = useState({
     customerId: '',
     addressId: '', 
     serviceId: '',
-    startDate: new Date().toISOString().split('T')[0], // Default Heute
-    startTime: '08:00', // Default 8 Uhr
+    startDate: new Date().toISOString().split('T')[0],
+    startTime: '08:00',
     interval: 'WEEKLY',
-    endDate: '' // Optionales Enddatum
+    endDate: ''
   });
 
+  // --- 1. DATEN LADEN ---
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -94,23 +76,22 @@ export default function CreateContractPage() {
     loadData();
   }, []);
 
-  // Adressen laden, wenn Kunde gewählt wird
+  // --- 2. ADRESSEN FILTERN ---
   useEffect(() => {
     if (formData.customerId) {
         const cust = customers.find(c => c.id === formData.customerId);
         setCustomerAddresses(cust?.addresses || []);
-        // Adresse resetten bei Kundenwechsel
         setFormData(prev => ({...prev, addressId: ''}));
     } else {
         setCustomerAddresses([]);
     }
   }, [formData.customerId, customers]);
 
+  // --- 3. SPEICHERN ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.addressId) return toast.error("Bitte eine Objekt-Adresse wählen.");
 
-    // Validierung: Enddatum vor Startdatum?
     if (formData.endDate && new Date(formData.endDate) < new Date(formData.startDate)) {
         return toast.error("Laufzeit-Ende darf nicht vor dem Start liegen.");
     }
@@ -121,7 +102,6 @@ export default function CreateContractPage() {
     try {
       const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
       
-      // Enddatum auf 23:59 setzen
       let endDateTime = null;
       if (formData.endDate && formData.interval !== 'ONCE') {
           endDateTime = new Date(formData.endDate);
@@ -134,7 +114,7 @@ export default function CreateContractPage() {
         addressId: formData.addressId,
         startDate: startDateTime.toISOString(),
         interval: formData.interval,
-        endDate: endDateTime ? endDateTime.toISOString() : null, // Nur senden wenn nicht ONCE
+        endDate: endDateTime ? endDateTime.toISOString() : null,
         quantity: 1
       });
 
@@ -149,167 +129,259 @@ export default function CreateContractPage() {
     }
   };
 
-  if (dataLoading) return <div className="page-container flex justify-center py-40"><Loader2 className="animate-spin text-blue-600" /></div>;
+  // Filter Logik
+  const filteredCustomers = customers.filter(c => {
+      const search = customerSearch.toLowerCase();
+      return (
+          c.lastName.toLowerCase().includes(search) ||
+          c.firstName.toLowerCase().includes(search) ||
+          (c.companyName && c.companyName.toLowerCase().includes(search))
+      );
+  });
+
+  if (dataLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" size={32}/></div>;
 
   const isOneTime = formData.interval === 'ONCE';
 
   return (
-    <div className="page-container max-w-6xl mx-auto">
+    <div className="page-container">
       
-      {/* HEADER */}
-      <div className="mb-8">
-        <button onClick={() => navigate('/dashboard/contracts')} className="text-[10px] text-slate-400 hover:text-blue-600 flex items-center gap-2 mb-4 font-black uppercase tracking-[0.2em] bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm transition-all">
-          <ArrowLeft size={14} /> Zurück
-        </button>
-        <h1 className="page-title text-3xl">Service-Vertrag erstellen</h1>
-        <p className="page-subtitle text-lg">Planen Sie wiederkehrende Dienstleistungen oder Einzelaufträge.</p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="animate-in fade-in slide-in-from-bottom-4 duration-500 mb-24">
-        
-        {/* INFO BANNER */}
-        <div className={`mb-8 rounded-[2rem] p-6 text-white shadow-xl relative overflow-hidden group transition-all duration-500 ${isOneTime ? 'bg-indigo-600 shadow-indigo-200' : 'bg-blue-600 shadow-blue-200'}`}>
-            <div className="absolute right-[-20px] top-[-20px] opacity-10 group-hover:scale-110 transition-transform duration-700">
-                {isOneTime ? <CheckCircle2 size={120} /> : <Repeat size={120} />}
-            </div>
-            <div className="flex items-start gap-4 relative z-10">
-                <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-md shadow-inner">
-                    {isOneTime ? <PauseCircle size={24} /> : <AlertCircle size={24} />}
-                </div>
-                <div>
-                    <h4 className="font-bold text-lg mb-1">{isOneTime ? 'Einmaliger Auftrag' : 'Automatischer Dauerauftrag'}</h4>
-                    <p className={`text-sm leading-relaxed max-w-md ${isOneTime ? 'text-indigo-100' : 'text-blue-100'}`}>
-                        {isOneTime 
-                            ? "Das System erstellt genau EINEN Job zum gewählten Zeitpunkt. Der Vertrag wird danach automatisch archiviert." 
-                            : "Das System plant automatisch wiederkehrende Termine im Kalender und berücksichtigt dabei Feiertage und Laufzeiten."
-                        }
-                    </p>
-                </div>
-            </div>
+      {/* --- HEADER SECTION --- */}
+      <div className="header-section">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate('/dashboard/contracts')} 
+            className="btn-secondary !p-2"
+            title="Zurück"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <div>
+            <h1 className="page-title text-base">Neuen Vertrag erstellen</h1>
+            <p className="page-subtitle">Planen Sie wiederkehrende Dienstleistungen oder Einzelaufträge.</p>
+          </div>
         </div>
 
-        {/* 2-SPALTEN LAYOUT */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="hidden md:flex items-center gap-2">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 flex items-center gap-2">
+                <Sparkles size={12} className="text-amber-400 fill-amber-400" /> Service-Planer
+            </span>
+        </div>
+      </div>
 
-            {/* LINKE SPALTE: PARTNER & LEISTUNG */}
-            <div className="space-y-6">
-                <div className="form-card space-y-6">
-                    <div className="form-section-title"><User size={16} className="text-blue-500" /> 1. Kunde & Objekt</div>
+      <form onSubmit={handleSubmit} className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-4 pb-24">
+        
+        <div className="content-grid lg:grid-cols-12 gap-4">
+
+            {/* --- LINKS: KUNDE & SERVICE (7 Cols) --- */}
+            <div className="lg:col-span-7 space-y-4">
+                
+                {/* 1. KUNDENWAHL */}
+                <div className="form-card">
+                    <div className="form-section-title">
+                        <User size={14} /> 1. Kunde & Objekt
+                    </div>
+                    
                     <div className="space-y-4">
-                        <SelectField 
-                            label="Vertragspartner" 
-                            icon={User} 
-                            value={formData.customerId}
-                            onChange={(e: any) => setFormData({...formData, customerId: e.target.value})}
-                            placeholder="Kunde wählen..."
-                            options={customers.map(c => <option key={c.id} value={c.id}>{c.companyName || `${c.lastName}, ${c.firstName}`}</option>)}
-                        />
-                        <SelectField 
-                            label="Leistungsort (Adresse)" 
-                            icon={MapPin} 
-                            value={formData.addressId}
-                            onChange={(e: any) => setFormData({...formData, addressId: e.target.value})}
-                            placeholder={formData.customerId ? (customerAddresses.length > 0 ? "Adresse wählen" : "Keine Adresse gefunden") : "Zuerst Kunde wählen"}
-                            disabled={!formData.customerId || customerAddresses.length === 0}
-                            options={customerAddresses.map(a => <option key={a.id} value={a.id}>{a.street}, {a.zipCode} {a.city}</option>)}
-                        />
+                        {/* Suchfeld integriert */}
+                        <div className="space-y-1">
+                            <label className="label-caps">Vertragspartner *</label>
+                            
+                            <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 mb-2">
+                                <div className="relative mb-2">
+                                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
+                                    <input 
+                                        type="text"
+                                        placeholder="Kunden suchen..."
+                                        className="w-full bg-white border border-slate-200 rounded-lg py-1.5 pl-9 text-xs font-medium focus:outline-none focus:border-blue-400 transition-colors"
+                                        value={customerSearch}
+                                        onChange={(e) => setCustomerSearch(e.target.value)}
+                                    />
+                                </div>
+                                <div className="relative group">
+                                    <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+                                    <select
+                                        required
+                                        value={formData.customerId}
+                                        onChange={(e) => setFormData({...formData, customerId: e.target.value})}
+                                        className="input-standard pl-10 appearance-none cursor-pointer bg-white font-bold"
+                                    >
+                                        <option value="">-- Bitte wählen ({filteredCustomers.length}) --</option>
+                                        {filteredCustomers.map(c => <option key={c.id} value={c.id}>{c.companyName || `${c.lastName}, ${c.firstName}`}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Adresse */}
+                        <div className="space-y-1">
+                            <label className="label-caps">Leistungsort (Adresse) *</label>
+                            <div className="relative group">
+                                <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+                                <select 
+                                    required
+                                    className={`input-standard pl-10 appearance-none cursor-pointer ${!formData.customerId ? 'bg-slate-50 text-slate-400' : ''}`}
+                                    value={formData.addressId}
+                                    onChange={(e) => setFormData({...formData, addressId: e.target.value})}
+                                    disabled={!formData.customerId || customerAddresses.length === 0}
+                                >
+                                    <option value="">
+                                        {formData.customerId 
+                                            ? (customerAddresses.length > 0 ? "-- Objekt wählen --" : "-- Keine Adresse hinterlegt --") 
+                                            : "-- Zuerst Kunde wählen --"
+                                        }
+                                    </option>
+                                    {customerAddresses.map(a => <option key={a.id} value={a.id}>{a.street}, {a.zipCode} {a.city}</option>)}
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div className="form-card space-y-6">
-                    <div className="form-section-title"><FileText size={16} className="text-blue-500" /> 2. Dienstleistung</div>
-                    <SelectField 
-                        label="Service-Paket" 
-                        icon={FileText} 
-                        value={formData.serviceId}
-                        onChange={(e: any) => setFormData({...formData, serviceId: e.target.value})}
-                        placeholder="Leistungskatalog öffnen..."
-                        options={services.map(s => <option key={s.id} value={s.id}>{s.name} — {Number(s.priceNet || 0).toFixed(2)} €</option>)}
-                    />
+                {/* 2. SERVICE */}
+                <div className="form-card">
+                    <div className="form-section-title">
+                        <FileText size={14} /> 2. Dienstleistung
+                    </div>
+                    <div className="space-y-1">
+                        <label className="label-caps">Service-Paket *</label>
+                        <div className="relative group">
+                            <FileText size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+                            <select 
+                                required
+                                className="input-standard pl-10 appearance-none cursor-pointer font-medium"
+                                value={formData.serviceId}
+                                onChange={(e) => setFormData({...formData, serviceId: e.target.value})}
+                            >
+                                <option value="">-- Leistungskatalog öffnen --</option>
+                                {services.map(s => <option key={s.id} value={s.id}>{s.name} — {Number(s.priceNet || 0).toFixed(2)} €</option>)}
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* RECHTE SPALTE: ZEITPLANUNG */}
-            <div className="space-y-6">
-                <div className="form-card space-y-6 h-full border-l-4 border-l-indigo-500">
-                    <div className="form-section-title text-indigo-700"><Calendar size={16} className="text-indigo-500" /> 3. Zeitplanung & Intervall</div>
-                    
-                    <div className="space-y-6">
-                        {/* INTERVALL WAHL */}
+            {/* --- RECHTS: ZEITPLAN (5 Cols) --- */}
+            <div className="lg:col-span-5 space-y-4">
+                
+                {/* INFO BANNER */}
+                <div className={`p-5 rounded-xl border relative overflow-hidden transition-all duration-300 ${
+                    isOneTime 
+                    ? 'bg-indigo-600 border-indigo-700 text-white shadow-lg shadow-indigo-500/20' 
+                    : 'bg-blue-600 border-blue-700 text-white shadow-lg shadow-blue-500/20'
+                }`}>
+                    <div className="absolute right-[-10px] top-[-10px] opacity-10 scale-150">
+                        {isOneTime ? <CheckCircle2 size={100} /> : <Repeat size={100} />}
+                    </div>
+                    <div className="flex items-start gap-3 relative z-10">
+                        <div className="bg-white/20 p-2 rounded-lg backdrop-blur-md">
+                            {isOneTime ? <PauseCircle size={20} /> : <AlertCircle size={20} />}
+                        </div>
                         <div>
-                            <label className="label-caps mb-2 block">Wiederholungs-Zyklus</label>
-                            <div className="grid grid-cols-2 gap-3">
+                            <h4 className="font-bold text-sm mb-1">{isOneTime ? 'Einmaliger Auftrag' : 'Automatischer Dauerauftrag'}</h4>
+                            <p className="text-[10px] leading-relaxed opacity-90">
+                                {isOneTime 
+                                    ? "Es wird genau EINEN Job erstellt. Der Vertrag wird danach archiviert." 
+                                    : "Das System plant automatisch wiederkehrende Termine im Kalender."
+                                }
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="form-card border-t-4 border-t-slate-900">
+                    <div className="form-section-title">
+                        <Calendar size={14} /> 3. Zeitplanung
+                    </div>
+
+                    <div className="space-y-4">
+                        {/* INTERVALL GRID */}
+                        <div className="space-y-1">
+                            <label className="label-caps">Wiederholung</label>
+                            <div className="grid grid-cols-2 gap-2">
                                 {[
-                                    { id: 'ONCE', label: 'Einmalig', sub: 'Sonderreinigung' },
-                                    { id: 'WEEKLY', label: 'Wöchentlich', sub: '7 Tage Zyklus' },
-                                    { id: 'BIWEEKLY', label: '14-tägig', sub: 'Alle 2 Wochen' },
-                                    { id: 'MONTHLY', label: 'Monatlich', sub: '30 Tage Zyklus' },
+                                    { id: 'ONCE', label: 'Einmalig' },
+                                    { id: 'WEEKLY', label: 'Wöchentlich' },
+                                    { id: 'BIWEEKLY', label: '14-tägig' },
+                                    { id: 'MONTHLY', label: 'Monatlich' },
                                 ].map(opt => (
                                     <div 
                                         key={opt.id}
                                         onClick={() => setFormData({...formData, interval: opt.id, endDate: opt.id === 'ONCE' ? '' : formData.endDate})}
-                                        className={`cursor-pointer p-4 rounded-xl border-2 transition-all text-center group relative overflow-hidden ${
+                                        className={`cursor-pointer px-2 py-3 rounded-lg border text-center transition-all ${
                                             formData.interval === opt.id 
-                                            ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-md' 
-                                            : 'border-slate-100 bg-white text-slate-500 hover:border-blue-200 hover:text-slate-700'
+                                            ? 'border-slate-800 bg-slate-900 text-white shadow-md' 
+                                            : 'border-slate-100 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'
                                         }`}
                                     >
-                                        <div className="font-black text-xs uppercase mb-1 relative z-10">{opt.label}</div>
-                                        <div className={`text-[9px] font-bold relative z-10 ${formData.interval === opt.id ? 'text-blue-400' : 'text-slate-300'}`}>{opt.sub}</div>
-                                        {formData.interval === opt.id && <div className="absolute inset-0 bg-blue-100/50 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                                        <div className="text-[10px] font-bold uppercase tracking-wider">{opt.label}</div>
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        {/* START & ZEIT */}
-                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
-                            <div className="space-y-1.5">
-                                <label className="label-caps">{isOneTime ? 'Ausführung am' : 'Vertragsstart'}</label>
+                        {/* START DATUM & ZEIT */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="label-caps">{isOneTime ? 'Datum' : 'Startdatum'}</label>
                                 <div className="relative group">
-                                    <Calendar size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500" />
+                                    <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
                                     <input required type="date" className="input-standard pl-10" value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})} />
                                 </div>
                             </div>
-                            <div className="space-y-1.5">
-                                <label className="label-caps">Start-Uhrzeit</label>
+                            <div className="space-y-1">
+                                <label className="label-caps">Uhrzeit</label>
                                 <div className="relative group">
-                                    <Clock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500" />
+                                    <Clock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
                                     <input required type="time" className="input-standard pl-10" value={formData.startTime} onChange={e => setFormData({...formData, startTime: e.target.value})} />
                                 </div>
                             </div>
                         </div>
 
-                        {/* LAUFZEIT ENDE */}
-                        <div className={`space-y-1.5 transition-all duration-300 ${isOneTime ? 'opacity-30 pointer-events-none grayscale' : 'opacity-100'}`}>
+                        {/* ENDE */}
+                        <div className={`space-y-1 transition-opacity duration-300 ${isOneTime ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
                             <label className="label-caps">Vertragsende (Optional)</label>
                             <div className="relative group">
-                                <Calendar size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500" />
+                                <ShieldCheck size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
                                 <input 
                                     type="date" 
-                                    className="input-standard pl-10 bg-slate-50 border-dashed" 
+                                    className="input-standard pl-10 border-dashed" 
                                     value={formData.endDate} 
                                     onChange={e => setFormData({...formData, endDate: e.target.value})} 
                                     disabled={isOneTime}
-                                    placeholder="Unbefristet"
                                 />
                             </div>
-                            <p className="text-[9px] text-slate-400 font-medium pl-1">Feld leer lassen für unbefristeten Vertrag.</p>
+                            <p className="text-[9px] text-slate-400 mt-1 pl-1">Leer lassen für unbefristete Laufzeit.</p>
                         </div>
+
                     </div>
                 </div>
             </div>
 
         </div>
 
-        {/* FLOATING FOOTER */}
-        <div className="fixed bottom-6 right-6 left-6 md:left-auto md:w-auto z-40">
-           <div className="bg-white/90 backdrop-blur-md p-2 rounded-[2rem] border border-slate-200 shadow-2xl flex items-center gap-2">
-              <button type="button" onClick={() => navigate('/dashboard/contracts')} className="px-6 py-3 rounded-xl text-slate-500 font-bold text-xs uppercase hover:bg-slate-100 transition-colors">Abbrechen</button>
-              <button type="submit" disabled={loading} className="btn-primary py-3 px-8 shadow-lg shadow-blue-600/20 min-w-[200px]">
-                {loading ? <Loader2 className="animate-spin" size={18} /> : <><Save size={18} /> <span className="uppercase tracking-widest text-[10px]">{isOneTime ? 'Auftrag erstellen' : 'Vertrag aktivieren'}</span></>}
-              </button>
-           </div>
+        {/* --- FLOATING ACTION FOOTER --- */}
+        <div className="fixed bottom-4 left-4 right-4 md:left-auto md:w-[450px] z-50">
+            <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-2xl flex items-center gap-2">
+            <button 
+                type="button" 
+                onClick={() => navigate('/dashboard/contracts')} 
+                className="flex-1 px-4 py-2.5 rounded-xl text-slate-500 font-bold text-[11px] uppercase tracking-wider hover:bg-slate-100 transition-colors"
+            >
+                Abbrechen
+            </button>
+            <button 
+                type="submit" 
+                disabled={loading} 
+                className="btn-primary flex-[2] py-2.5 shadow-lg shadow-blue-600/20"
+            >
+                {loading ? (
+                <Loader2 className="animate-spin" size={16} />
+                ) : (
+                <><Save size={16} /> {isOneTime ? 'Auftrag erstellen' : 'Vertrag speichern'}</>
+                )}
+            </button>
+            </div>
         </div>
 
       </form>

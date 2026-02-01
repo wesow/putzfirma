@@ -8,6 +8,7 @@ import {
   Loader2,
   Lock,
   Plus,
+  Search,
   Send,
   ShieldCheck
 } from 'lucide-react';
@@ -52,6 +53,7 @@ export default function InvoicesPage() {
   const [loading, setLoading] = useState(true);
   
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [customerSearch, setCustomerSearch] = useState(''); // NEU: Suche
   const [isGenerating, setIsGenerating] = useState(false);
   
   // Loading States für Actions
@@ -79,7 +81,7 @@ export default function InvoicesPage() {
       
       // 2. Wenn Admin: Lade zusätzlich NUR Kunden mit offenen Jobs für das Dropdown
       if (isAdmin) {
-          requests.push(api.get('/customers?billable=true')); // <--- DER FILTER!
+          requests.push(api.get('/customers?billable=true'));
       }
 
       const [invRes, custRes] = await Promise.all(requests);
@@ -103,7 +105,8 @@ export default function InvoicesPage() {
       await api.post('/invoices/generate', { customerId: selectedCustomerId });
       toast.success("Entwurf erfolgreich erstellt", { id: toastId });
       setSelectedCustomerId(''); 
-      fetchData(); // Aktualisiert Liste & entfernt Kunden aus Dropdown (weil jetzt abgerechnet)
+      setCustomerSearch(''); // Reset Search
+      fetchData(); 
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Fehler", { id: toastId });
     } finally {
@@ -145,9 +148,13 @@ export default function InvoicesPage() {
     try {
       const response = await api.get(`/invoices/${invoiceId}/pdf`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
+      
+      // WICHTIG: Dateinamen säubern (Schrägstriche entfernen!)
+      const safeFileName = invoiceNumber.replace(/[\/\\]/g, '-'); 
+
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `Rechnung_${invoiceNumber}.pdf`);
+      link.setAttribute('download', `Rechnung_${safeFileName}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
@@ -203,6 +210,16 @@ export default function InvoicesPage() {
     return <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${style}`}>{label}</span>;
   };
 
+  // Filterung für den Generator Dropdown
+  const filteredBillableCustomers = billableCustomers.filter(c => {
+      const search = customerSearch.toLowerCase();
+      return (
+          c.lastName.toLowerCase().includes(search) ||
+          c.firstName.toLowerCase().includes(search) ||
+          (c.companyName && c.companyName.toLowerCase().includes(search))
+      );
+  });
+
   return (
     <div className="page-container">
       
@@ -231,25 +248,45 @@ export default function InvoicesPage() {
           <div className="flex flex-col md:flex-row gap-3 items-end">
             <div className="flex-1 w-full">
               <label className="label-caps !text-indigo-600 mb-1.5">Kunde mit offenen Leistungen wählen</label>
+              
               <div className="relative">
-                  <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400" />
-                  <select 
-                    className="input-standard pl-10 font-bold cursor-pointer border-indigo-200 focus:border-indigo-500 focus:ring-indigo-200"
-                    value={selectedCustomerId}
-                    onChange={(e) => setSelectedCustomerId(e.target.value)}
-                  >
-                    <option value="">
-                        {billableCustomers.length > 0 ? "-- Bitte wählen --" : "-- Keine offenen Posten --"}
-                    </option>
-                    {billableCustomers.map(c => (
-                      <option key={c.id} value={c.id}>
-                        {c.companyName || `${c.lastName}, ${c.firstName}`} 
-                        {/* Zeigt an, wie viele Jobs in die Rechnung kommen: */}
-                        {c._count?.jobs ? ` (${c._count.jobs} offene Jobs)` : ''}
-                      </option>
-                    ))}
-                  </select>
+                  {/* Suchfeld integriert */}
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-indigo-400">
+                      <Search size={16} />
+                  </div>
+                  
+                  {/* Wir blenden ein Input ein, wenn das Dropdown fokussiert wird, oder nutzen einen Hybrid-Ansatz. 
+                      Hier einfach ein Input über dem Select für den Filter: */}
+                  <div className="flex flex-col gap-2">
+                      <input 
+                        type="text" 
+                        placeholder="Filter..." 
+                        value={customerSearch}
+                        onChange={(e) => setCustomerSearch(e.target.value)}
+                        className="input-standard pl-10 h-8 text-xs border-indigo-200 mb-1"
+                      />
+                      
+                      <div className="relative">
+                          <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400" />
+                          <select 
+                            className="input-standard pl-10 font-bold cursor-pointer border-indigo-200 focus:border-indigo-500 focus:ring-indigo-200"
+                            value={selectedCustomerId}
+                            onChange={(e) => setSelectedCustomerId(e.target.value)}
+                          >
+                            <option value="">
+                                {billableCustomers.length > 0 ? "-- Bitte wählen --" : "-- Keine offenen Posten --"}
+                            </option>
+                            {filteredBillableCustomers.map(c => (
+                              <option key={c.id} value={c.id}>
+                                {c.companyName || `${c.lastName}, ${c.firstName}`} 
+                                {c._count?.jobs ? ` (${c._count.jobs} offene Jobs)` : ''}
+                              </option>
+                            ))}
+                          </select>
+                      </div>
+                  </div>
               </div>
+
               {billableCustomers.length === 0 && (
                   <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1"><Info size={10}/> Aktuell gibt es keine erledigten Jobs, die abgerechnet werden müssen.</p>
               )}
@@ -257,7 +294,7 @@ export default function InvoicesPage() {
             <button 
                 onClick={handleGenerateInvoice}
                 disabled={isGenerating || !selectedCustomerId}
-                className="btn-primary min-w-[200px] h-[42px] bg-indigo-600 hover:bg-indigo-700 border-indigo-600 shadow-indigo-200 disabled:opacity-50 disabled:shadow-none"
+                className="btn-primary min-w-[200px] h-[42px] bg-indigo-600 hover:bg-indigo-700 border-indigo-600 shadow-indigo-200 disabled:opacity-50 disabled:shadow-none mb-[1px]"
             >
                 {isGenerating ? <Loader2 className="animate-spin" size={16} /> : <Plus size={16} />}
                 {isGenerating ? 'Erstelle...' : 'Rechnung generieren'}
