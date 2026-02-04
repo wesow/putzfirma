@@ -13,11 +13,9 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 
 export default function CustomerDashboard() {
-  const { user } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [nextJob, setNextJob] = useState<any>(null);
   const [openInvoices, setOpenInvoices] = useState<any[]>([]);
