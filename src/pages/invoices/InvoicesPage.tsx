@@ -10,7 +10,8 @@ import {
   Plus,
   Search,
   Send,
-  ShieldCheck
+  ShieldCheck,
+  XCircle // <--- NEU: Icon für Stornieren
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
@@ -53,13 +54,14 @@ export default function InvoicesPage() {
   const [loading, setLoading] = useState(true);
   
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
-  const [customerSearch, setCustomerSearch] = useState(''); // NEU: Suche
+  const [customerSearch, setCustomerSearch] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   
   // Loading States für Actions
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [finalizingId, setFinalizingId] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null); // <--- NEU
 
   const [confirmConfig, setConfirmConfig] = useState<{
     isOpen: boolean;
@@ -142,6 +144,21 @@ export default function InvoicesPage() {
     }
   };
 
+  // --- NEU: STORNIEREN ---
+  const executeCancel = async (invoiceId: string) => {
+      setCancellingId(invoiceId);
+      const toastId = toast.loading("Storniere Rechnung...");
+      try {
+          await api.post(`/invoices/${invoiceId}/cancel`);
+          toast.success("Rechnung storniert & Jobs freigegeben", { id: toastId });
+          fetchData();
+      } catch (error: any) {
+          toast.error(error.response?.data?.message || "Fehler beim Stornieren", { id: toastId });
+      } finally {
+          setCancellingId(null);
+      }
+  };
+
   // --- ACTIONS (UI) ---
   const handleDownloadPdf = async (invoiceId: string, invoiceNumber: string) => {
     setDownloadingId(invoiceId);
@@ -149,7 +166,6 @@ export default function InvoicesPage() {
       const response = await api.get(`/invoices/${invoiceId}/pdf`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       
-      // WICHTIG: Dateinamen säubern (Schrägstriche entfernen!)
       const safeFileName = invoiceNumber.replace(/[\/\\]/g, '-'); 
 
       const link = document.createElement('a');
@@ -189,6 +205,18 @@ export default function InvoicesPage() {
     });
   };
 
+  // --- NEU: STORNO CONFIRM ---
+  const openCancelConfirm = (invoice: Invoice) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: "Rechnung stornieren?",
+      message: `Möchten Sie die Rechnung ${invoice.invoiceNumber} wirklich stornieren? Die zugehörigen Jobs werden wieder freigegeben und können neu abgerechnet werden.`,
+      variant: 'danger',
+      confirmText: 'Ja, stornieren',
+      onConfirm: () => executeCancel(invoice.id)
+    });
+  };
+
   const getStatusBadge = (status: string) => {
     const styles = {
         'DRAFT': 'bg-slate-100 text-slate-500 border-slate-200',
@@ -210,7 +238,6 @@ export default function InvoicesPage() {
     return <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${style}`}>{label}</span>;
   };
 
-  // Filterung für den Generator Dropdown
   const filteredBillableCustomers = billableCustomers.filter(c => {
       const search = customerSearch.toLowerCase();
       return (
@@ -250,13 +277,10 @@ export default function InvoicesPage() {
               <label className="label-caps !text-indigo-600 mb-1.5">Kunde mit offenen Leistungen wählen</label>
               
               <div className="relative">
-                  {/* Suchfeld integriert */}
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-indigo-400">
                       <Search size={16} />
                   </div>
                   
-                  {/* Wir blenden ein Input ein, wenn das Dropdown fokussiert wird, oder nutzen einen Hybrid-Ansatz. 
-                      Hier einfach ein Input über dem Select für den Filter: */}
                   <div className="flex flex-col gap-2">
                       <input 
                         type="text" 
@@ -401,6 +425,19 @@ export default function InvoicesPage() {
                             {sendingId === inv.id ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                           </button>
                         )}
+
+                        {/* --- NEU: STORNIEREN BUTTON --- */}
+                        {isAdmin && inv.status !== 'CANCELLED' && inv.status !== 'PAID' && (
+                            <button 
+                              onClick={() => openCancelConfirm(inv)}
+                              disabled={!!cancellingId}
+                              className="btn-icon-only text-red-400 hover:text-red-600 hover:bg-red-50"
+                              title="Rechnung stornieren"
+                            >
+                              {cancellingId === inv.id ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />}
+                            </button>
+                        )}
+
                       </div>
                     </td>
                   </tr>
