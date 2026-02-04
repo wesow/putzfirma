@@ -1,13 +1,17 @@
 import {
-  AlertCircle, Building2,
+  AlertCircle,
+  Building2,
   CheckCircle,
-  ChevronRight, CreditCard, Landmark,
+  ChevronRight,
+  CreditCard,
+  Landmark,
   Loader2,
   Mail,
   MapPin,
   Pencil,
   Phone,
-  Plus, Search,
+  Plus,
+  Search,
   Trash2
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -25,7 +29,7 @@ interface Customer {
   email: string;
   phone: string | null;
   userId: string | null;
-  iban?: string; // Für Status-Badge SEPA
+  iban?: string;
   addresses: { id: string; street: string; city: string; zipCode: string; }[];
 }
 
@@ -35,9 +39,17 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'GRID' | 'TABLE'>('GRID');
-  const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', name: '' });
+  
+  // State für das Löschen-Modal
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string; name: string }>({ 
+    isOpen: false, 
+    id: '', 
+    name: '' 
+  });
 
-  useEffect(() => { fetchCustomers(); }, []);
+  useEffect(() => { 
+    fetchCustomers(); 
+  }, []);
 
   const fetchCustomers = async () => {
     try {
@@ -53,17 +65,26 @@ export default function CustomersPage() {
   const handleGenerateInvoice = async (customerId: string) => {
     const toastId = toast.loading('Prüfe abrechenbare Einsätze...');
     try {
+      // 1. Rechnung generieren
       const genRes = await api.post('/invoices/generate', { customerId });
       const invoice = genRes.data; 
+      
+      // 2. PDF laden
       toast.loading('Generiere PDF...', { id: toastId });
       const pdfRes = await api.get(`/invoices/${invoice.id}/pdf`, { responseType: 'blob' });
+      
+      // 3. Download starten
       const url = window.URL.createObjectURL(new Blob([pdfRes.data]));
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `Rechnung-${invoice.invoiceNumber}.pdf`);
       document.body.appendChild(link);
       link.click();
+      
+      // Cleanup
       link.remove();
+      window.URL.revokeObjectURL(url); // WICHTIG: Speicher freigeben
+
       toast.success(`Rechnung ${invoice.invoiceNumber} erstellt!`, { id: toastId });
     } catch (error: any) {
       const msg = error.response?.data?.message || "Keine fertigen Jobs gefunden.";
@@ -72,10 +93,12 @@ export default function CustomersPage() {
   };
 
   const confirmDelete = async () => {
+    if (!deleteModal.id) return;
+    
     const tid = toast.loading('Kunde wird entfernt...');
     try {
       await api.delete(`/customers/${deleteModal.id}`);
-      setCustomers(customers.filter(c => c.id !== deleteModal.id));
+      setCustomers(prev => prev.filter(c => c.id !== deleteModal.id));
       toast.success('Kunde erfolgreich gelöscht', { id: tid });
       setDeleteModal({ isOpen: false, id: '', name: '' });
     } catch { 
@@ -134,10 +157,10 @@ export default function CustomersPage() {
         </div>
       ) : viewMode === 'GRID' ? (
         
-        /* --- GRID VIEW (IDENTISCH ZU TEAM) --- */
+        /* --- GRID VIEW --- */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-in fade-in duration-500 pb-safe">
           {filtered.map(c => (
-            <div key={c.id} className="employee-card group h-full">
+            <div key={c.id} className="employee-card group h-full relative overflow-hidden">
               {/* Farbstreifen oben passend zum Kundentyp */}
               <div className={`absolute top-0 left-0 w-full h-1 ${c.companyName ? 'bg-indigo-500' : 'bg-blue-500'}`}></div>
               
@@ -274,6 +297,8 @@ export default function CustomersPage() {
         message={`Möchtest du ${deleteModal.name} wirklich unwiderruflich löschen? Alle verknüpften Rechnungen bleiben archiviert.`} 
         onConfirm={confirmDelete} 
         onCancel={() => setDeleteModal({ isOpen: false, id: '', name: '' })} 
+        variant="danger"
+        confirmText="Löschen"
       />
     </div>
   );

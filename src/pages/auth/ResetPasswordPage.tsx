@@ -34,7 +34,8 @@ export default function ResetPasswordPage() {
     setIsLoading(true);
 
     try {
-      const res = await api.post('/auth/reset-password', { 
+      // WICHTIG: 'res' Variable entfernt, da sie nicht genutzt wurde (Fix für Build-Fehler)
+      await api.post('/auth/reset-password', { 
         token, 
         newPassword: password 
       });

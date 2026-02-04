@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom';
+import { Building, ChevronLeft, Gavel, Landmark, Mail, MapPin, Phone, Scale, Shield, User } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
-import { ArrowLeft, Shield, Mail, Phone, MapPin, Building, User, Gavel, Scale, ChevronLeft, Landmark } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function ImpressumPage() {
   // --------------------------------------------------------
@@ -172,7 +172,7 @@ export default function ImpressumPage() {
                 <p className="text-slate-400 text-xs leading-relaxed font-medium">
                     Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung bereit.
                 </p>
-            </div>خ
+            </div>
             <a 
                 href="https://ec.europa.org/consumers/odr/" 
                 target="_blank" 
