@@ -1,7 +1,7 @@
 import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
 import { Route, Routes } from 'react-router-dom';
-import './app.css';
+import './App.css';
 
 // --- CONTEXT ---
 import { useAuth } from './context/AuthContext';
