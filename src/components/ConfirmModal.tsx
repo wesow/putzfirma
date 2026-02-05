@@ -1,11 +1,14 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, CheckCircle2, Info, Trash2 } from 'lucide-react';
+import React from 'react'; // Wichtig für React.ReactNode
 
 interface ConfirmModalProps {
   isOpen: boolean;
   title: string;
-  message: string;
-  onConfirm: () => void;
+  // Geändert: Akzeptiert jetzt String ODER JSX-Elemente
+  message: string | React.ReactNode; 
+  // Geändert: Optional gemacht, damit das Modal auch nur Infos zeigen kann
+  onConfirm?: () => void | Promise<void>; 
   onCancel: () => void;
   confirmText?: string;
   cancelText?: string;
@@ -50,7 +53,6 @@ export default function ConfirmModal({
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* BACKDROP */}
           <motion.div 
             initial={{ opacity: 0 }} 
             animate={{ opacity: 1 }} 
@@ -59,7 +61,6 @@ export default function ConfirmModal({
             className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[9998]"
           />
           
-          {/* MODAL WRAPPER */}
           <div className="fixed inset-0 flex items-center justify-center z-[9999] p-4">
             <motion.div 
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
@@ -69,7 +70,6 @@ export default function ConfirmModal({
               className="bg-white rounded-3xl p-6 max-w-[380px] w-full shadow-2xl border border-slate-100 relative overflow-hidden"
             >
               <div className="flex flex-col items-center text-center">
-                {/* Kompaktes Icon Badge */}
                 <div className={`w-12 h-12 rounded-2xl mb-4 flex items-center justify-center shadow-sm ${current.iconBg} ${current.iconColor}`}>
                   {current.icon}
                 </div>
@@ -78,11 +78,11 @@ export default function ConfirmModal({
                   {title}
                 </h3>
                 
-                <p className="text-[13px] text-slate-500 font-medium leading-relaxed mb-6">
+                {/* Geändert: div statt p, damit verschachtelte Elemente (Liste) erlaubt sind */}
+                <div className="text-[13px] text-slate-500 font-medium leading-relaxed mb-6">
                   {message}
-                </p>
+                </div>
                 
-                {/* Button Group - Horizontal wie in den Sidebars */}
                 <div className="flex gap-3 w-full">
                   <button 
                     onClick={onCancel}
@@ -90,12 +90,16 @@ export default function ConfirmModal({
                   >
                     {cancelText}
                   </button>
-                  <button 
-                    onClick={() => { onConfirm(); onCancel(); }}
-                    className={`flex-1 px-4 py-2.5 rounded-xl font-bold text-[11px] uppercase tracking-wider shadow-lg transition-all active:scale-95 ${current.btn}`}
-                  >
-                    {confirmText}
-                  </button>
+
+                  {/* Bedingtes Rendering: Nur zeigen, wenn confirmText nicht leer ist */}
+                  {confirmText && onConfirm && (
+                    <button 
+                      onClick={() => { onConfirm(); onCancel(); }}
+                      className={`flex-1 px-4 py-2.5 rounded-xl font-bold text-[11px] uppercase tracking-wider shadow-lg transition-all active:scale-95 ${current.btn}`}
+                    >
+                      {confirmText}
+                    </button>
+                  )}
                 </div>
               </div>
             </motion.div>

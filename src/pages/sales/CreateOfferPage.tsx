@@ -22,7 +22,6 @@ export default function CreateOfferPage() {
   const [services, setServices] = useState<any[]>([]);
   const [availableAddresses, setAvailableAddresses] = useState<any[]>([]);
 
-  // Form State
   const [formData, setFormData] = useState({
     customerId: '',
     addressId: '',
@@ -52,7 +51,6 @@ export default function CreateOfferPage() {
     loadData();
   }, []);
 
-  // Adressen laden, wenn Kunde gewählt wird
   useEffect(() => {
     if (formData.customerId) {
       const cust = customers.find(c => c.id === formData.customerId);
@@ -60,7 +58,6 @@ export default function CreateOfferPage() {
     }
   }, [formData.customerId, customers]);
 
-  // Template Logik: Importiert Preis, Beschreibung UND Checkliste
   const applyServiceTemplate = (serviceId: string) => {
     const s = services.find(srv => srv.id === serviceId);
     if (!s) return;
@@ -71,7 +68,6 @@ export default function CreateOfferPage() {
       price: s.priceNet.toString()
     }));
 
-    // Checkliste importieren (Parsen falls String)
     let importedChecklist = [];
     try {
       importedChecklist = typeof s.checklist === 'string' 
@@ -104,7 +100,7 @@ export default function CreateOfferPage() {
         validUntil: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
         interval: formData.interval,
         preferredTime: formData.preferredTime,
-        // Checkliste wird als Teil der Metadaten oder Items gesendet
+        // WICHTIG: Checkliste wird hier mitgesendet
         checklist: checklist, 
         items: [{
           description: formData.description,
@@ -124,8 +120,6 @@ export default function CreateOfferPage() {
 
   return (
     <div className="page-container">
-      
-      {/* --- HEADER --- */}
       <div className="header-section">
         <div className="flex items-center gap-4">
           <button onClick={() => navigate('/dashboard/offers')} className="btn-secondary !p-2">
@@ -139,8 +133,6 @@ export default function CreateOfferPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-4 pb-24">
-        
-        {/* --- TEMPLATE SELECTOR --- */}
         <div className="bg-blue-600 p-4 rounded-xl shadow-lg shadow-blue-500/20 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-3 text-white">
             <Sparkles size={20} className="text-blue-200" />
@@ -162,8 +154,6 @@ export default function CreateOfferPage() {
         </div>
 
         <div className="content-grid lg:grid-cols-12 gap-4">
-
-          {/* --- LINKS: KUNDE & KALKULATION --- */}
           <div className="lg:col-span-7 space-y-4">
             <div className="form-card">
               <div className="form-section-title"><User size={14} /> 1. Empfänger & Objekt</div>
@@ -261,7 +251,6 @@ export default function CreateOfferPage() {
             </div>
           </div>
 
-          {/* --- RECHTS: OPTIONALE CHECKLISTE --- */}
           <div className="lg:col-span-5">
             <div className="form-card h-full border-l-2 border-l-blue-500 flex flex-col">
               <div className="form-section-title flex justify-between items-center w-full">
@@ -270,7 +259,7 @@ export default function CreateOfferPage() {
               </div>
               
               <p className="text-[10px] text-slate-400 mb-4 leading-relaxed">
-                Diese Punkte werden dem Kunden im Angebot angezeigt und dem Mitarbeiter später als Aufgabe zugewiesen.
+                Diese Punkte werden im Angebot angezeigt und dem Mitarbeiter später als Aufgabe zugewiesen.
               </p>
 
               <div className="flex gap-2 mb-4">
@@ -288,7 +277,7 @@ export default function CreateOfferPage() {
                 {checklist.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-slate-50 rounded-xl bg-slate-50/30">
                     <Info size={20} className="text-slate-200 mb-2" />
-                    <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest text-center">Keine spezifischen<br/>Aufgaben gelistet</p>
+                    <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest text-center">Keine Aufgaben<br/>gelistet</p>
                   </div>
                 ) : (
                   checklist.map((item, idx) => (
@@ -306,7 +295,6 @@ export default function CreateOfferPage() {
           </div>
         </div>
 
-        {/* --- FIXED FOOTER --- */}
         <div className="fixed bottom-4 left-4 right-4 md:left-auto md:w-[450px] z-50">
           <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-2xl flex items-center gap-2">
             <button type="button" onClick={() => navigate('/dashboard/offers')} className="flex-1 px-4 py-2.5 rounded-xl text-slate-500 font-bold text-[11px] uppercase tracking-wider hover:bg-slate-100 transition-colors">Abbrechen</button>
@@ -315,7 +303,6 @@ export default function CreateOfferPage() {
             </button>
           </div>
         </div>
-
       </form>
     </div>
   );

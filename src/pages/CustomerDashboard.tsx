@@ -1,13 +1,17 @@
 import {
-    AlertCircle,
     Calendar,
     CheckCircle,
+    ChevronDown,
+    ChevronUp,
     Clock,
+    Download,
+    Euro,
     FileCheck,
     FileText,
+    ListTodo,
     Loader2,
-    Mail,
-    MapPin, Phone,
+    MapPin,
+    QrCode,
     ShieldCheck,
     User
 } from 'lucide-react';
@@ -18,9 +22,12 @@ import api from '../lib/api';
 export default function CustomerDashboard() {
   const [profile, setProfile] = useState<any>(null);
   const [nextJob, setNextJob] = useState<any>(null);
+  const [lastJobs, setLastJobs] = useState<any[]>([]); 
   const [openInvoices, setOpenInvoices] = useState<any[]>([]);
   const [openOffers, setOpenOffers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedOffer, setExpandedOffer] = useState<string | null>(null);
+  const [showQrFor, setShowQrFor] = useState<string | null>(null);
 
   useEffect(() => {
     loadCustomerData();
@@ -34,18 +41,22 @@ export default function CustomerDashboard() {
 
       if (myProfile) {
         const [jobsRes, invRes, offRes] = await Promise.all([
-            api.get('/jobs?limit=1&status=SCHEDULED'),
+            api.get('/jobs?limit=10&orderBy=scheduledDate:desc'),
             api.get('/invoices'),
             api.get('/offers')
         ]);
 
-        setNextJob(jobsRes.data[0] || null);
+        const allJobs = jobsRes.data;
+        // Nächsten geplanten Job finden
+        setNextJob(allJobs.find((j: any) => j.status === 'SCHEDULED') || null);
+        // Die letzten 3 erledigten Jobs filtern
+        setLastJobs(allJobs.filter((j: any) => j.status === 'COMPLETED').slice(0, 3));
 
-        const openInv = invRes.data.filter((i: any) => i.status === 'SENT' || i.status === 'OVERDUE' || i.status === 'REMINDER_1' || i.status === 'REMINDER_2');
-        setOpenInvoices(openInv);
+        // Rechnungen filtern (offene Posten)
+        setOpenInvoices(invRes.data.filter((i: any) => i.status !== 'PAID' && i.status !== 'CANCELLED'));
 
-        const relevantOffers = offRes.data.filter((o: any) => o.status === 'SENT' || o.status === 'ACCEPTED');
-        setOpenOffers(relevantOffers);
+        // Angebote filtern (SENT zum Annehmen, ACCEPTED zur Info)
+        setOpenOffers(offRes.data.filter((o: any) => o.status === 'SENT' || o.status === 'ACCEPTED'));
       }
     } catch (e) {
       toast.error("Daten konnten nicht geladen werden.");
@@ -55,15 +66,43 @@ export default function CustomerDashboard() {
   };
 
   const handleAcceptOffer = async (offerId: string) => {
-      if(!confirm("Möchten Sie dieses Angebot verbindlich annehmen?")) return;
-      const toastId = toast.loading("Sende Bestätigung...");
+      if(!confirm("Möchten Sie dieses Angebot verbindlich annehmen und den Auftrag erteilen?")) return;
+      const toastId = toast.loading("Übermittele Annahme...");
       try {
           await api.patch(`/offers/${offerId}/accept`); 
-          toast.success("Auftrag erteilt!", { id: toastId });
+          toast.success("Vielen Dank! Der Auftrag wurde erteilt.", { id: toastId });
           loadCustomerData(); 
       } catch (e) {
           toast.error("Fehler bei der Übermittlung.", { id: toastId });
       }
+  };
+
+  const downloadInvoice = async (invoiceId: string, invoiceNumber: string) => {
+    try {
+      const response = await api.get(`/invoices/${invoiceId}/pdf`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Rechnung_${invoiceNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (e) {
+      toast.error("PDF konnte nicht geladen werden.");
+    }
+  };
+
+  const getGiroCodeUrl = (inv: any) => {
+    const name = encodeURIComponent("GlanzOps Gebäudereinigung");
+    const iban = "DE12345678901234567890"; // HIER DEINE IBAN EINTRAGEN
+    const amount = Number(inv.totalGross).toFixed(2);
+    const ref = encodeURIComponent(`${inv.invoiceNumber}`);
+    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=BCD%0A001%0A1%0ASCT%0A%0A${name}%0A${iban}%0AEUR${amount}%0A%0A%0A${ref}`;
+  };
+
+  const translateInterval = (int: string) => {
+    const map: Record<string, string> = { 'ONCE': 'Einmalig', 'WEEKLY': 'Wöchentlich', 'BIWEEKLY': '14-tägig', 'MONTHLY': 'Monatlich' };
+    return map[int] || int;
   };
 
   if (loading) return <div className="h-full flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" size={32}/></div>;
@@ -72,18 +111,16 @@ export default function CustomerDashboard() {
   const billingAddress = profile.addresses?.find((a:any) => a.type === 'BILLING') || profile.addresses?.[0];
 
   return (
-    <div className="page-container space-y-4">
+    <div className="page-container space-y-4 pb-20">
       
-      {/* HEADER SECTION (Compact) */}
+      {/* HEADER SECTION */}
       <div className="bg-slate-900 rounded-xl p-6 text-white shadow-lg relative overflow-hidden flex flex-col justify-center min-h-[140px]">
         <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
         <div className="relative z-10">
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-500/20 border border-blue-400/30 text-blue-100 text-[10px] font-bold uppercase tracking-wider mb-2">
                 <ShieldCheck size={10} /> Kunden-Portal
             </span>
-            <h1 className="text-2xl font-bold tracking-tight mb-1">
-                Hallo, {profile.companyName || profile.firstName}
-            </h1>
+            <h1 className="text-2xl font-bold tracking-tight mb-1">Hallo, {profile.companyName || profile.firstName}</h1>
             <p className="text-slate-400 text-xs font-medium">Willkommen in Ihrer persönlichen Übersicht.</p>
         </div>
       </div>
@@ -93,42 +130,90 @@ export default function CustomerDashboard() {
         {/* LINKS (HAUPTBEREICH) */}
         <div className="space-y-4 lg:col-span-2">
             
-            {/* 1. ANGEBOTE */}
+            {/* 1. ANGEBOTE (Detailliert) */}
             {openOffers.length > 0 && (
                 <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
                     <div className="flex items-center gap-2 mb-4">
                         <div className="p-1.5 bg-blue-50 rounded-md text-blue-600"><FileCheck size={16}/></div>
-                        <h3 className="font-bold text-slate-800 text-sm">Meine Angebote</h3>
+                        <h3 className="font-bold text-slate-800 text-sm">Offene Angebote</h3>
                     </div>
+                    
                     <div className="space-y-3">
                         {openOffers.map((offer: any) => (
-                            <div key={offer.id} className="p-4 rounded-lg bg-slate-50 border border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group hover:border-blue-200 transition-all">
-                                <div>
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className="font-bold text-slate-900 text-sm">#{offer.offerNumber}</span>
-                                        {offer.status === 'ACCEPTED' 
-                                            ? <span className="bg-emerald-100 text-emerald-700 text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">Angenommen</span>
-                                            : <span className="bg-blue-600 text-white text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wide animate-pulse">Offen</span>
-                                        }
+                            <div key={offer.id} className={`rounded-xl border transition-all overflow-hidden ${expandedOffer === offer.id ? 'border-blue-300 ring-4 ring-blue-50' : 'border-slate-100 bg-slate-50/50'}`}>
+                                <div 
+                                    className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 cursor-pointer hover:bg-slate-50 transition-colors"
+                                    onClick={() => setExpandedOffer(expandedOffer === offer.id ? null : offer.id)}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-blue-600 shadow-sm">
+                                            <FileText size={18} />
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-black text-slate-900 text-sm">#{offer.offerNumber}</span>
+                                                {offer.status === 'ACCEPTED' 
+                                                    ? <span className="bg-emerald-100 text-emerald-700 text-[9px] font-bold px-2 py-0.5 rounded uppercase">Angenommen</span>
+                                                    : <span className="bg-blue-600 text-white text-[9px] font-bold px-2 py-0.5 rounded uppercase animate-pulse">Offen</span>
+                                                }
+                                            </div>
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Turnus: {translateInterval(offer.interval)}</p>
+                                        </div>
                                     </div>
-                                    <p className="text-xs text-slate-600 font-medium mb-1">
-                                        {offer.items[0]?.description}
-                                    </p>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase">
-                                        Volumen: {Number(offer.totalNet).toLocaleString('de-DE', {style:'currency', currency:'EUR'})} (Netto)
-                                    </p>
+                                    <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+                                        <div className="text-right">
+                                            <p className="text-sm font-black text-slate-900">{Number(offer.totalNet).toLocaleString('de-DE', {style:'currency', currency:'EUR'})}</p>
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase">Summe Netto</p>
+                                        </div>
+                                        {expandedOffer === offer.id ? <ChevronUp size={18} className="text-slate-400"/> : <ChevronDown size={18} className="text-slate-400"/>}
+                                    </div>
                                 </div>
 
-                                {offer.status === 'SENT' ? (
-                                    <button 
-                                        onClick={() => handleAcceptOffer(offer.id)}
-                                        className="btn-primary !py-2 !px-3 !bg-emerald-600 !border-emerald-700 shadow-sm text-[11px]"
-                                    >
-                                        <CheckCircle size={14} className="mr-1.5" /> Kostenpflichtig annehmen
-                                    </button>
-                                ) : (
-                                    <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-xs bg-white px-3 py-1.5 rounded-md border border-emerald-100">
-                                        <CheckCircle size={14} /> In Bearbeitung
+                                {expandedOffer === offer.id && (
+                                    <div className="border-t border-slate-200 bg-white p-5 animate-in slide-in-from-top-2 duration-300">
+                                        <div className="mb-6">
+                                            <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3 flex items-center gap-2"><Euro size={12}/> Leistungsumfang</h4>
+                                            <div className="space-y-2">
+                                                {offer.items.map((item: any, idx: number) => (
+                                                    <div key={idx} className="flex justify-between items-center p-3 rounded-lg bg-slate-50 border border-slate-100">
+                                                        <div>
+                                                            <p className="text-xs font-bold text-slate-800">{item.description}</p>
+                                                            <p className="text-[10px] text-slate-500">{item.quantity}x {item.unit || 'Psch'}</p>
+                                                        </div>
+                                                        <p className="text-xs font-black text-slate-700">{Number(item.totalPrice).toLocaleString('de-DE', {style:'currency', currency:'EUR'})}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {offer.checklist && offer.checklist.length > 0 && (
+                                            <div className="mb-6">
+                                                <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3 flex items-center gap-2"><ListTodo size={12}/> Vereinbarte Aufgaben</h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                    {offer.checklist.map((task: string, idx: number) => (
+                                                        <div key={idx} className="flex items-center gap-2 text-[11px] text-slate-600 bg-white border border-slate-100 p-2 rounded-md">
+                                                            <CheckCircle size={12} className="text-emerald-500 shrink-0" />
+                                                            <span>{task}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="pt-4 border-t border-slate-100 flex justify-end">
+                                            {offer.status === 'SENT' ? (
+                                                <button 
+                                                    onClick={() => handleAcceptOffer(offer.id)}
+                                                    className="btn-primary !bg-emerald-600 !border-emerald-700 w-full sm:w-auto shadow-lg shadow-emerald-600/20"
+                                                >
+                                                    <FileCheck size={16} className="mr-2" /> Kostenpflichtig annehmen & Auftrag starten
+                                                </button>
+                                            ) : (
+                                                <div className="flex items-center gap-2 text-emerald-600 font-bold text-xs bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-100">
+                                                    <ShieldCheck size={16} /> Dieses Angebot wurde bereits akzeptiert.
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -138,133 +223,108 @@ export default function CustomerDashboard() {
             )}
 
             {/* 2. NÄCHSTER TERMIN */}
-            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm relative overflow-hidden">
-                <div className="flex items-center justify-between mb-4 relative z-10">
-                    <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-indigo-50 rounded-md text-indigo-600"><Calendar size={16}/></div>
-                        <h3 className="font-bold text-slate-800 text-sm">Nächster Termin</h3>
-                    </div>
-                </div>
-                
+            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+                <h3 className="font-bold text-slate-800 text-sm mb-4 flex items-center gap-2">
+                    <div className="p-1.5 bg-indigo-50 rounded-md text-indigo-600"><Calendar size={16}/></div> Nächster Termin
+                </h3>
                 {nextJob ? (
-                    <div className="flex items-center gap-4 bg-slate-50 rounded-lg p-4 border border-slate-100 relative z-10">
-                        <div className="text-center min-w-[70px] bg-white p-2 rounded-md border border-slate-100 shadow-sm">
-                            <p className="text-[9px] text-slate-400 font-bold uppercase">Datum</p>
-                            <p className="text-lg font-bold text-slate-900 leading-none my-0.5">
+                    <div className="flex items-center gap-4 bg-slate-50 rounded-xl p-4 border border-slate-100">
+                        <div className="text-center min-w-[70px] bg-white p-2 rounded-lg border border-slate-100 shadow-sm">
+                            <p className="text-lg font-black text-slate-900 leading-none mb-1">
                                 {new Date(nextJob.scheduledDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
                             </p>
-                            <p className="text-[10px] font-bold text-slate-500">{new Date(nextJob.scheduledDate).getFullYear()}</p>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase">{new Date(nextJob.scheduledDate).getFullYear()}</p>
                         </div>
                         <div className="flex-1">
                             <h4 className="font-bold text-slate-900 text-sm mb-1">{nextJob.service?.name}</h4>
-                            <div className="flex flex-wrap gap-3 text-[11px] font-medium text-slate-500">
-                                <span className="flex items-center gap-1">
-                                    <MapPin size={12} className="text-indigo-500"/> 
-                                    {nextJob.address?.street}, {nextJob.address?.city}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                    <Clock size={12} className="text-indigo-500"/> 
-                                    ab 08:00 Uhr
-                                </span>
+                            <div className="flex flex-wrap gap-4 text-[11px] font-medium text-slate-500">
+                                <span className="flex items-center gap-1.5"><MapPin size={12} className="text-indigo-500"/> {nextJob.address?.street}</span>
+                                <span className="flex items-center gap-1.5"><Clock size={12} className="text-indigo-500"/> ab 08:00 Uhr</span>
                             </div>
                         </div>
                     </div>
-                ) : (
-                    <div className="text-center py-8 bg-slate-50 rounded-lg border border-dashed border-slate-200">
-                        <Calendar className="mx-auto text-slate-300 mb-2" size={24} />
-                        <p className="text-slate-400 font-bold text-xs">Aktuell keine Termine geplant.</p>
-                    </div>
-                )}
+                ) : <p className="text-xs text-slate-400 italic py-4">Aktuell keine Termine geplant.</p>}
             </div>
 
-            {/* 3. STAMMDATEN (Read Only) */}
+            {/* 3. LETZTE EINSÄTZE */}
             <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
-                <div className="flex items-center gap-2 mb-4">
-                    <div className="p-1.5 bg-slate-100 rounded-md text-slate-500"><User size={16}/></div>
-                    <h3 className="font-bold text-slate-800 text-sm">Meine Stammdaten</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="label-caps">Anschrift</label>
-                        <div className="font-medium text-[12px] text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100 flex items-start gap-2">
-                            <MapPin size={14} className="text-slate-400 mt-0.5 shrink-0" />
-                            <span>
-                                {billingAddress?.street}<br/>
-                                {billingAddress?.zipCode} {billingAddress?.city}
-                            </span>
+                <h3 className="font-bold text-slate-800 text-sm mb-4 flex items-center gap-2">
+                    <div className="p-1.5 bg-emerald-50 rounded-md text-emerald-600"><CheckCircle size={16}/></div> Letzte Einsätze
+                </h3>
+                <div className="space-y-2">
+                    {lastJobs.length > 0 ? lastJobs.map((job: any) => (
+                        <div key={job.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center"><CheckCircle size={14}/></div>
+                                <div>
+                                    <p className="text-xs font-bold text-slate-800">{job.service?.name}</p>
+                                    <p className="text-[10px] text-slate-400">{new Date(job.scheduledDate).toLocaleDateString('de-DE')}</p>
+                                </div>
+                            </div>
+                            <span className="text-[9px] font-bold text-emerald-600 uppercase bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">Erledigt</span>
                         </div>
-                    </div>
-                    <div>
-                        <label className="label-caps">Kontakt</label>
-                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-1.5">
-                            <p className="font-medium text-[12px] text-slate-700 flex items-center gap-2">
-                                <Mail size={14} className="text-slate-400 shrink-0" /> {profile.email}
-                            </p>
-                            {profile.phone && (
-                                <p className="font-medium text-[12px] text-slate-700 flex items-center gap-2">
-                                    <Phone size={14} className="text-slate-400 shrink-0" /> {profile.phone}
-                                </p>
-                            )}
-                        </div>
-                    </div>
+                    )) : <p className="text-xs text-slate-400 italic">Noch keine Einsätze abgeschlossen.</p>}
                 </div>
             </div>
         </div>
 
         {/* RECHTS (SIDEBAR) */}
         <div className="space-y-4">
-            
-            {/* RECHNUNGEN */}
-            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm h-full flex flex-col">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
-                        <FileText className="text-purple-600" size={16}/> Offene Posten
-                    </h3>
-                    {openInvoices.length > 0 && <span className="bg-red-500 text-white px-2 py-0.5 rounded-md text-[10px] font-bold">{openInvoices.length}</span>}
-                </div>
+            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm mb-4">
+                    <FileText className="text-purple-600" size={16}/> Rechnungen & Zahlung
+                </h3>
                 
-                {openInvoices.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center py-8 text-center space-y-2 opacity-60">
-                        <div className="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-500">
-                            <CheckCircle size={20} />
+                <div className="space-y-3">
+                    {openInvoices.length === 0 ? (
+                        <div className="py-6 text-center opacity-60">
+                            <CheckCircle size={24} className="mx-auto text-emerald-500 mb-2" />
+                            <p className="text-xs font-bold text-emerald-600 uppercase">Alles bezahlt!</p>
                         </div>
-                        <p className="text-xs font-bold text-emerald-600">Alles bezahlt!</p>
-                    </div>
-                ) : (
-                    <div className="space-y-2">
-                        {openInvoices.map((inv: any) => (
-                            <div key={inv.id} className="p-3 rounded-lg border border-slate-100 bg-white hover:border-red-200 transition-all group">
-                                <div className="flex justify-between items-start mb-1">
-                                    <span className="font-bold text-slate-700 text-xs">#{inv.invoiceNumber}</span>
-                                    <span className="font-bold text-slate-900 text-xs">{Number(inv.totalGross).toLocaleString('de-DE', {style:'currency', currency:'EUR'})}</span>
+                    ) : openInvoices.map((inv: any) => (
+                        <div key={inv.id} className="p-4 rounded-xl border border-slate-100 bg-white shadow-sm space-y-3">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <span className="font-bold text-slate-900 text-xs block">#{inv.invoiceNumber}</span>
+                                    <span className="text-[10px] text-slate-400">{new Date(inv.createdAt).toLocaleDateString()}</span>
                                 </div>
-                                <div className="flex justify-between items-center pt-2 border-t border-slate-50">
-                                    <span className="text-[10px] font-medium text-slate-400">{new Date(inv.dueDate).toLocaleDateString()}</span>
-                                    {inv.status === 'OVERDUE' || inv.status.includes('REMINDER') ? (
-                                        <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded uppercase tracking-wide flex items-center gap-1">
-                                            <AlertCircle size={10} /> Überfällig
-                                        </span>
-                                    ) : (
-                                        <span className="text-[9px] font-bold text-blue-500 uppercase tracking-wide">Offen</span>
-                                    )}
-                                </div>
+                                <span className="font-black text-slate-900 text-sm">{Number(inv.totalGross).toLocaleString('de-DE', {style:'currency', currency:'EUR'})}</span>
                             </div>
-                        ))}
-                    </div>
-                )}
-            </div>
 
-            {/* KONTAKT CARD */}
-            <div className="bg-slate-900 rounded-xl p-5 text-white text-center relative overflow-hidden">
-                <div className="relative z-10">
-                    <h4 className="font-bold text-sm mb-1">Hilfe benötigt?</h4>
-                    <p className="text-slate-400 text-[11px] mb-3">Unser Support ist für Sie da.</p>
-                    <a href="mailto:support@glanzops.de" className="inline-flex items-center justify-center gap-2 w-full bg-white text-slate-900 font-bold text-[11px] py-2 rounded-lg hover:bg-blue-50 transition-colors">
-                        <Mail size={14} /> E-Mail schreiben
-                    </a>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button onClick={() => downloadInvoice(inv.id, inv.invoiceNumber)} className="flex items-center justify-center gap-2 bg-slate-50 text-slate-700 text-[10px] font-bold py-2 rounded-lg border border-slate-200 hover:bg-slate-100"><Download size={12}/> PDF</button>
+                                <button onClick={() => setShowQrFor(inv.id)} className="flex items-center justify-center gap-2 bg-blue-600 text-white text-[10px] font-bold py-2 rounded-lg shadow-md hover:bg-blue-700"><QrCode size={12}/> QR-Zahlung</button>
+                            </div>
+
+                            {showQrFor === inv.id && (
+                                <div className="mt-4 p-4 bg-slate-900 rounded-xl text-center animate-in zoom-in-95">
+                                    <p className="text-[9px] text-white font-bold uppercase mb-2 tracking-widest">GiroCode scannen</p>
+                                    <div className="bg-white p-2 rounded-lg inline-block mb-2">
+                                        <img src={getGiroCodeUrl(inv)} alt="QR Code" className="w-24 h-24" />
+                                    </div>
+                                    <p className="text-[8px] text-slate-400 leading-tight">Rechnungsnummer:<br/><b>{inv.invoiceNumber}</b></p>
+                                    <button onClick={() => setShowQrFor(null)} className="text-[8px] text-blue-400 mt-2 font-bold uppercase">Schließen</button>
+                                </div>
+                            )}
+                        </div>
+                    ))}
                 </div>
             </div>
 
+            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+                <h3 className="font-bold text-slate-800 text-sm mb-4 flex items-center gap-2"><User size={16}/> Stammdaten</h3>
+                <div className="space-y-3 text-[11px]">
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                        <label className="label-caps !text-slate-400">Rechnungsanschrift</label>
+                        <p className="font-bold text-slate-700 mt-1">{billingAddress?.street}<br/>{billingAddress?.zipCode} {billingAddress?.city}</p>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                        <label className="label-caps !text-slate-400">Kontakt</label>
+                        <p className="font-bold text-slate-700 mt-1">{profile.email}</p>
+                        {profile.phone && <p className="font-bold text-slate-700">{profile.phone}</p>}
+                    </div>
+                </div>
+            </div>
         </div>
 
       </div>
