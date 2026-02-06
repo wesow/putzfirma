@@ -17,11 +17,12 @@ import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ImpressumPage from './pages/public/ImpressumPage';
 import LandingPage from './pages/public/LandingPage';
+import PublicSignPage from './pages/public/PublicSignPage'; // <--- WICHTIG: Importieren
 import RegisterPage from './pages/RegisterPage';
 
 // --- DASHBOARDS ---
 import CustomerDashboard from './pages/CustomerDashboard';
-import Dashboard from './pages/Dashboard'; // Admin Dashboard
+import Dashboard from './pages/Dashboard'; // Admin/Manager Dashboard
 import EmployeeDashboard from './pages/EmployeeDashboard';
 
 // --- OPERATIVE PAGES ---
@@ -55,16 +56,14 @@ import CreateOffersPage from './pages/sales/CreateOfferPage';
 import OffersPage from './pages/sales/OffersPage';
 
 // --- SYSTEM & INFRASTRUKTUR ---
-import SystemStatusPage from './pages/admin/SystemStatusPage'; // <--- NEU: Importiert
-
-// --- LAGER & SONSTIGES ---
 import BusinessFlowPage from './pages/admin/BusinessFlowPage';
+import SystemStatusPage from './pages/admin/SystemStatusPage';
 import CreateInventoryPage from './pages/inventory/CreateInventoryPage';
 import InventoryPage from './pages/inventory/InventoryPage';
 import SettingsPage from './pages/SettingsPage';
 
 /**
- * Hilfskomponente für die Dashboard-Weiche
+ * Weiche für das Start-Dashboard nach dem Login
  */
 const DashboardSwitcher = () => {
   const { user } = useAuth();
@@ -86,21 +85,7 @@ function App() {
             borderRadius: '16px',
             fontSize: '14px',
             fontWeight: '600'
-          },
-          success: { 
-            style: { 
-              background: '#ecfdf5', 
-              color: '#065f46', 
-              border: '1px solid #10b981' 
-            } 
-          },
-          error: { 
-            style: { 
-              background: '#fef2f2', 
-              color: '#991b1b', 
-              border: '1px solid #ef4444' 
-            } 
-          },
+          }
         }} 
       />
 
@@ -108,60 +93,69 @@ function App() {
         {/* === 1. ÖFFENTLICHE SEITEN === */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/impressum" element={<ImpressumPage />} />
-        
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        
+        {/* KORREKTUR: Hier muss die Signatur-Route hin (außerhalb vom Dashboard!) */}
+        <Route path="/sign/:token" element={<PublicSignPage />} />
 
-        {/* === 2. GESCHÜTZTER DASHBOARD BEREICH === */}
+        {/* === 2. GESCHÜTZTER BEREICH (Alle Rollen) === */}
         <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE', 'CUSTOMER', 'MANAGER']} />}>
           <Route path="/dashboard" element={<DashboardLayout />}>
             
+            {/* Startseite (Rollen-spezifisch) */}
             <Route index element={<DashboardSwitcher />} />
 
-            {/* --- OPERATIVES TEAM (Admin & Mitarbeiter) --- */}
+            {/* Gemeinsame Profileinstellungen für alle Rollen */}
+            <Route path="settings" element={<SettingsPage />} />
+
+            {/* --- GEMEINSAME ROUTE: RECHNUNGEN (Admin, Manager & Kunden) --- */}
+            <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'CUSTOMER']} />}>
+               <Route path="invoices" element={<InvoicesPage />} />
+            </Route>
+
+            {/* --- NUR MITARBEITER & ADMINS (Operativ) --- */}
             <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'EMPLOYEE', 'MANAGER']} />}>
               <Route path="jobs" element={<JobsPage />} />
               <Route path="calendar" element={<CalendarPage />} />
               <Route path="absences" element={<AbsencesPage />} />
-              <Route path="customers" element={<CustomersPage />} />
-              <Route path="customers/new" element={<CreateCustomerPage />} />
-              <Route path="customers/edit/:id" element={<EditCustomerPage />} />
               <Route path="inventory" element={<InventoryPage />} />
               <Route path="inventory/new" element={<CreateInventoryPage />} />
             </Route>
 
-            {/* --- EXKLUSIVE ADMIN BEREICHE (Unternehmenssteuerung) --- */}
+            {/* --- NUR ADMIN & MANAGER (Steuerung) --- */}
             <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']} />}>
+              {/* Kundenstamm */}
+              <Route path="customers" element={<CustomersPage />} />
+              <Route path="customers/new" element={<CreateCustomerPage />} />
+              <Route path="customers/edit/:id" element={<EditCustomerPage />} />
+              
+              {/* Services & Verträge */}
               <Route path="services" element={<ServicesPage />} />
               <Route path="services/new" element={<CreateServicePage />} />
               <Route path="services/edit/:id" element={<EditServicePage />} />
-              
               <Route path="contracts" element={<ContractsPage />} />
               <Route path="contracts/new" element={<CreateContractPage />} />
               
+              {/* Personal & Finanzen */}
               <Route path="team" element={<TeamPage />} />
               <Route path="team/new" element={<CreateEmployeePage />} />
               <Route path="team/:id" element={<EditEmployeePage />} />
-              
               <Route path="payroll" element={<PayrollPage />} />
-              
-              {/* FINANZEN */}
               <Route path="offers" element={<OffersPage />} />
               <Route path="offers/new" element={<CreateOffersPage />} />
-              <Route path="invoices" element={<InvoicesPage />} />
+              
               <Route path="finance" element={<FinancePage />} />
               <Route path="expenses" element={<ExpensesPage />} />
-              
               <Route path="reports" element={<ReportsPage />} />
               
-              
-              {/* SYSTEM & SETTINGS */}
+              {/* System-Tools */}
+              <Route path="flow" element={<BusinessFlowPage />} />
               <Route path="audit" element={<AuditLogs />} />
               <Route path="system-status" element={<SystemStatusPage />} /> 
               <Route path="business-flow" element={<BusinessFlowPage />} />
-              <Route path="settings" element={<SettingsPage />} />
             </Route>
 
           </Route>

@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import ConfirmModal from '../../components/ConfirmModal'; // Dein neues Modal
 import ViewSwitcher from '../../components/ViewSwitcher';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../lib/api';
@@ -63,16 +64,27 @@ export default function JobsPage() {
   
   // Filter States
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'OPEN' | 'DONE'>('OPEN');
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>('WEEK'); // Standardmäßig auf Woche
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('WEEK'); 
   const [viewMode, setViewMode] = useState<'GRID' | 'TABLE'>('GRID');
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
 
+  // Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'COMPLETE' | 'UPLOAD'>('COMPLETE');
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   
+  // Confirm Modal State
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string | React.ReactNode;
+    onConfirm: () => void;
+    variant: 'danger' | 'warning' | 'info' | 'success';
+    confirmText: string;
+  }>({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'info', confirmText: 'OK' });
+
   const [timeInputs, setTimeInputs] = useState({ start: '', end: '' });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -118,8 +130,18 @@ export default function JobsPage() {
       );
   };
 
-  const handleManualGeneration = async () => {
-    if (!confirm("Jobs aus Verträgen generieren?")) return;
+  const confirmManualGeneration = () => {
+    setConfirmConfig({
+      isOpen: true,
+      title: "Jobs generieren?",
+      message: "Dies erstellt Jobs für alle fälligen Verträge bis heute. Fortfahren?",
+      variant: 'info',
+      confirmText: "Generieren",
+      onConfirm: executeManualGeneration
+    });
+  };
+
+  const executeManualGeneration = async () => {
     setIsGenerating(true);
     const toastId = toast.loading("Generiere...");
     try {
@@ -140,10 +162,24 @@ export default function JobsPage() {
     return "Keine Adresse";
   };
 
-  const handleAssignEmployee = async (jid: string, eid: string, jobDate: string) => {
+  const requestAssignEmployee = (jid: string, eid: string, jobDate: string) => {
     const conflict = checkAvailability(eid, jobDate);
-    if (conflict && !confirm(`WARNUNG: Mitarbeiter ist abwesend (${conflict.type === 'SICKNESS' ? 'Krank' : 'Urlaub'}). Trotzdem zuweisen?`)) return;
+    
+    if (conflict) {
+      setConfirmConfig({
+        isOpen: true,
+        title: "Konflikt erkannt",
+        message: `Mitarbeiter ist abwesend (${conflict.type === 'SICKNESS' ? 'Krank' : 'Urlaub'}). Trotzdem zuweisen?`,
+        variant: 'warning',
+        confirmText: "Trotzdem zuweisen",
+        onConfirm: () => executeAssignEmployee(jid, eid)
+      });
+    } else {
+      executeAssignEmployee(jid, eid);
+    }
+  };
 
+  const executeAssignEmployee = async (jid: string, eid: string) => {
     const toastId = toast.loading("Zuweisung...");
     try { 
       await api.post(`/jobs/${jid}/assign`, { employeeId: eid }); 
@@ -154,8 +190,18 @@ export default function JobsPage() {
     }
   };
 
-  const handleUnassignEmployee = async (jid: string, eid: string) => {
-    if(!confirm("Zuweisung aufheben?")) return;
+  const requestUnassignEmployee = (jid: string, eid: string) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: "Zuweisung entfernen?",
+      message: "Möchten Sie diesen Mitarbeiter wirklich vom Job entfernen?",
+      variant: 'danger',
+      confirmText: "Entfernen",
+      onConfirm: () => executeUnassignEmployee(jid, eid)
+    });
+  };
+
+  const executeUnassignEmployee = async (jid: string, eid: string) => {
     try {
       await api.delete(`/jobs/${jid}/assign`, { data: { employeeId: eid } });
       toast.success("Entfernt");
@@ -174,7 +220,7 @@ export default function JobsPage() {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-        if (selectedFile) {
+        if (selectedFile && selectedJobId) {
           const fd = new FormData();
           fd.append('image', selectedFile);
           await api.post(`/jobs/${selectedJobId}/proof`, fd, { headers: { 'Content-Type': 'multipart/form-data' }});
@@ -204,12 +250,10 @@ export default function JobsPage() {
       const jobDate = new Date(job.scheduledDate);
       const now = new Date();
 
-      // 1. Status Filter
       let matchesStatus = true;
       if (filterStatus === 'OPEN') matchesStatus = ['SCHEDULED', 'IN_PROGRESS'].includes(job.status);
       if (filterStatus === 'DONE') matchesStatus = ['COMPLETED', 'CANCELLED'].includes(job.status);
 
-      // 2. Zeit Filter
       let matchesTime = true;
       if (timeFilter === 'TODAY') matchesTime = isToday(jobDate);
       else if (timeFilter === 'TOMORROW') matchesTime = isTomorrow(jobDate);
@@ -244,7 +288,7 @@ export default function JobsPage() {
             {assigned.map((a: any) => (
                 <div 
                     key={a.employee.id} 
-                    onClick={(e) => { e.stopPropagation(); isUserAdmin && handleUnassignEmployee(job.id, a.employee.id); }} 
+                    onClick={(e) => { e.stopPropagation(); isUserAdmin && requestUnassignEmployee(job.id, a.employee.id); }} 
                     className="w-7 h-7 rounded-full bg-white border-2 border-white flex items-center justify-center text-[9px] font-black text-slate-600 shadow-sm cursor-pointer hover:scale-110 hover:border-red-100 hover:text-red-500 transition-all z-10" 
                     title={`${a.employee.firstName} (Klicken zum Entfernen)`}
                 >
@@ -268,7 +312,7 @@ export default function JobsPage() {
                                 const conflict = checkAvailability(emp.id, job.scheduledDate);
                                 if(assigned.some((a: any) => a.employee.id === emp.id)) return null;
                                 return (
-                                    <div key={emp.id} onClick={() => { handleAssignEmployee(job.id, emp.id, job.scheduledDate); setActiveDropdownId(null); }} className="flex items-center gap-2.5 p-2 rounded-lg cursor-pointer hover:bg-slate-50 transition-all">
+                                    <div key={emp.id} onClick={() => { requestAssignEmployee(job.id, emp.id, job.scheduledDate); setActiveDropdownId(null); }} className="flex items-center gap-2.5 p-2 rounded-lg cursor-pointer hover:bg-slate-50 transition-all">
                                         <div className={`w-6 h-6 rounded flex items-center justify-center text-[9px] font-black ${conflict ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-600'}`}>{emp.firstName.charAt(0)}{emp.lastName.charAt(0)}</div>
                                         <div className="flex-1"><p className="text-[11px] font-bold text-slate-700">{emp.firstName} {emp.lastName}</p></div>
                                         {conflict ? <AlertCircle size={12} className="text-red-400" /> : <Plus size={12} className="text-slate-300" />}
@@ -284,7 +328,7 @@ export default function JobsPage() {
   );
 
   return (
-    <div className="page-container">
+    <div className="page-container pb-safe">
       {/* HEADER SECTION */}
       <div className="header-section">
         <div>
@@ -295,7 +339,6 @@ export default function JobsPage() {
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
           <ViewSwitcher viewMode={viewMode} onViewChange={setViewMode} />
           
-          {/* Zeit Filter Bar */}
           <div className="view-switcher-container">
             {(['TODAY', 'TOMORROW', 'WEEK', 'MONTH', 'ALL'] as const).map((t) => (
               <button 
@@ -310,7 +353,6 @@ export default function JobsPage() {
 
           <div className="h-6 w-px bg-slate-200 mx-1"></div>
 
-          {/* Status Filter Bar */}
           <div className="view-switcher-container">
             {(['OPEN', 'DONE', 'ALL'] as const).map((s) => (
               <button 
@@ -325,7 +367,7 @@ export default function JobsPage() {
 
           <div className="flex items-center gap-2 ml-1">
             {isUserAdmin && (
-               <button onClick={handleManualGeneration} disabled={isGenerating} className="btn-secondary !p-2 text-indigo-600" title="Jobs generieren">
+               <button onClick={confirmManualGeneration} disabled={isGenerating} className="btn-secondary !p-2 text-indigo-600" title="Jobs generieren">
                   {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} fill="currentColor" />}
                </button>
             )}
@@ -334,9 +376,9 @@ export default function JobsPage() {
         </div>
       </div>
 
-  {/* KPI STATS */}
+      {/* KPI STATS */}
       <div className="stats-grid mb-4 grid grid-cols-2 lg:grid-cols-5 gap-3">
-        {/* Gesamt im Filter */}
+        {/* ... (Stats Cards bleiben unverändert) ... */}
         <div className="stat-card">
           <div className="stat-icon-wrapper icon-info"><Clock size={16} /></div>
           <div>
@@ -345,7 +387,6 @@ export default function JobsPage() {
           </div>
         </div>
 
-        {/* GEPLANT */}
         <div className="stat-card">
           <div className="stat-icon-wrapper bg-blue-50 text-blue-600 border-blue-100">
             <Calendar size={16} />
@@ -358,7 +399,6 @@ export default function JobsPage() {
           </div>
         </div>
 
-        {/* IN ARBEIT */}
         <div className="stat-card">
           <div className="stat-icon-wrapper bg-amber-50 text-amber-600 border-amber-100">
             <Play size={14} fill="currentColor" />
@@ -371,7 +411,6 @@ export default function JobsPage() {
           </div>
         </div>
 
-        {/* ERLEDIGT */}
         <div className="stat-card">
           <div className="stat-icon-wrapper icon-success">
             <CheckCircle2 size={16} />
@@ -384,7 +423,6 @@ export default function JobsPage() {
           </div>
         </div>
 
-        {/* HEUTE (Schnellübersicht) */}
         <div className="stat-card hidden lg:flex">
           <div className="stat-icon-wrapper bg-indigo-50 text-indigo-600 border-indigo-100">
             <Briefcase size={16} />
@@ -409,7 +447,7 @@ export default function JobsPage() {
           <p className="text-slate-400 font-bold text-[11px] uppercase tracking-widest text-center">Keine Einsätze für diesen Zeitraum<br/><span className="text-[9px] font-normal lowercase italic">Ändere den Filter oder erstelle neue Jobs</span></p>
         </div>
       ) : viewMode === 'GRID' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 animate-in fade-in duration-500">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 animate-in fade-in duration-500 pb-20">
           {filteredJobs.map((job) => (
             <div key={job.id} className="group relative flex flex-col h-full min-h-[180px]"> 
               <div className="absolute inset-0 bg-white rounded-xl border border-slate-200 shadow-sm group-hover:shadow-md group-hover:border-blue-200 transition-all duration-300 overflow-hidden z-0">
@@ -459,52 +497,94 @@ export default function JobsPage() {
           ))}
         </div>
       ) : (
-        /* TABLE VIEW */
-        <div className="table-container bg-white animate-in slide-in-from-bottom-2 duration-300">
-          <table className="table-main">
-            <thead className="table-head">
-              <tr>
-                <th className="table-cell">Termin</th>
-                <th className="table-cell">Kunde & Service</th>
-                <th className="table-cell">Adresse</th>
-                <th className="table-cell">Team</th>
-                <th className="table-cell text-center">Status</th>
-                <th className="table-cell text-right">Aktion</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredJobs.map((job) => (
-                <tr key={job.id} className="table-row group">
-                  <td className="table-cell">
-                    <div className="font-bold text-slate-900">{format(new Date(job.scheduledDate), 'dd.MM.yy')}</div>
-                    <div className="text-[10px] text-slate-400 font-medium">{format(new Date(job.scheduledDate), 'HH:mm')} Uhr</div>
-                  </td>
-                  <td className="table-cell">
-                    <div className="font-bold text-slate-800 leading-tight">{job.customer.companyName || job.customer.lastName}</div>
-                    <div className="text-[10px] text-blue-600 font-bold uppercase">{job.service.name}</div>
-                  </td>
-                  <td className="table-cell text-[11px] text-slate-500 truncate max-w-[150px]">{getAddressString(job)}</td>
-                  <td className="table-cell"><TeamSelector job={job} assigned={job.assignments || []} /></td>
-                  <td className="table-cell text-center">
-                    <span className={`status-badge text-[10px] ${job.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
-                        {job.status === 'SCHEDULED' ? 'Geplant' : job.status}
-                    </span>
-                  </td>
-                  <td className="table-cell text-right">
-                    {['SCHEDULED', 'IN_PROGRESS'].includes(job.status) && (
-                        <button onClick={() => openCompleteModal(job)} className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all"><CheckCircle size={14} /></button>
-                    )}
-                  </td>
+        <div className="table-container bg-white animate-in slide-in-from-bottom-2 duration-300 pb-20">
+          <div className="overflow-x-auto">
+            <table className="table-main w-full min-w-[900px]">
+              <thead className="table-head">
+                <tr>
+                  <th className="table-cell font-bold">Termin</th>
+                  <th className="table-cell font-bold">Kunde & Service</th>
+                  <th className="table-cell font-bold">Adresse</th>
+                  <th className="table-cell font-bold">Team</th>
+                  <th className="table-cell font-bold text-center">Status</th>
+                  <th className="table-cell font-bold text-right pr-4">Aktion</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredJobs.map((job) => (
+                  <tr key={job.id} className="table-row group">
+                    <td className="table-cell">
+                      <div className="flex items-center gap-2">
+                        <Calendar size={14} className="text-blue-500" />
+                        <div>
+                          <div className="font-bold text-slate-900">{format(new Date(job.scheduledDate), 'dd.MM.yy')}</div>
+                          <div className="text-[10px] text-slate-400 font-medium">{format(new Date(job.scheduledDate), 'HH:mm')} Uhr</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="table-cell">
+                      <div className="font-bold text-slate-800 leading-tight">
+                        {job.customer.companyName || `${job.customer.firstName} ${job.customer.lastName}`}
+                      </div>
+                      <div className="text-[10px] text-blue-600 font-bold uppercase tracking-tight flex items-center gap-1">
+                        <Briefcase size={10} /> {job.service.name}
+                      </div>
+                    </td>
+                    <td className="table-cell">
+                      <div className="flex items-start gap-1.5 max-w-[200px]">
+                        <MapPin size={12} className="text-slate-300 mt-0.5 shrink-0" />
+                        <span className="text-[11px] text-slate-500 truncate" title={getAddressString(job)}>
+                          {getAddressString(job)}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="table-cell">
+                      <TeamSelector job={job} assigned={job.assignments || []} />
+                    </td>
+                    <td className="table-cell text-center">
+                      <span className={`status-badge text-[9px] ${
+                        job.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                        job.status === 'IN_PROGRESS' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                        'bg-blue-50 text-blue-600 border-blue-100'
+                      }`}>
+                        {job.status === 'SCHEDULED' ? 'Geplant' : job.status}
+                      </span>
+                    </td>
+                    <td className="table-cell text-right pr-4">
+                      {['SCHEDULED', 'IN_PROGRESS'].includes(job.status) ? (
+                        <button 
+                          onClick={() => openCompleteModal(job)} 
+                          className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+                          title="Abschließen"
+                        >
+                          <CheckCircle size={14} />
+                        </button>
+                      ) : (
+                        <CheckCircle2 size={16} className="text-emerald-400 ml-auto" />
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
+      {/* CONFIRM MODAL */}
+      <ConfirmModal 
+        isOpen={confirmConfig.isOpen}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+        variant={confirmConfig.variant}
+        confirmText={confirmConfig.confirmText}
+      />
+
       {/* COMPLETE MODAL */}
       {isModalOpen && (
-        <div className="modal-overlay">
+        <div className="modal-overlay z-50">
           <div className="modal-content !max-w-sm">
             <div className="modal-header">
               <div className="flex items-center gap-2">

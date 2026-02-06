@@ -2,7 +2,8 @@ import {
     Archive,
     Calendar,
     ChevronDown,
-    Download, FileText,
+    Download,
+    FileText,
     History,
     Loader2,
     PieChart,
@@ -14,52 +15,52 @@ import toast from 'react-hot-toast';
 import api from '../lib/api';
 
 interface PayrollReport {
-  id: string;
-  title: string;
-  type: 'HR' | 'FINANCE';
-  date: string;
-  month: number;
-  year: number;
+    id: string;
+    title: string;
+    type: 'HR' | 'FINANCE';
+    date: string;
+    month: number;
+    year: number;
 }
 
 const ReportList = ({ title, icon: Icon, type, colorClass, bgClass, reports, onDownload, downloadingId }: any) => {
     const filtered = reports.filter((r: any) => r.type === type);
     
     return (
-      <div className="table-container shadow-sm border border-slate-200 flex flex-col h-[500px] animate-in fade-in duration-700">
-          <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+      <div className="table-container flex flex-col h-[500px] animate-in fade-in duration-700">
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3 text-left">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm border border-white ${bgClass} ${colorClass}`}>
+                  <div className={`stat-icon-wrapper ${bgClass} ${colorClass}`}>
                       <Icon size={16} />
                   </div>
                   <div>
-                      <h3 className="font-bold text-slate-800 uppercase tracking-wider text-[11px] leading-none mb-1">{title}</h3>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">
-                        {filtered.length} Archiviert
+                      <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">{title}</h3>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">
+                        {filtered.length} Dokumente
                       </span>
                   </div>
               </div>
           </div>
           
-          <div className="flex-1 overflow-y-auto custom-scrollbar bg-white">
+          <div className="flex-1 overflow-y-auto custom-scrollbar bg-white p-2">
               {filtered.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-slate-300">
-                      <Archive size={32} className="mb-2 opacity-20" />
-                      <p className="font-bold uppercase tracking-wider text-[10px]">Leer</p>
+                      <Archive size={32} className="mb-2 opacity-10" />
+                      <p className="font-bold uppercase tracking-wider text-[10px]">Keine Berichte</p>
                   </div>
               ) : (
-                  <div className="divide-y divide-slate-50">
+                  <div className="space-y-1">
                       {filtered.map((report: any) => (
-                          <div key={report.id} className="group flex items-center justify-between px-4 py-3 hover:bg-blue-50/30 transition-all cursor-default">
+                          <div key={report.id} className="group flex items-center justify-between p-2.5 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all">
                               <div className="flex items-center gap-3 text-left min-w-0">
-                                  <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-white group-hover:text-blue-600 group-hover:shadow-sm border border-transparent group-hover:border-blue-100 transition-all shrink-0">
-                                      <FileText size={16} />
+                                  <div className="stat-icon-box bg-white border border-slate-100 text-slate-400 group-hover:text-blue-600 transition-colors shadow-sm">
+                                      <FileText size={14} />
                                   </div>
                                   <div className="min-w-0">
-                                      <p className="text-[12px] font-semibold text-slate-700 group-hover:text-blue-700 transition-colors truncate leading-tight">
+                                      <p className="text-[11px] font-bold text-slate-700 group-hover:text-slate-900 truncate leading-tight">
                                         {report.title}
                                       </p>
-                                      <div className="flex items-center gap-1.5 mt-1 text-[10px] text-slate-400 font-bold uppercase tracking-wide">
+                                      <div className="flex items-center gap-1.5 mt-0.5 text-[9px] text-slate-400 font-bold uppercase tracking-tighter">
                                           <Calendar size={10} className="text-slate-300" />
                                           {new Date(report.date).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}
                                       </div>
@@ -69,10 +70,9 @@ const ReportList = ({ title, icon: Icon, type, colorClass, bgClass, reports, onD
                               <button 
                                   onClick={() => onDownload(report)}
                                   disabled={!!downloadingId}
-                                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-sm rounded-lg transition-all opacity-0 group-hover:opacity-100 border border-transparent hover:border-slate-100"
-                                  title="Download"
+                                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-sm rounded-md transition-all sm:opacity-0 group-hover:opacity-100 border border-transparent hover:border-slate-100"
                               >
-                                  {downloadingId === report.id ? <Loader2 size={16} className="animate-spin text-blue-600"/> : <Download size={16} />}
+                                  {downloadingId === report.id ? <Loader2 size={14} className="animate-spin text-blue-600"/> : <Download size={14} />}
                               </button>
                           </div>
                       ))}
@@ -95,7 +95,6 @@ export default function ReportsPage() {
 
   const fetchAvailableReports = async () => {
     setLoading(true);
-    // Simulierter Delay für UX
     await new Promise(r => setTimeout(r, 400));
 
     const generatedReports: PayrollReport[] = [];
@@ -116,7 +115,7 @@ export default function ReportsPage() {
 
         generatedReports.push({
             id: `finance-${month + 1}-${filterYear}`,
-            title: `Finanzbericht / BWA ${d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}`,
+            title: `BWA / Finanzen ${d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}`,
             type: 'FINANCE',
             date: d.toISOString(),
             month: month + 1,
@@ -131,7 +130,7 @@ export default function ReportsPage() {
 
   const handleDownload = async (report: PayrollReport) => {
     setDownloadingId(report.id);
-    const toastId = toast.loading("Lade Dokument...");
+    const toastId = toast.loading("PDF wird generiert...");
     
     try {
       let endpoint = report.type === 'HR' 
@@ -149,37 +148,37 @@ export default function ReportsPage() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      toast.success("Download gestartet", { id: toastId });
+      toast.success("Dokument geladen", { id: toastId });
     } catch (error) {
-      toast.error("Export-Fehler.", { id: toastId });
+      toast.error("Download fehlgeschlagen.", { id: toastId });
     } finally {
       setDownloadingId(null);
     }
   };
 
   return (
-    <div className="page-container space-y-4">
+    <div className="page-container pb-safe">
       
       {/* HEADER SECTION */}
       <div className="header-section">
         <div className="text-left">
           <h1 className="page-title">Berichts-Archiv</h1>
-          <p className="page-subtitle">Zentraler Zugriff auf alle monatlichen Exporte.</p>
+          <p className="page-subtitle">Zugriff auf monatliche Exporte und Analysen.</p>
         </div>
         
         {/* YEAR FILTER */}
-        <div className="flex items-center bg-slate-50 p-1 rounded-lg border border-slate-200">
-            <div className="flex items-center gap-1.5 px-2 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-              <Search size={12} /> Zeitraum
+        <div className="view-switcher-container">
+            <div className="flex items-center gap-1.5 px-2 text-[9px] font-black text-slate-400 uppercase tracking-widest border-r border-slate-200">
+              <Search size={12} /> Filter
             </div>
             <div className="relative">
                 <select 
                     value={filterYear}
                     onChange={(e) => setFilterYear(Number(e.target.value))}
-                    className="appearance-none bg-white border border-slate-200 text-slate-700 font-bold text-[11px] py-1.5 pl-3 pr-8 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500/10 outline-none cursor-pointer transition-all hover:border-slate-300"
+                    className="appearance-none bg-transparent text-slate-800 font-bold text-[11px] py-1.5 pl-3 pr-8 outline-none cursor-pointer"
                 >
                     {[2024, 2025, 2026].map(y => (
-                        <option key={y} value={y}>{y} Gesamt</option>
+                        <option key={y} value={y}>{y}</option>
                     ))}
                 </select>
                 <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -188,64 +187,68 @@ export default function ReportsPage() {
       </div>
 
       {loading ? (
-          <div className="h-96 flex flex-col items-center justify-center text-slate-400">
+          <div className="flex-1 flex flex-col items-center justify-center py-20">
               <Loader2 className="animate-spin text-blue-600 mb-2" size={32} />
-              <span className="font-bold text-[10px] uppercase tracking-wider">Indexiere Archiv...</span>
+              <span className="label-caps">Archiv wird indexiert...</span>
           </div>
       ) : (
-          <>
+          <div className="space-y-4">
             {/* KPI STATS */}
-            <div className="stats-grid animate-in fade-in slide-in-from-top-4 duration-500">
-                <div className="stat-card border-l-[3px] border-l-purple-500">
-                    <div className="stat-icon-wrapper bg-purple-50 text-purple-600">
-                        <TrendingUp size={18} />
+            <div className="stats-grid grid grid-cols-2 lg:grid-cols-4 gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="stat-card border-l-[3px] border-l-violet-500">
+                    <div className="stat-icon-wrapper icon-purple">
+                        <TrendingUp size={16} />
                     </div>
                     <div>
-                        <div className="label-caps !mb-0 text-purple-600 !ml-0">Personalberichte</div>
-                        <div className="text-xl font-bold text-slate-900 tracking-tight">
-                          {reports.filter(r => r.type === 'HR').length} <span className="text-xs text-slate-400 font-medium">Files</span>
+                        <div className="label-caps !mb-0 !ml-0 text-violet-600">HR Berichte</div>
+                        <div className="text-base font-bold text-slate-900 leading-tight">
+                          {reports.filter(r => r.type === 'HR').length} <span className="text-[10px] text-slate-400 font-medium">Dateien</span>
                         </div>
                     </div>
                 </div>
 
                 <div className="stat-card border-l-[3px] border-l-emerald-500">
-                    <div className="stat-icon-wrapper bg-emerald-50 text-emerald-600">
-                        <PieChart size={18} />
+                    <div className="stat-icon-wrapper icon-success">
+                        <PieChart size={16} />
                     </div>
                     <div>
-                        <div className="label-caps !mb-0 text-emerald-600 !ml-0">Finanzberichte</div>
-                        <div className="text-xl font-bold text-slate-900 tracking-tight">
-                          {reports.filter(r => r.type === 'FINANCE').length} <span className="text-xs text-slate-400 font-medium">BWAs</span>
+                        <div className="label-caps !mb-0 !ml-0 text-emerald-600">BWA Exporte</div>
+                        <div className="text-base font-bold text-slate-900 leading-tight">
+                          {reports.filter(r => r.type === 'FINANCE').length} <span className="text-[10px] text-slate-400 font-medium">Dokumente</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* LISTS GRID */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start animate-in fade-in duration-700 delay-200">
-                <ReportList 
-                    title="Personalabrechnung" 
-                    icon={History} 
-                    type="HR"
-                    colorClass="text-purple-600"
-                    bgClass="bg-purple-50"
-                    reports={reports}
-                    onDownload={handleDownload}
-                    downloadingId={downloadingId}
-                />
+            <div className="content-grid animate-in fade-in duration-700 delay-200">
+                <div className="lg:col-span-6">
+                    <ReportList 
+                        title="Lohn & Personal" 
+                        icon={History} 
+                        type="HR"
+                        colorClass="text-violet-600"
+                        bgClass="bg-violet-50"
+                        reports={reports}
+                        onDownload={handleDownload}
+                        downloadingId={downloadingId}
+                    />
+                </div>
 
-                <ReportList 
-                    title="Finanz-Analysen" 
-                    icon={PieChart} 
-                    type="FINANCE"
-                    colorClass="text-emerald-600"
-                    bgClass="bg-emerald-50"
-                    reports={reports}
-                    onDownload={handleDownload}
-                    downloadingId={downloadingId}
-                />
+                <div className="lg:col-span-6">
+                    <ReportList 
+                        title="Finanz-Berichte" 
+                        icon={PieChart} 
+                        type="FINANCE"
+                        colorClass="text-emerald-600"
+                        bgClass="bg-emerald-50"
+                        reports={reports}
+                        onDownload={handleDownload}
+                        downloadingId={downloadingId}
+                    />
+                </div>
             </div>
-          </>
+          </div>
       )}
     </div>
   );

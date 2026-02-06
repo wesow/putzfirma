@@ -3,7 +3,6 @@ import {
   Archive,
   CheckCircle,
   ChevronRight,
-  FileText,
   Landmark,
   Loader2,
   Mail,
@@ -43,7 +42,6 @@ export default function CustomersPage() {
   const [viewMode, setViewMode] = useState<'GRID' | 'TABLE'>('GRID');
   const [showArchived, setShowArchived] = useState(false);
   
-  // States für Modals
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string; name: string; invoices?: string[] }>({ 
     isOpen: false, 
     id: '', 
@@ -67,7 +65,6 @@ export default function CustomersPage() {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      // Nutzt den neuen Backend-Parameter archived=true/false
       const res = await api.get(`/customers?archived=${showArchived}`);
       setCustomers(res.data);
     } catch (e) { 
@@ -82,10 +79,10 @@ export default function CustomersPage() {
     try {
       await api.patch(`/customers/${archiveModal.id}/archive`);
       setCustomers(prev => prev.filter(c => c.id !== archiveModal.id));
-      toast.success('Kunde archiviert & Zugang gesperrt', { id: tid });
+      toast.success('Kunde archiviert', { id: tid });
       setArchiveModal({ isOpen: false, id: '', name: '' });
     } catch {
-      toast.error('Archivieren fehlgeschlagen', { id: tid });
+      toast.error('Fehler beim Archivieren', { id: tid });
     }
   };
 
@@ -94,33 +91,33 @@ export default function CustomersPage() {
     try {
       await api.patch(`/customers/${restoreModal.id}/restore`);
       setCustomers(prev => prev.filter(c => c.id !== restoreModal.id));
-      toast.success('Kunde & Zugang wieder aktiv', { id: tid });
+      toast.success('Kunde wieder aktiv', { id: tid });
       setRestoreModal({ isOpen: false, id: '', name: '' });
     } catch {
-      toast.error('Reaktivierung fehlgeschlagen', { id: tid });
+      toast.error('Fehler bei Reaktivierung', { id: tid });
     }
   };
 
   const confirmDelete = async () => {
     if (!deleteModal.id) return;
-    const tid = toast.loading('Löschvorgang läuft...');
+    const tid = toast.loading('Lösche Kunde...');
     try {
       await api.delete(`/customers/${deleteModal.id}`);
       setCustomers(prev => prev.filter(c => c.id !== deleteModal.id));
-      toast.success('Kunde & System-Account gelöscht', { id: tid });
+      toast.success('Kunde gelöscht', { id: tid });
       setDeleteModal({ isOpen: false, id: '', name: '' });
     } catch (error: any) {
       if (error.response?.status === 400 && error.response?.data?.invoices) {
         toast.dismiss(tid);
         setDeleteModal(prev => ({ ...prev, invoices: error.response.data.invoices }));
       } else {
-        toast.error('Löschen fehlgeschlagen', { id: tid });
+        toast.error('Fehler beim Löschen', { id: tid });
       }
     }
   };
 
   const handleGenerateInvoice = async (customerId: string) => {
-    const toastId = toast.loading('Prüfe abrechenbare Einsätze...');
+    const toastId = toast.loading('Prüfe Jobs...');
     try {
       const genRes = await api.post('/invoices/generate', { customerId });
       const invoice = genRes.data; 
@@ -145,205 +142,197 @@ export default function CustomersPage() {
   );
 
   return (
-    <div className="page-container">
-      {/* --- HEADER SECTION --- */}
-      <div className="header-section">
+    <div className="page-container pb-safe">
+      <div className="header-section flex-col lg:flex-row items-stretch lg:items-center gap-4">
         <div>
-          <h1 className="page-title">{showArchived ? 'Archivierte Kunden' : 'Kundenstamm'}</h1>
-          <p className="page-subtitle">
-            {showArchived ? 'Gesperrte Konten und historische Daten.' : 'Zentrale Verwaltung aller aktiven Auftraggeber.'}
-          </p>
+          <h1 className="page-title">{showArchived ? 'Kunden-Archiv' : 'Kunden-Verwaltung'}</h1>
+          <p className="page-subtitle">Verwaltung der Auftraggeber und Zugänge.</p>
         </div>
         
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-          {/* Status Switcher */}
-          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
-            <button 
-              onClick={() => setShowArchived(false)}
-              className={`px-4 py-1.5 rounded-lg text-[10px] font-black transition-all ${!showArchived ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`}
-            >
-              AKTIV
-            </button>
-            <button 
-              onClick={() => setShowArchived(true)}
-              className={`px-4 py-1.5 rounded-lg text-[10px] font-black transition-all ${showArchived ? 'bg-white shadow-sm text-amber-600' : 'text-slate-400'}`}
-            >
-              ARCHIV
-            </button>
-          </div>
+        <div className="flex flex-col sm:flex-row items-center gap-2">
+           <div className="view-switcher-container w-full sm:w-auto">
+              <ViewSwitcher viewMode={viewMode} onViewChange={setViewMode} />
+              <div className="h-4 w-px bg-slate-200 mx-1 hidden sm:block"></div>
+              
+              <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-md mr-1">
+                <button 
+                  onClick={() => setShowArchived(false)}
+                  className={`px-2.5 py-1 rounded-md text-[9px] font-black transition-all ${!showArchived ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  AKTIV
+                </button>
+                <button 
+                  onClick={() => setShowArchived(true)}
+                  className={`px-2.5 py-1 rounded-md text-[9px] font-black transition-all ${showArchived ? 'bg-white shadow-sm text-amber-600' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  ARCHIV
+                </button>
+              </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto bg-slate-50 p-1 rounded-lg border border-slate-200">
-            <ViewSwitcher viewMode={viewMode} onViewChange={setViewMode} />
-            <div className="relative flex-1 sm:w-48">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-              <input 
-                type="text" 
-                placeholder="Suchen..." 
-                value={searchTerm} 
-                onChange={(e) => setSearchTerm(e.target.value)} 
-                className="w-full bg-white border-none rounded-md py-1.5 pl-8 pr-2 text-[12px] focus:ring-0 font-medium" 
-              />
-            </div>
-          </div>
+              <div className="relative flex-1 sm:w-48 group">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                <input 
+                  type="text" 
+                  placeholder="Suchen..." 
+                  value={searchTerm} 
+                  onChange={(e) => setSearchTerm(e.target.value)} 
+                  className="w-full bg-transparent border-none py-1.5 pl-8 pr-2 text-[12px] font-bold text-slate-700 focus:ring-0" 
+                />
+              </div>
+           </div>
 
-          <button onClick={() => navigate('/dashboard/customers/new')} className="btn-primary w-full sm:w-auto">
-            <Plus size={16} /> Neuer Kunde
-          </button>
+           <button onClick={() => navigate('/dashboard/customers/new')} className="btn-primary w-full sm:w-auto uppercase tracking-wider">
+             <Plus size={16} /> Hinzufügen
+           </button>
         </div>
       </div>
 
-      {/* --- CONTENT AREA --- */}
       {loading ? (
-        <div className="flex-1 flex flex-col items-center justify-center min-h-[400px]">
-          <Loader2 className="animate-spin text-blue-600 mb-3" size={32} />
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest italic">Synchronisierung...</span>
+        <div className="flex-1 flex flex-col items-center justify-center py-20">
+          <Loader2 className="animate-spin text-blue-600 mb-2" size={32} />
+          <span className="label-caps">Lade Kunden...</span>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50 m-4 py-20 text-center">
-           <AlertCircle size={40} className="text-slate-300 mb-3 mx-auto" />
-           <p className="text-slate-500 font-bold text-sm">Keine {showArchived ? 'archivierten' : ''} Kunden gefunden</p>
+        <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-xl bg-white m-2 py-20 text-center">
+           <AlertCircle size={32} className="text-slate-200 mb-2" />
+           <p className="text-slate-400 font-bold text-[11px] uppercase tracking-widest text-center">Keine Einträge</p>
         </div>
       ) : viewMode === 'GRID' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-in fade-in duration-500 pb-safe">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 animate-in fade-in duration-500 pb-20 sm:pb-0">
           {filtered.map(c => (
-            <div key={c.id} className={`employee-card group h-full relative overflow-hidden flex flex-col ${!c.isActive ? 'grayscale-[0.5] opacity-90' : ''}`}>
+            <div key={c.id} className="customer-card group h-full">
               <div className={`absolute top-0 left-0 w-full h-1 ${!c.isActive ? 'bg-amber-400' : c.companyName ? 'bg-indigo-500' : 'bg-blue-500'}`}></div>
               
-              <div className="flex justify-between items-start mb-4 pt-1">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black text-white shadow-sm shrink-0 ${!c.isActive ? 'bg-slate-400' : c.companyName ? 'bg-indigo-500' : 'bg-blue-500'}`}>
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black text-white shadow-sm shrink-0
+                    ${!c.isActive ? 'bg-slate-400' : c.companyName ? 'bg-indigo-500' : 'bg-blue-500'}`}>
                     {c.firstName.charAt(0)}{c.lastName.charAt(0)}
                   </div>
-                  <div className="text-left overflow-hidden">
-                    <h3 className="font-bold text-slate-900 text-sm leading-tight truncate w-32">{c.firstName} {c.lastName}</h3>
-                    <span className={`status-badge mt-1 ${!c.isActive ? 'bg-amber-50 text-amber-700' : c.companyName ? 'bg-indigo-50 text-indigo-700' : 'bg-blue-50 text-blue-700'}`}>
-                      {!c.isActive ? 'ARCHIVIERT' : c.companyName ? 'GEWERBE' : 'PRIVAT'}
+                  <div className="text-left overflow-hidden min-w-0">
+                    <h3 className="font-bold text-slate-900 text-[13px] leading-tight truncate pr-2">{c.firstName} {c.lastName}</h3>
+                    <span className={`status-badge mt-1 !text-[8px] ${!c.isActive ? 'bg-amber-50 text-amber-700 border-amber-100' : c.companyName ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                        {!c.isActive ? 'ARCHIVIERT' : c.companyName ? 'GEWERBE' : 'PRIVAT'}
                     </span>
                   </div>
                 </div>
-                <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => navigate(`/dashboard/customers/edit/${c.id}`)} className="btn-icon-only hover:text-blue-600"><Pencil size={14} /></button>
-                  {c.isActive ? (
-                    <button onClick={() => setArchiveModal({ isOpen: true, id: c.id, name: c.companyName || c.lastName })} className="btn-icon-only hover:text-amber-600"><Archive size={14} /></button>
-                  ) : (
-                    <button onClick={() => setRestoreModal({ isOpen: true, id: c.id, name: c.companyName || c.lastName })} className="btn-icon-only hover:text-emerald-600"><RefreshCw size={14} /></button>
-                  )}
-                  <button onClick={() => setDeleteModal({ isOpen: true, id: c.id, name: c.companyName || c.lastName })} className="btn-icon-only hover:text-red-600"><Trash2 size={14} /></button>
+                
+                <div className="flex items-center gap-0.5 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                   <button onClick={() => navigate(`/dashboard/customers/edit/${c.id}`)} className="btn-icon-only hover:text-blue-600 hover:bg-blue-50" title="Edit"><Pencil size={14} /></button>
+                   {c.isActive ? (
+                     <button onClick={() => setArchiveModal({ isOpen: true, id: c.id, name: c.companyName || c.lastName })} className="btn-icon-only hover:text-amber-600 hover:bg-amber-50" title="Archiv"><Archive size={14} /></button>
+                   ) : (
+                     <button onClick={() => setRestoreModal({ isOpen: true, id: c.id, name: c.companyName || c.lastName })} className="btn-icon-only hover:text-emerald-600 hover:bg-emerald-50" title="Restore"><RefreshCw size={14} /></button>
+                   )}
+                   <button onClick={() => setDeleteModal({ isOpen: true, id: c.id, name: c.companyName || c.lastName })} className="btn-icon-only hover:text-red-600 hover:bg-red-50" title="Delete"><Trash2 size={14} /></button>
                 </div>
               </div>
 
               <div className="space-y-2 mb-4 flex-1">
-                <div className="flex items-center gap-2 text-[11px] text-slate-500 font-medium bg-slate-50 p-1.5 rounded border border-slate-100">
+                <div className="flex items-center gap-2 text-[11px] text-slate-500 font-bold bg-slate-50 p-2 rounded-lg border border-slate-100/50">
                   <Mail size={12} className="text-slate-400 shrink-0" /> <span className="truncate">{c.email}</span>
                 </div>
                 {c.addresses[0] && (
-                  <div className="flex items-start gap-2 text-[11px] text-slate-400 font-medium px-1.5 mt-1">
-                    <MapPin size={12} className="text-slate-300 shrink-0 mt-0.5" /> 
-                    <span className="leading-tight">{c.addresses[0].street}, {c.addresses[0].city}</span>
-                  </div>
+                    <div className="flex items-start gap-2 text-[10px] text-slate-400 font-bold uppercase tracking-tighter px-1 leading-tight">
+                        <MapPin size={12} className="text-slate-300 shrink-0 mt-0.5" /> 
+                        <span>{c.addresses[0].street}, {c.addresses[0].city}</span>
+                    </div>
                 )}
               </div>
               
               <div className="pt-3 border-t border-slate-50 flex items-center justify-between mt-auto">
                 {c.userId && c.isActive ? (
-                  <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100 uppercase">
-                    <CheckCircle size={10} /> Portal Aktiv
-                  </span>
-                ) : !c.isActive ? (
-                  <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full border border-amber-100 uppercase">Zugang Gesperrt</span>
-                ) : (
-                  <button onClick={() => handleGenerateInvoice(c.id)} className="flex items-center gap-1.5 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full border border-blue-100 hover:bg-blue-100 transition-colors uppercase">
-                    <Landmark size={10} /> Abrechnen
+                    <span className="flex items-center gap-1.5 text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 uppercase tracking-widest">
+                      <CheckCircle size={10} /> Portal Aktiv
+                    </span>
+                  ) : !c.isActive ? (
+                    <span className="text-[9px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100 uppercase tracking-widest">Gesperrt</span>
+                  ) : (
+                    <button onClick={() => handleGenerateInvoice(c.id)} className="flex items-center gap-1.5 text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 hover:bg-blue-600 hover:text-white transition-all uppercase tracking-widest">
+                      <Landmark size={10} /> Abrechnen
+                    </button>
+                  )}
+                  
+                  <button onClick={() => navigate(`/dashboard/customers/edit/${c.id}`)} className="text-[10px] font-black text-slate-400 hover:text-blue-600 flex items-center gap-1 uppercase tracking-widest transition-colors">
+                    Details <ChevronRight size={12} strokeWidth={3} />
                   </button>
-                )}
-                <button onClick={() => navigate(`/dashboard/customers/edit/${c.id}`)} className="text-[10px] font-bold text-slate-400 hover:text-blue-600 flex items-center gap-1 uppercase tracking-wider transition-colors">
-                  Details <ChevronRight size={12} strokeWidth={3} />
-                </button>
               </div>
             </div>
           ))}
         </div>
       ) : (
-        /* --- TABLE VIEW --- */
-        <div className="table-container animate-in slide-in-from-bottom-2 duration-300 pb-safe">
-          <div className="flex-1 custom-scrollbar overflow-y-auto">
-            <table className="table-main">
-              <thead className="table-head sticky top-0 z-10">
+        <div className="table-container animate-in slide-in-from-bottom-2 duration-300 pb-20 sm:pb-0">
+          <div className="overflow-x-auto">
+            <table className="table-main w-full min-w-[900px]">
+                <thead className="table-head">
                 <tr>
-                  <th className="px-4 py-3 text-left">Kunde / Firma</th>
-                  <th className="px-4 py-3 text-left">Kontakt</th>
-                  <th className="px-4 py-3 text-left">Anschrift</th>
-                  <th className="px-4 py-3 text-left">Status</th>
-                  <th className="px-4 py-3 text-right pr-4">Aktionen</th>
+                    <th className="table-cell">Kunde / Firma</th>
+                    <th className="table-cell">Kontakt</th>
+                    <th className="table-cell">Anschrift</th>
+                    <th className="table-cell text-center">Status</th>
+                    <th className="table-cell text-right pr-4">Aktionen</th>
                 </tr>
-              </thead>
-              <tbody>
+                </thead>
+                <tbody>
                 {filtered.map(c => (
-                  <tr key={c.id} className={`table-row group ${!c.isActive ? 'bg-slate-50/50' : ''}`}>
-                    <td className="table-cell pl-4 align-middle">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black text-white border-2 border-white shadow-sm shrink-0 ${!c.isActive ? 'bg-slate-400' : c.companyName ? 'bg-indigo-500' : 'bg-blue-500'}`}>
-                          {c.firstName.charAt(0)}{c.lastName.charAt(0)}
+                    <tr key={c.id} className="table-row group">
+                    <td className="table-cell align-middle">
+                        <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black text-white border-2 border-white shadow-sm shrink-0
+                                ${!c.isActive ? 'bg-slate-400' : c.companyName ? 'bg-indigo-500' : 'bg-blue-500'}`}>
+                                {c.firstName.charAt(0)}{c.lastName.charAt(0)}
+                            </div>
+                            <div className="min-w-0">
+                                <div className="font-bold text-slate-800 text-[13px] leading-tight">{c.firstName} {c.lastName}</div>
+                                {c.companyName && <div className="text-[9px] text-blue-600 font-bold uppercase tracking-tighter truncate max-w-[150px]">{c.companyName}</div>}
+                            </div>
                         </div>
-                        <div>
-                          <div className={`font-bold ${!c.isActive ? 'text-slate-400' : 'text-slate-800'}`}>{c.firstName} {c.lastName}</div>
-                          {c.companyName && <div className="text-[10px] text-blue-600 font-bold uppercase">{c.companyName}</div>}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="table-cell align-middle text-slate-500">
-                      <div className="flex flex-col gap-0.5 text-[11px]">
-                        <div className="flex items-center gap-1.5 truncate max-w-[150px]"><Mail size={12} className="text-slate-300" /> {c.email}</div>
-                        {c.phone && <div className="flex items-center gap-1.5"><Phone size={12} className="text-slate-300" /> {c.phone}</div>}
-                      </div>
-                    </td>
-                    <td className="table-cell align-middle text-[11px] text-slate-500">
-                      {c.addresses[0] ? `${c.addresses[0].street}, ${c.addresses[0].city}` : '---'}
                     </td>
                     <td className="table-cell align-middle">
-                      <span className={`status-badge ${!c.isActive ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                        {!c.isActive ? 'INAKTIV' : 'AKTIV'}
-                      </span>
+                        <div className="flex flex-col gap-0.5 text-[11px] font-bold">
+                            <div className="flex items-center gap-1.5 text-slate-600"><Mail size={12} className="text-slate-300" /> {c.email}</div>
+                            {c.phone && <div className="flex items-center gap-1.5 text-slate-400"><Phone size={12} className="text-slate-300" /> {c.phone}</div>}
+                        </div>
+                    </td>
+                    <td className="table-cell align-middle text-[11px] font-bold text-slate-500">
+                        {c.addresses[0] ? `${c.addresses[0].street}, ${c.addresses[0].city}` : '---'}
+                    </td>
+                    <td className="table-cell text-center align-middle">
+                        <span className={`status-badge text-[9px] ${!c.isActive ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+                            {!c.isActive ? 'ARCHIVIERT' : 'AKTIV'}
+                        </span>
                     </td>
                     <td className="table-cell text-right pr-4 align-middle">
-                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                        {c.isActive && <button onClick={() => handleGenerateInvoice(c.id)} className="btn-icon-only hover:text-emerald-600" title="Rechnung"><Landmark size={14}/></button>}
-                        <button onClick={() => navigate(`/dashboard/customers/edit/${c.id}`)} className="btn-icon-only hover:text-blue-600" title="Bearbeiten"><Pencil size={14} /></button>
-                        {c.isActive ? (
-                          <button onClick={() => setArchiveModal({ isOpen: true, id: c.id, name: c.companyName || c.lastName })} className="btn-icon-only hover:text-amber-600" title="Archivieren"><Archive size={14} /></button>
-                        ) : (
-                          <button onClick={() => setRestoreModal({ isOpen: true, id: c.id, name: c.companyName || c.lastName })} className="btn-icon-only hover:text-emerald-600" title="Reaktivieren"><RefreshCw size={14} /></button>
-                        )}
-                        <button onClick={() => setDeleteModal({ isOpen: true, id: c.id, name: c.companyName || c.lastName })} className="btn-icon-only hover:text-red-600" title="Löschen"><Trash2 size={14} /></button>
-                      </div>
+                        <div className="flex justify-end gap-1 sm:opacity-0 group-hover:opacity-100 transition-all">
+                          {c.isActive && <button onClick={() => handleGenerateInvoice(c.id)} className="btn-icon-only hover:text-emerald-600 hover:bg-emerald-50"><Landmark size={14}/></button>}
+                          <button onClick={() => navigate(`/dashboard/customers/edit/${c.id}`)} className="btn-icon-only hover:text-blue-600 hover:bg-blue-50"><Pencil size={14} /></button>
+                          {c.isActive ? (
+                            <button onClick={() => setArchiveModal({ isOpen: true, id: c.id, name: c.companyName || c.lastName })} className="btn-icon-only hover:text-amber-600 hover:bg-amber-50"><Archive size={14} /></button>
+                          ) : (
+                            <button onClick={() => setRestoreModal({ isOpen: true, id: c.id, name: c.companyName || c.lastName })} className="btn-icon-only hover:text-emerald-600 hover:bg-emerald-50"><RefreshCw size={14} /></button>
+                          )}
+                          <button onClick={() => setDeleteModal({ isOpen: true, id: c.id, name: c.companyName || c.lastName })} className="btn-icon-only hover:text-red-600 hover:bg-red-50"><Trash2 size={14} /></button>
+                        </div>
                     </td>
-                  </tr>
+                    </tr>
                 ))}
-              </tbody>
+                </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* --- MODALS --- */}
       <ConfirmModal 
         isOpen={deleteModal.isOpen} 
-        title={deleteModal.invoices ? "Löschen nicht möglich" : "Kunden entfernen?"} 
+        title={deleteModal.invoices ? "GoBD Sperre" : "Kunden entfernen?"} 
         message={
           deleteModal.invoices ? (
             <div className="space-y-3">
-              <p className="text-red-600 font-bold text-[13px]">Der Kunde hat noch {deleteModal.invoices.length} Rechnung(en) im System (GoBD-Sperre):</p>
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 max-h-40 overflow-y-auto custom-scrollbar">
-                {deleteModal.invoices.map(inv => (
-                  <div key={inv} className="flex items-center gap-2 text-slate-600 text-[11px] font-mono py-1.5 border-b border-slate-100 last:border-0">
-                    <FileText size={12} className="text-slate-400" /> {inv}
-                  </div>
-                ))}
-              </div>
-              <p className="text-[11px] text-slate-400 italic">Tipp: Archivieren Sie den Kunden stattdessen, um den Zugang zu sperren.</p>
+              <p className="text-red-600 font-bold text-[12px] uppercase tracking-widest flex items-center gap-2"><AlertCircle size={14}/> Abrechnungs-Konflikt</p>
+              <p className="text-slate-600 text-[11px] leading-relaxed">Aufgrund der GoBD-Vorschriften kann dieser Kunde nicht gelöscht werden, da Rechnungen existieren. Bitte nutzen Sie die Archivierung.</p>
             </div>
           ) : (
-            `Möchtest du ${deleteModal.name} wirklich unwiderruflich löschen? Auch der System-Login wird entfernt.`
+            `Möchtest du ${deleteModal.name} unwiderruflich aus dem System löschen?`
           )
         }
         onConfirm={deleteModal.invoices ? undefined : confirmDelete} 
@@ -356,17 +345,17 @@ export default function CustomersPage() {
       <ConfirmModal 
         isOpen={archiveModal.isOpen} 
         title="Kunden archivieren?" 
-        message={`Möchtest du ${archiveModal.name} archivieren? Der Login-Zugang wird sofort gesperrt, Dokumente bleiben erhalten.`} 
+        message={`Der Zugriff für ${archiveModal.name} wird sofort gesperrt. Dokumente bleiben erhalten.`} 
         onConfirm={confirmArchive} 
         onCancel={() => setArchiveModal({ isOpen: false, id: '', name: '' })} 
         variant="warning"
-        confirmText="Jetzt archivieren"
+        confirmText="Archivieren"
       />
 
       <ConfirmModal 
         isOpen={restoreModal.isOpen} 
-        title="Kunden reaktivieren?" 
-        message={`Möchtest du ${restoreModal.name} wieder aktivieren? Der Kunde kann sich danach wieder mit seinen alten Daten einloggen.`} 
+        title="Kunde reaktivieren?" 
+        message={`Möchtest du das Konto von ${restoreModal.name} wieder freischalten?`} 
         onConfirm={confirmRestore} 
         onCancel={() => setRestoreModal({ isOpen: false, id: '', name: '' })} 
         variant="success"

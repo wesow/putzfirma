@@ -46,9 +46,8 @@ export default function CreateEmployeePage() {
   };
 
   return (
-    <div className="page-container space-y-4">
+    <div className="page-container">
       
-      {/* HEADER SECTION */}
       <div className="header-section">
         <div className="text-left">
             <button 
@@ -62,12 +61,10 @@ export default function CreateEmployeePage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <form onSubmit={handleSubmit} className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-32">
         
-        {/* GRID LAYOUT (FULL WIDTH) */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
           
-          {/* LINKE SPALTE: PERSÖNLICHE DATEN */}
           <div className="space-y-4">
             <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
               <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2 mb-4">
@@ -96,7 +93,6 @@ export default function CreateEmployeePage() {
               </div>
             </div>
 
-            {/* EINLADUNGS OPTION */}
             <div 
               onClick={() => setSendInvite(!sendInvite)}
               className={`p-4 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-4 ${
@@ -118,7 +114,6 @@ export default function CreateEmployeePage() {
             </div>
           </div>
 
-          {/* RECHTE SPALTE: VERTRAGSDATEN */}
           <div className="space-y-4">
             <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 border-l-[3px] border-l-indigo-500 h-full">
               <div className="flex items-center gap-2 text-[11px] font-bold text-indigo-700 uppercase tracking-widest border-b border-slate-50 pb-2 mb-4">
@@ -165,11 +160,11 @@ export default function CreateEmployeePage() {
 
         </div>
 
-        {/* FLOATING FOOTER */}
-        <div className="fixed bottom-4 right-4 left-4 md:left-auto md:w-auto z-40">
-           <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-200 shadow-xl flex items-center gap-2 animate-in slide-in-from-bottom-2">
-              <button type="button" onClick={() => navigate('/dashboard/team')} className="px-4 py-2 rounded-lg text-slate-500 font-bold text-[11px] uppercase hover:bg-slate-50 transition-colors">Abbrechen</button>
-              <button type="submit" disabled={loading} className="btn-primary py-2.5 px-6 shadow-md min-w-[140px] text-[11px]">
+        {/* FLOATING FOOTER - ANGEPASST FÜR NAVBAR */}
+        <div className="fixed bottom-20 sm:bottom-6 left-4 right-4 md:left-auto md:w-auto z-30">
+           <div className="bg-white/90 backdrop-blur-md p-2 rounded-xl border border-slate-200 shadow-2xl flex items-center gap-2 animate-in slide-in-from-bottom-2">
+              <button type="button" onClick={() => navigate('/dashboard/team')} className="flex-1 md:flex-none px-4 py-2 rounded-lg text-slate-500 font-bold text-[11px] uppercase hover:bg-slate-50 transition-colors">Abbrechen</button>
+              <button type="submit" disabled={loading} className="btn-primary flex-[2] md:flex-none py-2.5 px-8 shadow-lg shadow-blue-600/20 min-w-[140px] text-[11px] uppercase tracking-widest font-black">
                 {loading ? <Loader2 className="animate-spin" size={16} /> : <><UserPlus size={16} /> Anlegen</>}
               </button>
            </div>
